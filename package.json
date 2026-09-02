@@ -3,8 +3,8 @@
   "version": "1.0.0",
   "description": "Social network for developers",
   "engines": {
-    "node": "18.x",
-    "npm": "9.x"
+    "node": "24.x",
+    "npm": "11.x"
   },
   "main": "server.js",
   "scripts": {
