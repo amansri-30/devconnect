@@ -15,7 +15,7 @@ const initialState = {
   error: {}
 };
 
-export default function (state = initialState, action) {
+export default function profileReducer(state = initialState, action) {
   switch (action.type) {
     case GET_PROFILE:
     case UPDATE_PROFILE:
