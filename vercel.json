@@ -1,0 +1,20 @@
+{
+  "version": 2,
+  "framework": null,
+  "buildCommand": "cd client && npm install && npm run build",
+  "outputDirectory": "client/build",
+  "installCommand": "npm install",
+  "functions": {
+    "api/index.js": {
+      "maxDuration": 10
+    }
+  },
+  "routes": [
+    { "src": "/api/(.*)", "dest": "/api/index.js" },
+    {
+      "src": "/favicon.ico",
+      "dest": "/favicon.ico"
+    },
+    { "src": "/(.*)", "dest": "/index.html" }
+  ]
+}
