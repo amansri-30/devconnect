@@ -21,9 +21,11 @@ const Posts = ({ getPosts, post: { posts, loading } }) => {
       </p>
       <PostForm />
       <div className="posts">
-        {posts.map((post) => (
-          <PostItem key={post._id} post={post} />
-        ))}
+        {posts.length > 0 ? (
+          posts.map((post) => <PostItem key={post._id} post={post} />)
+        ) : (
+          <p className="my-1">No posts yet. Be the first to start a discussion!</p>
+        )}
       </div>
     </Fragment>
   );

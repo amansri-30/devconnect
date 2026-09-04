@@ -13,6 +13,18 @@ const PostItem = ({
   post: { _id, text, name, avatar, user, likes, comments, date },
   showActions
 }) => {
+  // Whether the current user has already liked this post.
+  const likedByMe =
+    !auth.loading &&
+    auth.user &&
+    likes.some((like) => like.user === auth.user._id);
+
+  const removePost = (e) => {
+    if (window.confirm('Are you sure you want to delete this post?')) {
+      deletePost(_id);
+    }
+  };
+
   return (
     <div className="post bg-white p-1 my-1">
       <div>
@@ -29,19 +41,12 @@ const PostItem = ({
         {showActions && (
           <Fragment>
             <button
-              onClick={(e) => addLike(_id)}
+              onClick={(e) => (likedByMe ? removeLike(_id) : addLike(_id))}
               type="button"
-              className="btn btn-light"
+              className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
+              title={likedByMe ? 'Unlike this post' : 'Like this post'}
             >
-              <i className="fas fa-thumbs-up" />{' '}
-              {likes.length > 0 && <span>{likes.length}</span>}
-            </button>
-            <button
-              onClick={(e) => removeLike(_id)}
-              type="button"
-              className="btn btn-light"
-            >
-              <i className="fas fa-thumbs-down" />
+              <i className="fas fa-thumbs-up" /> <span>{likes.length}</span>
             </button>
             <Link to={`/post/${_id}`} className="btn btn-primary">
               Discussion{' '}
@@ -50,11 +55,7 @@ const PostItem = ({
               )}
             </Link>
             {!auth.loading && user === auth.user._id && (
-              <button
-                onClick={(e) => deletePost(_id)}
-                type="button"
-                className="btn btn-danger"
-              >
+              <button onClick={removePost} type="button" className="btn btn-danger">
                 <i className="fas fa-times" />
               </button>
             )}

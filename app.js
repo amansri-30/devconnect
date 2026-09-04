@@ -4,6 +4,7 @@ const express = require('express');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
+const mongoose = require('mongoose');
 const { notFound, errorHandler } = require('./middleware/error');
 
 const app = express();
@@ -31,6 +32,43 @@ app.use('/api/auth', authLimiter, require('./routes/api/auth'));
 app.use('/api/users', authLimiter, require('./routes/api/users'));
 app.use('/api/profile', require('./routes/api/profile'));
 app.use('/api/posts', require('./routes/api/posts'));
+
+// Health check endpoint (public) - useful for diagnosing the most common
+// serverless failures (missing env vars, DB connectivity).
+app.get('/api/health', (req, res) => {
+  const state = {
+    status: 'ok',
+    time: new Date().toISOString(),
+    env: {
+      mongoUriSet: Boolean(process.env.MONGO_URI),
+      jwtSecretSet: Boolean(process.env.JWT_SECRET),
+      githubClientIdSet: Boolean(process.env.GITHUB_CLIENT_ID),
+      nodeEnv: process.env.NODE_ENV
+    },
+    database: {
+      connected: mongoose.connection.readyState === 1,
+      readyState: mongoose.connection.readyState,
+      mongooseVersion: mongoose.version
+    },
+    message: null
+  };
+
+  if (!state.env.mongoUriSet) {
+    state.status = 'error';
+    state.message =
+      'MONGO_URI is not set. Add it in Vercel -> Settings -> Environment Variables and redeploy.';
+  } else if (!state.env.jwtSecretSet) {
+    state.status = 'error';
+    state.message =
+      'JWT_SECRET is not set. Add it in Vercel -> Settings -> Environment Variables and redeploy.';
+  } else if (!state.database.connected) {
+    state.status = 'error';
+    state.message =
+      'Database is not connected. Check MONGO_URI and that MongoDB allows Vercel IPs.';
+  }
+
+  res.status(state.status === 'ok' ? 200 : 503).json(state);
+});
 
 // Serve static assets if in production (local `npm start` builds)
 if (process.env.NODE_ENV === 'production') {

@@ -56,13 +56,34 @@ router.post(
 );
 
 // @route   GET api/posts
-// @desc    Get all Posts
+// @desc    Get posts (paginated, newest first)
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
-    const posts = await Post.find().sort({ date: -1 });
+    // Optional pagination via query params; default to the 30 most recent.
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 30, 1),
+      100
+    );
+    const skip = (page - 1) * limit;
 
-    return res.json(posts);
+    const docs = await Post.find()
+      .sort({ date: -1 })
+      .skip(skip)
+      .limit(limit);
+
+    const total = await Post.countDocuments();
+
+    // Keep the response body backward-compatible (array) and surface
+    // pagination metadata in the headers.
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
+
+    return res.json(docs);
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
