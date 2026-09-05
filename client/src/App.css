@@ -350,6 +350,20 @@ button {
 }
 
 /* Profiles Page */
+.search-bar input {
+  width: 100%;
+  padding: 0.75rem 1rem;
+  font-size: 1rem;
+  border: 2px solid #ccc;
+  border-radius: 6px;
+  transition: border-color 0.2s;
+}
+
+.search-bar input:focus {
+  border-color: #17a2b8;
+  outline: none;
+}
+
 .profile {
   display: grid;
   grid-template-columns: 2fr 4fr 2fr;

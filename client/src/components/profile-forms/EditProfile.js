@@ -16,25 +16,23 @@ const formUpdateReducer = (state, action) => {
 // Logic to initialize starting state
 // Shape of state is set below when returning the object
 const initializeState = (profileStateSlice) => {
-  const { loading, profile } = profileStateSlice;
+  const { profile } = profileStateSlice;
+  const p = profile || {};
+  const social = p.social || {};
 
   return {
-    company: loading || !profile.company ? '' : profile.company,
-    website: loading || !profile.website ? '' : profile.website,
-    location: loading || !profile.location ? '' : profile.location,
-    status: loading || !profile.status ? '' : profile.status,
-    skills: loading || !profile.skills ? '' : profile.skills.join(','),
-    githubusername:
-      loading || !profile.githubusername ? '' : profile.githubusername,
-    bio: loading || !profile.bio ? '' : profile.bio,
-    twitter: loading || !profile.social.twitter ? '' : profile.social.twitter,
-    facebook:
-      loading || !profile.social.facebook ? '' : profile.social.facebook,
-    linkedin:
-      loading || !profile.social.linkedin ? '' : profile.social.linkedin,
-    youtube: loading || !profile.social.youtube ? '' : profile.social.youtube,
-    instagram:
-      loading || !profile.social.instagram ? '' : profile.social.instagram
+    company: p.company || '',
+    website: p.website || '',
+    location: p.location || '',
+    status: p.status || '',
+    skills: Array.isArray(p.skills) ? p.skills.join(',') : (p.skills || ''),
+    githubusername: p.githubusername || '',
+    bio: p.bio || '',
+    twitter: social.twitter || '',
+    facebook: social.facebook || '',
+    linkedin: social.linkedin || '',
+    youtube: social.youtube || '',
+    instagram: social.instagram || ''
   };
 };
 

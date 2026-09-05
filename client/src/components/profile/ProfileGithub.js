@@ -2,7 +2,6 @@ import React, { useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { getGithubRepos } from '../../actions/profile';
-import Spinner from '../layout/Spinner';
 
 const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
   useEffect(() => {
@@ -14,9 +13,7 @@ const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
       <h2 className="text-primary my-1">
         <i className="fab fa-github" /> Github Repos
       </h2>
-      {repos === null ? (
-        <Spinner />
-      ) : (
+      {repos.length > 0 ? (
         repos.map((repo) => (
           <div key={repo.id} className="repo bg-white p-1 my-1">
             <div>
@@ -44,6 +41,10 @@ const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
             </div>
           </div>
         ))
+      ) : (
+        <p className="my-1">
+          No public GitHub repositories to show for this user.
+        </p>
       )}
     </div>
   );

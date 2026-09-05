@@ -2,15 +2,14 @@ import React from 'react';
 import PropTypes from 'prop-types';
 
 const ProfileTop = ({
-  profile: {
-    status,
-    company,
-    location,
-    website,
-    social,
-    user: { name, avatar }
-  }
+  profile: { status, company, location, website, social, user }
 }) => {
+  // Guard against a missing user reference on a profile.
+  if (!user) {
+    return null;
+  }
+
+  const { name, avatar } = user;
   return (
     <div className="profile-top bg-primary p-2">
       <img className="round-img my-1" src={avatar} alt={name} />

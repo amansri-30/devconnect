@@ -4,7 +4,8 @@ import {
   CLEAR_PROFILE,
   UPDATE_PROFILE,
   GET_PROFILES,
-  GET_REPOS
+  GET_REPOS,
+  REPOS_ERROR
 } from '../actions/types';
 
 const initialState = {
@@ -48,6 +49,13 @@ export default function profileReducer(state = initialState, action) {
       return {
         ...state,
         repos: action.payload,
+        loading: false
+      };
+    case REPOS_ERROR:
+      // A GitHub fetch failure must NOT clobber the loaded profile.
+      return {
+        ...state,
+        repos: [],
         loading: false
       };
     default:

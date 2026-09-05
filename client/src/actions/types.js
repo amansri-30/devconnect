@@ -14,6 +14,7 @@ export const CLEAR_PROFILE = 'CLEAR_PROFILE';
 export const UPDATE_PROFILE = 'UPDATE_PROFILE';
 export const ACCOUNT_DELETED = 'ACCOUNT_DELETED';
 export const GET_REPOS = 'GET_REPOS';
+export const REPOS_ERROR = 'REPOS_ERROR';
 export const GET_POSTS = 'GET_POSTS';
 export const GET_SINGLE_POST = 'GET_SINGLE_POST';
 export const POST_ERROR = 'POST_ERROR';

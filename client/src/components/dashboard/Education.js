@@ -5,6 +5,12 @@ import Moment from 'react-moment';
 import { deleteEducation } from '../../actions/profile';
 
 const Education = ({ education, deleteEducation }) => {
+  const confirmDelete = (school, id) => {
+    if (window.confirm(`Are you sure you want to delete your education at ${school}?`)) {
+      deleteEducation(id);
+    }
+  };
+
   const educations = education.map((edu) => (
     <tr key={edu._id}>
       <td>{edu.school}</td>
@@ -19,7 +25,7 @@ const Education = ({ education, deleteEducation }) => {
       </td>
       <td>
         <button
-          onClick={() => deleteEducation(edu._id)}
+          onClick={() => confirmDelete(edu.school, edu._id)}
           className="btn btn-danger"
         >
           Delete

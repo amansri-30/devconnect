@@ -5,6 +5,12 @@ import Moment from 'react-moment';
 import { deleteExperience } from '../../actions/profile';
 
 const Experience = ({ experience, deleteExperience }) => {
+  const confirmDelete = (company, id) => {
+    if (window.confirm(`Are you sure you want to delete your experience at ${company}?`)) {
+      deleteExperience(id);
+    }
+  };
+
   const experiences = experience.map((exp) => (
     <tr key={exp._id}>
       <td>{exp.company}</td>
@@ -19,7 +25,7 @@ const Experience = ({ experience, deleteExperience }) => {
       </td>
       <td>
         <button
-          onClick={() => deleteExperience(exp._id)}
+          onClick={() => confirmDelete(exp.company, exp._id)}
           className="btn btn-danger"
         >
           Delete
