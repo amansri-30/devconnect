@@ -21,14 +21,19 @@ const getErrorPayload = (err) => ({
   status: (err.response && err.response.status) || 500
 });
 
-// Get posts
-export const getPosts = () => async dispatch => {
+// Get posts (paginated; page 1 replaces the list, later pages append).
+export const getPosts = (page = 1) => async (dispatch) => {
   try {
-    const res = await axios.get('/api/posts');
+    const res = await axios.get('/api/posts', { params: { page, limit: 8 } });
 
     dispatch({
       type: GET_POSTS,
-      payload: res.data
+      payload: {
+        posts: res.data,
+        page,
+        total: parseInt(res.headers['x-total-count'], 10) || 0,
+        perPage: parseInt(res.headers['x-per-page'], 10) || 8
+      }
     });
   } catch (err) {
     dispatch({

@@ -36,7 +36,9 @@ const AddEducation = ({ addEducation }) => {
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
-          addEducation(formData, navigate);
+          // If currently attending, never persist a "to" date.
+          const payload = current ? { ...formData, to: '' } : formData;
+          addEducation(payload, navigate);
         }}
       >
         <div className="form-group">

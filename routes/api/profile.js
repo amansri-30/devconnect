@@ -184,6 +184,12 @@ router.put(
     try {
       const profile = await Profile.findOne({ user: req.user.id });
 
+      if (!profile) {
+        return res
+          .status(404)
+          .json({ msg: 'No profile found. Create a profile first.' });
+      }
+
       profile.experience.unshift(newExp);
 
       await profile.save();
@@ -238,6 +244,12 @@ router.put(
     try {
       const profile = await Profile.findOne({ user: req.user.id });
 
+      if (!profile) {
+        return res
+          .status(404)
+          .json({ msg: 'No profile found. Create a profile first.' });
+      }
+
       profile.education.unshift(newEdu);
 
       await profile.save();
@@ -257,10 +269,18 @@ router.delete('/experience/:exp_id', auth, async (req, res) => {
   try {
     const profile = await Profile.findOne({ user: req.user.id });
 
+    if (!profile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
     // Get remove index
     const removeIndex = profile.experience
       .map((item) => item.id)
       .indexOf(req.params.exp_id);
+
+    if (removeIndex === -1) {
+      return res.status(400).json({ msg: 'Experience entry not found' });
+    }
 
     profile.experience.splice(removeIndex, 1);
 
@@ -280,9 +300,17 @@ router.delete('/education/:edu_id', auth, async (req, res) => {
   try {
     const profile = await Profile.findOne({ user: req.user.id });
 
+    if (!profile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
     const removeIndex = profile.education
       .map((item) => item.id)
       .indexOf(req.params.edu_id);
+
+    if (removeIndex === -1) {
+      return res.status(400).json({ msg: 'Education entry not found' });
+    }
 
     profile.education.splice(removeIndex, 1);
 

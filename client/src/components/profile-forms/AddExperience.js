@@ -36,7 +36,9 @@ const AddExperience = ({ addExperience }) => {
         className="form"
         onSubmit={(e) => {
           e.preventDefault();
-          addExperience(formData, navigate);
+          // If the position is the current one, never persist a "to" date.
+          const payload = current ? { ...formData, to: '' } : formData;
+          addExperience(payload, navigate);
         }}
       >
         <div className="form-group">

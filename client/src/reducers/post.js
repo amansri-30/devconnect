@@ -13,17 +13,34 @@ const initialState = {
   posts: [],
   post: null,
   loading: true,
-  error: {}
+  error: {},
+  page: 1,
+  total: 0,
+  perPage: 8
 };
 
 export default function postReducer(state = initialState, action) {
   switch (action.type) {
-    case GET_POSTS:
+    case GET_POSTS: {
+      const { posts, page, total, perPage } = action.payload;
+      // page 1 replaces the list; later pages append without duplicates.
+      const allPosts =
+        page === 1
+          ? posts
+          : Array.from(
+              new Map(
+                [...state.posts, ...posts].map((p) => [p._id, p])
+              ).values()
+            );
       return {
         ...state,
-        posts: action.payload,
+        posts: allPosts,
+        page,
+        total,
+        perPage,
         loading: false
       };
+    }
     case GET_SINGLE_POST:
       return {
         ...state,

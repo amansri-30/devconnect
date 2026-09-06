@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { getPosts } from '../../actions/post';
@@ -6,10 +6,20 @@ import Spinner from '../layout/Spinner';
 import PostItem from './PostItem';
 import PostForm from './PostForm';
 
-const Posts = ({ getPosts, post: { posts, loading } }) => {
+const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
+  const [moreLoading, setMoreLoading] = useState(false);
+
   useEffect(() => {
-    getPosts();
+    getPosts(1);
   }, [getPosts]);
+
+  const loadMore = async () => {
+    setMoreLoading(true);
+    await getPosts(page + 1);
+    setMoreLoading(false);
+  };
+
+  const hasMore = posts.length < total;
 
   return loading ? (
     <Spinner />
@@ -27,6 +37,17 @@ const Posts = ({ getPosts, post: { posts, loading } }) => {
           <p className="my-1">No posts yet. Be the first to start a discussion!</p>
         )}
       </div>
+      {hasMore && (
+        <div className="my-1" style={{ textAlign: 'center' }}>
+          <button
+            className="btn btn-light"
+            onClick={loadMore}
+            disabled={moreLoading}
+          >
+            {moreLoading ? 'Loading...' : 'Load More Posts'}
+          </button>
+        </div>
+      )}
     </Fragment>
   );
 };
