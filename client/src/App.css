@@ -298,6 +298,37 @@ button {
   background: var(--light-color);
 }
 
+/* Dashboard profile-completion meter */
+.completion-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.5rem;
+}
+
+.progress-bar {
+  height: 14px;
+  background: #e0e0e0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.progress-fill {
+  height: 100%;
+  background: var(--primary-color);
+  border-radius: 8px;
+  transition: width 0.4s ease;
+}
+
+.completion-hint {
+  color: var(--dark-color);
+  font-size: 0.9rem;
+}
+
+.completion-hint a {
+  text-decoration: underline;
+}
+
 /* Navbar */
 .navbar {
   display: flex;

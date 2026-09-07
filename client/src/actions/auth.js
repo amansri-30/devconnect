@@ -39,6 +39,9 @@ export const loadUser = () => async dispatch => {
       payload: res.data
     });
   } catch (err) {
+    // Token is invalid/expired: drop the persisted header so later requests
+    // don't carry a stale token.
+    setAuthToken(null);
     dispatch({
       type: AUTH_ERROR
     });
@@ -102,7 +105,8 @@ export const login = (email, password) => async dispatch => {
 };
 
 // Logout user and clear profile
-export const logout = () => dispatch => {
+export const logout = () => (dispatch) => {
+  setAuthToken(null);
   dispatch({ type: CLEAR_PROFILE });
   dispatch({ type: LOGOUT });
 };

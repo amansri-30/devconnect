@@ -10,6 +10,15 @@ const Profile = require('../../models/Profile');
 const User = require('../../models/User');
 const Post = require('../../models/Post');
 
+// Ensure a user-entered URL always has a protocol so it never turns into a
+// broken relative anchor on the profile page.
+const normalizeUrl = (value) => {
+  if (!value || typeof value !== 'string') return value;
+  const trimmed = value.trim();
+  if (!trimmed) return '';
+  return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
+};
+
 // @route   GET api/profile/test
 // @desc    Tests profile route
 // @access  Public
@@ -96,7 +105,8 @@ router.post(
     const profileFields = {};
     profileFields.user = req.user.id;
     if (req.body.company) profileFields.company = req.body.company;
-    if (req.body.website) profileFields.website = req.body.website;
+    if (req.body.website)
+      profileFields.website = normalizeUrl(req.body.website);
     if (req.body.location) profileFields.location = req.body.location;
     if (req.body.bio) profileFields.bio = req.body.bio;
     if (req.body.status) profileFields.status = req.body.status;
@@ -107,16 +117,22 @@ router.post(
     if (req.body.skills) {
       profileFields.skills = req.body.skills
         .split(',')
-        .map((skill) => skill.trim());
+        .map((skill) => skill.trim())
+        .filter(Boolean);
     }
 
     // social links
     profileFields.social = {};
-    if (req.body.youtube) profileFields.social.youtube = req.body.youtube;
-    if (req.body.twitter) profileFields.social.twitter = req.body.twitter;
-    if (req.body.facebook) profileFields.social.facebook = req.body.facebook;
-    if (req.body.linkedin) profileFields.social.linkedin = req.body.linkedin;
-    if (req.body.instagram) profileFields.social.instagram = req.body.instagram;
+    if (req.body.youtube)
+      profileFields.social.youtube = normalizeUrl(req.body.youtube);
+    if (req.body.twitter)
+      profileFields.social.twitter = normalizeUrl(req.body.twitter);
+    if (req.body.facebook)
+      profileFields.social.facebook = normalizeUrl(req.body.facebook);
+    if (req.body.linkedin)
+      profileFields.social.linkedin = normalizeUrl(req.body.linkedin);
+    if (req.body.instagram)
+      profileFields.social.instagram = normalizeUrl(req.body.instagram);
 
     try {
       let profile = await Profile.findOne({ user: req.user.id });
@@ -349,7 +365,7 @@ router.delete('/', auth, async (req, res) => {
 // @access  Public
 router.get('/github/:username', async (req, res) => {
   try {
-    const uri = `https://api.github.com/users/${req.params.username}/repos?per_page=5&sort=created:asc`;
+    const uri = `https://api.github.com/users/${req.params.username}/repos?per_page=5&sort=created&direction=desc`;
 
     const githubRes = await fetch(uri, {
       headers: {
