@@ -1,4 +1,5 @@
 import React, { Fragment } from 'react';
+import { Link } from 'react-router-dom';
 
 const NotFound = () => {
   return (
@@ -8,6 +9,9 @@ const NotFound = () => {
         Page Not Found
       </h1>
       <p className="large">Sorry, this page does not exist.</p>
+      <Link to="/" className="btn btn-primary my-1">
+        Go Home
+      </Link>
     </Fragment>
   );
 };

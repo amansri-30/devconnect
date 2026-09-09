@@ -17,13 +17,15 @@ const ProfileEducation = ({
         {degree}
       </p>
       <p>
-        <strong>Field fo Study: </strong>
+        <strong>Field of Study: </strong>
         {fieldofstudy}
       </p>
-      <p>
-        <strong>Description: </strong>
-        {description}
-      </p>
+      {description && (
+        <p>
+          <strong>Description: </strong>
+          {description}
+        </p>
+      )}
     </div>
   );
 };
