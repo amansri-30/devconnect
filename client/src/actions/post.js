@@ -56,6 +56,7 @@ export const addLike = postId => async dispatch => {
       }
     });
   } catch (err) {
+    dispatch(setAlert('Could not like post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
@@ -76,6 +77,7 @@ export const removeLike = postId => async dispatch => {
       }
     });
   } catch (err) {
+    dispatch(setAlert('Could not unlike post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
@@ -120,6 +122,7 @@ export const addPost = formData => async dispatch => {
 
     dispatch(setAlert('Post created', 'success'));
   } catch (err) {
+    dispatch(setAlert('Could not create post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
@@ -166,6 +169,7 @@ export const addComment = (postId, formData) => async dispatch => {
 
     dispatch(setAlert('Comment added', 'success'));
   } catch (err) {
+    dispatch(setAlert('Could not add comment', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

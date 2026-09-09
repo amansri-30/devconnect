@@ -3,8 +3,10 @@ import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { logout } from '../../actions/auth';
+import useDarkMode from '../../utils/useDarkMode';
 
 const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
+  const [dark, toggleDark] = useDarkMode();
   const authLinks = (
     <ul>
       <li>
@@ -49,6 +51,15 @@ const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
           <i className="fas fa-code" /> DevConnect
         </Link>
       </h1>
+      <button
+        type="button"
+        className="theme-toggle"
+        onClick={toggleDark}
+        title={dark ? 'Switch to light mode' : 'Switch to dark mode'}
+        aria-label="Toggle dark mode"
+      >
+        {dark ? <i className="fas fa-sun" /> : <i className="fas fa-moon" />}
+      </button>
       {!loading && (
         <Fragment>{isAuthenticated ? authLinks : guestLinks}</Fragment>
       )}

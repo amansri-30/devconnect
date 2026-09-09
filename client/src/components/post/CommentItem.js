@@ -11,6 +11,12 @@ const CommentItem = ({
   auth,
   deleteComment
 }) => {
+  const removeComment = () => {
+    if (window.confirm('Are you sure you want to delete this comment?')) {
+      deleteComment(postId, _id);
+    }
+  };
+
   return (
     <div className="post bg-white p-1 my-1">
       <div>
@@ -26,7 +32,7 @@ const CommentItem = ({
         </p>
         {!auth.loading && user === auth.user._id && (
           <button
-            onClick={(e) => deleteComment(postId, _id)}
+            onClick={removeComment}
             type="button"
             className="btn btn-danger"
           >

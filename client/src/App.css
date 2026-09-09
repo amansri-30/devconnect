@@ -343,6 +343,21 @@ button {
   opacity: 0.9;
 }
 
+.theme-toggle {
+  background: transparent;
+  border: 1px solid var(--primary-color);
+  color: #fff;
+  border-radius: 4px;
+  padding: 0.35rem 0.6rem;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+}
+
+.theme-toggle:hover {
+  background: var(--primary-color);
+}
+
 .navbar ul {
   display: flex;
 }
@@ -617,6 +632,96 @@ button {
   }
   .post a,
   .post button {
+    padding: 0.3rem 0.4rem;
+  }
+}
+
+/* Dark Mode (applied via data-theme="dark" on <html>) */
+[data-theme='dark'] {
+  --primary-color: #3fc1d8;
+  --dark-color: #1f2428;
+  --light-color: #2a3138;
+}
+
+[data-theme='dark'] body {
+  background-color: #12161a;
+  color: #e6e6e6;
+}
+
+[data-theme='dark'] .btn-light,
+[data-theme='dark'] .bg-light,
+[data-theme='dark'] .badge-light,
+[data-theme='dark'] .alert-light,
+[data-theme='dark'] .alert,
+[data-theme='dark'] .btn-white,
+[data-theme='dark'] .bg-white,
+[data-theme='dark'] .badge-white,
+[data-theme='dark'] .alert-white {
+  background: #1f2428;
+  color: #e6e6e6;
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .search-bar input,
+[data-theme='dark'] .form input[type='text'],
+[data-theme='dark'] .form input[type='email'],
+[data-theme='dark'] .form input[type='password'],
+[data-theme='dark'] .form input[type='date'],
+[data-theme='dark'] .form select,
+[data-theme='dark'] .form textarea {
+  background: #1f2428;
+  color: #e6e6e6;
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .form input::placeholder,
+[data-theme='dark'] .form textarea::placeholder,
+[data-theme='dark'] .search-bar input::placeholder {
+  color: #9aa4ad;
+}
+
+[data-theme='dark'] .profile-exp,
+[data-theme='dark'] .profile-edu,
+[data-theme='dark'] .post,
+[data-theme='dark'] .repo,
+[data-theme='dark'] .profile,
+[data-theme='dark'] .completion-card,
+[data-theme='dark'] .table th {
+  background: #1f2428;
+  color: #e6e6e6;
+}
+
+[data-theme='dark'] .post .post-date,
+[data-theme='dark'] .text-dark {
+  color: #cfd6db;
+}
+
+[data-theme='dark'] .profile-exp > div,
+[data-theme='dark'] .profile-edu > div {
+  border-bottom-color: #3a424a;
+}
+
+[data-theme='dark'] h1,
+[data-theme='dark'] h2,
+[data-theme='dark'] h3,
+[data-theme='dark'] h4 {
+  color: #f0f0f0;
+}
+
+[data-theme='dark'] .navbar {
+  background: #1a1f24;
+}
+
+[data-theme='dark'] .landing-inner .lead {
+  color: #e6e6e6;
+}
+
+@media (max-width: 700px) {
+  [data-theme='dark'] .post {
+    grid-template-columns: 1fr;
+  }
+  [data-theme='dark'] .post a,
+  [data-theme='dark'] .post button {
     padding: 0.3rem 0.4rem;
   }
 }
