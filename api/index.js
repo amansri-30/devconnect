@@ -21,10 +21,7 @@ async function connectDB() {
     return cachedDb;
   }
 
-  cachedDb = await mongoose.connect(MONGO_URI, {
-    useNewUrlParser: true,
-    useUnifiedTopology: true
-  });
+  cachedDb = await mongoose.connect(MONGO_URI);
 
   return cachedDb;
 }

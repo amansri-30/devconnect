@@ -519,6 +519,12 @@ button {
   padding: 0.5rem;
 }
 
+.char-counter {
+  text-align: right;
+  font-size: 0.8rem;
+  color: #888;
+}
+
 .post {
   display: grid;
   grid-template-columns: 1fr 4fr;

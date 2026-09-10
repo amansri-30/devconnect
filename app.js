@@ -70,6 +70,10 @@ app.get('/api/health', (req, res) => {
   res.status(state.status === 'ok' ? 200 : 503).json(state);
 });
 
+// API 404 handler - mounted BEFORE the SPA catch-all so unknown /api routes
+// return JSON instead of the frontend's index.html.
+app.use('/api', notFound);
+
 // Serve static assets if in production (local `npm start` builds)
 if (process.env.NODE_ENV === 'production') {
   // Set static folder
@@ -79,9 +83,6 @@ if (process.env.NODE_ENV === 'production') {
     res.sendFile(path.resolve(__dirname, 'client', 'build', 'index.html'));
   });
 }
-
-// API 404 handler
-app.use('/api', notFound);
 
 // Central error handler
 app.use(errorHandler);

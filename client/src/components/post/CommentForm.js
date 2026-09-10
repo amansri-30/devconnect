@@ -5,6 +5,7 @@ import { addComment } from '../../actions/post';
 
 const CommentForm = ({ postId, addComment }) => {
   const [text, setText] = useState('');
+  const MAX_LENGTH = 1000;
 
   return (
     <div className="post-form">
@@ -15,8 +16,10 @@ const CommentForm = ({ postId, addComment }) => {
         className="form my-1"
         onSubmit={(e) => {
           e.preventDefault();
-          addComment(postId, { text });
-          setText('');
+          if (text.trim()) {
+            addComment(postId, { text });
+            setText('');
+          }
         }}
       >
         <textarea
@@ -26,8 +29,14 @@ const CommentForm = ({ postId, addComment }) => {
           cols="30"
           rows="5"
           placeholder="Write a comment"
+          maxLength={MAX_LENGTH}
           required
         />
+        <div className="char-counter">
+          <span className={`${text.length >= MAX_LENGTH ? 'text-danger' : ''}`}>
+            {text.length}/{MAX_LENGTH}
+          </span>
+        </div>
         <input type="submit" className="btn btn-dark my-1" value="Submit" />
       </form>
     </div>
