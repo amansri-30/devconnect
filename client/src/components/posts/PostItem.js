@@ -1,4 +1,4 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useState } from 'react';
 import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
@@ -13,6 +13,8 @@ const PostItem = ({
   post: { _id, text, name, avatar, user, likes, comments, date },
   showActions
 }) => {
+  const [copied, setCopied] = useState(false);
+
   // Whether the current user has already liked this post.
   const likedByMe =
     !auth.loading &&
@@ -22,6 +24,29 @@ const PostItem = ({
   const removePost = (e) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
       deletePost(_id);
+    }
+  };
+
+  const copyLink = async () => {
+    const url = `${window.location.origin}/post/${_id}`;
+    try {
+      if (navigator.clipboard && window.isSecureContext) {
+        await navigator.clipboard.writeText(url);
+      } else {
+        // Fallback for older browsers / non-secure contexts.
+        const el = document.createElement('textarea');
+        el.value = url;
+        el.style.position = 'fixed';
+        el.style.opacity = '0';
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+      }
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    } catch (err) {
+      window.prompt('Copy this link:', url);
     }
   };
 
@@ -54,6 +79,15 @@ const PostItem = ({
                 <span className="comment-count">{comments.length}</span>
               )}
             </Link>
+            <button
+              onClick={copyLink}
+              type="button"
+              className="btn btn-light"
+              title="Copy link to this post"
+            >
+              <i className="fas fa-share-alt" />{' '}
+              {copied ? <span>Copied!</span> : <span>Share</span>}
+            </button>
             {!auth.loading && user === auth.user._id && (
               <button onClick={removePost} type="button" className="btn btn-danger">
                 <i className="fas fa-times" />

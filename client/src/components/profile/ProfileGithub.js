@@ -13,6 +13,14 @@ const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
       <h2 className="text-primary my-1">
         <i className="fab fa-github" /> Github Repos
       </h2>
+      <a
+        href={`https://github.com/${githubusername}`}
+        target="_blank"
+        rel="noopener noreferrer"
+        className="text-primary"
+      >
+        <i className="fab fa-github" /> View @{githubusername} on GitHub →
+      </a>
       {repos.length > 0 ? (
         repos.map((repo) => (
           <div key={repo.id} className="repo bg-white p-1 my-1">
