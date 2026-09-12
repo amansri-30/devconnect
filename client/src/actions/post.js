@@ -7,6 +7,7 @@ import {
   DELETE_POST,
   ADD_POST,
   GET_SINGLE_POST,
+  UPDATE_POST,
   ADD_COMMENT,
   REMOVE_COMMENT
 } from './types';
@@ -140,6 +141,32 @@ export const getSinglePost = postId => async dispatch => {
       payload: res.data
     });
   } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Edit a post's text (owner only)
+export const editPost = (postId, formData) => async dispatch => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  try {
+    const res = await axios.put(`/api/posts/${postId}`, formData, config);
+
+    dispatch({
+      type: UPDATE_POST,
+      payload: res.data
+    });
+
+    dispatch(setAlert('Post updated', 'success'));
+  } catch (err) {
+    dispatch(setAlert('Could not update post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

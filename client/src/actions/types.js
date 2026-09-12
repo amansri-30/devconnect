@@ -17,6 +17,7 @@ export const GET_REPOS = 'GET_REPOS';
 export const REPOS_ERROR = 'REPOS_ERROR';
 export const GET_POSTS = 'GET_POSTS';
 export const GET_SINGLE_POST = 'GET_SINGLE_POST';
+export const UPDATE_POST = 'UPDATE_POST';
 export const POST_ERROR = 'POST_ERROR';
 export const UPDATE_LIKES = 'UPDATE_LIKES';
 export const DELETE_POST = 'DELETE_POST';

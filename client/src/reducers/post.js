@@ -5,6 +5,7 @@ import {
   DELETE_POST,
   ADD_POST,
   GET_SINGLE_POST,
+  UPDATE_POST,
   ADD_COMMENT,
   REMOVE_COMMENT
 } from '../actions/types';
@@ -51,6 +52,15 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         posts: [action.payload, ...state.posts],
+        loading: false
+      };
+    case UPDATE_POST:
+      return {
+        ...state,
+        post: action.payload,
+        posts: state.posts.map((p) =>
+          p._id === action.payload._id ? action.payload : p
+        ),
         loading: false
       };
     case POST_ERROR:
