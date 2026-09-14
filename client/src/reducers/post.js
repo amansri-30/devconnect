@@ -52,6 +52,7 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         posts: [action.payload, ...state.posts],
+        total: state.total + 1,
         loading: false
       };
     case UPDATE_POST:
