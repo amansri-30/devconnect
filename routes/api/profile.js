@@ -278,6 +278,135 @@ router.put(
   }
 );
 
+// @route   PUT api/profile/experience/:exp_id
+// @desc    Edit an experience entry
+// @access  Private
+router.put(
+  '/experience/:exp_id',
+  [
+    auth,
+    [
+      check('title', 'Title is required').not().isEmpty(),
+      check('company', 'Company is required').not().isEmpty(),
+      check('from', 'From date is required').not().isEmpty()
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const profile = await Profile.findOne({ user: req.user.id });
+
+      if (!profile) {
+        return res
+          .status(404)
+          .json({ msg: 'No profile found. Create a profile first.' });
+      }
+
+      const targetIndex = profile.experience
+        .map((item) => item.id)
+        .indexOf(req.params.exp_id);
+
+      if (targetIndex === -1) {
+        return res.status(400).json({ msg: 'Experience entry not found' });
+      }
+
+      const { title, company, location, current, description } = req.body;
+
+      const to =
+        req.body.to && req.body.to !== '' && !current
+          ? new moment.utc(req.body.to)
+          : null;
+
+      profile.experience[targetIndex] = {
+        ...profile.experience[targetIndex].toObject(),
+        title,
+        company,
+        location,
+        from: new moment.utc(req.body.from),
+        to,
+        current: !!current,
+        description
+      };
+
+      await profile.save();
+
+      return res.json(profile);
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).send('Server Error');
+    }
+  }
+);
+
+// @route   PUT api/profile/education/:edu_id
+// @desc    Edit an education entry
+// @access  Private
+router.put(
+  '/education/:edu_id',
+  [
+    auth,
+    [
+      check('school', 'School is required').not().isEmpty(),
+      check('degree', 'Degree is required').not().isEmpty(),
+      check('fieldofstudy', 'Field of study is required').not().isEmpty(),
+      check('from', 'From date is required').not().isEmpty()
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const profile = await Profile.findOne({ user: req.user.id });
+
+      if (!profile) {
+        return res
+          .status(404)
+          .json({ msg: 'No profile found. Create a profile first.' });
+      }
+
+      const targetIndex = profile.education
+        .map((item) => item.id)
+        .indexOf(req.params.edu_id);
+
+      if (targetIndex === -1) {
+        return res.status(400).json({ msg: 'Education entry not found' });
+      }
+
+      const { school, degree, fieldofstudy, current, description } = req.body;
+
+      const to =
+        req.body.to && req.body.to !== '' && !current
+          ? new moment.utc(req.body.to)
+          : null;
+
+      profile.education[targetIndex] = {
+        ...profile.education[targetIndex].toObject(),
+        school,
+        degree,
+        fieldofstudy,
+        from: new moment.utc(req.body.from),
+        to,
+        current: !!current,
+        description
+      };
+
+      await profile.save();
+
+      return res.json(profile);
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).send('Server Error');
+    }
+  }
+);
+
 // @route   DELETE api/profile/experience/:exp_id
 // @desc    Remove experience from profile
 // @access  Private

@@ -16,14 +16,14 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/kirbym/devconnect.git"
+    "url": "git+https://github.com/amansri-30/devconnect.git"
   },
   "author": "Michael Kirby",
   "license": "ISC",
   "bugs": {
-    "url": "https://github.com/kirbym/devconnect/issues"
+    "url": "https://github.com/amansri-30/devconnect/issues"
   },
-  "homepage": "https://github.com/kirbym/devconnect#readme",
+  "homepage": "https://github.com/amansri-30/devconnect#readme",
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "concurrently": "^6.5.1",
