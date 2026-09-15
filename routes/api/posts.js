@@ -56,7 +56,7 @@ router.post(
 );
 
 // @route   GET api/posts
-// @desc    Get posts (paginated, newest first)
+// @desc    Get posts (paginated, newest or most liked first)
 // @access  Private
 router.get('/', auth, async (req, res) => {
   try {
@@ -68,8 +68,36 @@ router.get('/', auth, async (req, res) => {
     );
     const skip = (page - 1) * limit;
 
+    const sort = req.query.sort === 'likes' ? 'likes' : 'recent';
+    const sortSpec = sort === 'likes' ? { likesCount: -1, date: -1 } : { date: -1 };
+
+    const match = sort === 'likes' ? { likesCount: { $gt: 0 } } : {};
+
+    // For like-based sorting we need a sortable field; use an aggregation
+    // that projects a stable count while keeping the response shape intact.
+    if (sort === 'likes') {
+      const [docs, total] = await Promise.all([
+        Post.aggregate([
+          { $match: match },
+          { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
+          { $sort: sortSpec },
+          { $skip: skip },
+          { $limit: limit }
+        ]),
+        Post.countDocuments(match)
+      ]);
+
+      res.set({
+        'X-Total-Count': String(total),
+        'X-Page': String(page),
+        'X-Per-Page': String(limit)
+      });
+
+      return res.json(docs);
+    }
+
     const docs = await Post.find()
-      .sort({ date: -1 })
+      .sort(sortSpec)
       .skip(skip)
       .limit(limit);
 

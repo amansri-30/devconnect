@@ -17,13 +17,14 @@ const initialState = {
   error: {},
   page: 1,
   total: 0,
-  perPage: 8
+  perPage: 8,
+  sort: 'recent'
 };
 
 export default function postReducer(state = initialState, action) {
   switch (action.type) {
     case GET_POSTS: {
-      const { posts, page, total, perPage } = action.payload;
+      const { posts, page, total, perPage, sort } = action.payload;
       // page 1 replaces the list; later pages append without duplicates.
       const allPosts =
         page === 1
@@ -39,6 +40,7 @@ export default function postReducer(state = initialState, action) {
         page,
         total,
         perPage,
+        sort: sort || state.sort,
         loading: false
       };
     }
@@ -78,6 +80,10 @@ export default function postReducer(state = initialState, action) {
             ? { ...post, likes: action.payload.likes }
             : post
         ),
+        post:
+          state.post && state.post._id === action.payload.postId
+            ? { ...state.post, likes: action.payload.likes }
+            : state.post,
         loading: false
       };
     case DELETE_POST:

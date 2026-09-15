@@ -23,9 +23,13 @@ const getErrorPayload = (err) => ({
 });
 
 // Get posts (paginated; page 1 replaces the list, later pages append).
-export const getPosts = (page = 1) => async (dispatch) => {
+// sort may be 'recent' (default) or 'likes' (most liked first).
+export const getPosts = (page = 1, sort = 'recent') => async (dispatch) => {
   try {
-    const res = await axios.get('/api/posts', { params: { page, limit: 8 } });
+    const params = { page, limit: 8 };
+    if (sort === 'likes') params.sort = 'likes';
+
+    const res = await axios.get('/api/posts', { params });
 
     dispatch({
       type: GET_POSTS,
@@ -33,7 +37,8 @@ export const getPosts = (page = 1) => async (dispatch) => {
         posts: res.data,
         page,
         total: parseInt(res.headers['x-total-count'], 10) || 0,
-        perPage: parseInt(res.headers['x-per-page'], 10) || 8
+        perPage: parseInt(res.headers['x-per-page'], 10) || 8,
+        sort
       }
     });
   } catch (err) {

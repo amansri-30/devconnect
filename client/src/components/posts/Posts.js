@@ -9,15 +9,22 @@ import PostForm from './PostForm';
 const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
   const [moreLoading, setMoreLoading] = useState(false);
   const [query, setQuery] = useState('');
+  const [sort, setSort] = useState('recent');
 
   useEffect(() => {
-    getPosts(1);
-  }, [getPosts]);
+    getPosts(1, sort);
+  }, [getPosts, sort]);
 
   const loadMore = async () => {
     setMoreLoading(true);
-    await getPosts(page + 1);
+    await getPosts(page + 1, sort);
     setMoreLoading(false);
+  };
+
+  const onSortChange = (e) => {
+    const value = e.target.value;
+    setSort(value);
+    setQuery('');
   };
 
   // Array of loaded posts (used for the "Load More" hint).
@@ -44,13 +51,25 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
         <i className="fas fa-user" /> Welcome to the community
       </p>
       <PostForm />
-      <div className="search-bar my-1">
-        <input
-          type="text"
-          placeholder="Search posts by text or author..."
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-        />
+      <div className="my-1" style={{ display: 'flex', alignItems: 'center' }}>
+        <div className="search-bar" style={{ flex: 1 }}>
+          <input
+            type="text"
+            placeholder="Search posts by text or author..."
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+          />
+        </div>
+        <select
+          className="btn btn-light my-1"
+          style={{ marginLeft: '1rem' }}
+          value={sort}
+          onChange={onSortChange}
+          aria-label="Sort posts"
+        >
+          <option value="recent">Newest First</option>
+          <option value="likes">Most Liked</option>
+        </select>
       </div>
       <div className="posts">
         {filtered.length > 0 ? (
