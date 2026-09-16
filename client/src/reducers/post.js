@@ -7,6 +7,7 @@ import {
   GET_SINGLE_POST,
   UPDATE_POST,
   ADD_COMMENT,
+  UPDATE_COMMENT,
   REMOVE_COMMENT
 } from '../actions/types';
 
@@ -93,6 +94,12 @@ export default function postReducer(state = initialState, action) {
         loading: false
       };
     case ADD_COMMENT:
+      return {
+        ...state,
+        post: { ...state.post, comments: action.payload },
+        loading: false
+      };
+    case UPDATE_COMMENT:
       return {
         ...state,
         post: { ...state.post, comments: action.payload },

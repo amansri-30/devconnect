@@ -9,6 +9,7 @@ import {
   GET_SINGLE_POST,
   UPDATE_POST,
   ADD_COMMENT,
+  UPDATE_COMMENT,
   REMOVE_COMMENT
 } from './types';
 
@@ -202,6 +203,36 @@ export const addComment = (postId, formData) => async dispatch => {
     dispatch(setAlert('Comment added', 'success'));
   } catch (err) {
     dispatch(setAlert('Could not add comment', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Edit a comment's text (owner only)
+export const editComment = (postId, commentId, formData) => async dispatch => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  try {
+    const res = await axios.put(
+      `/api/posts/comment/${postId}/${commentId}`,
+      formData,
+      config
+    );
+
+    dispatch({
+      type: UPDATE_COMMENT,
+      payload: res.data
+    });
+
+    dispatch(setAlert('Comment updated', 'success'));
+  } catch (err) {
+    dispatch(setAlert('Could not update comment', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

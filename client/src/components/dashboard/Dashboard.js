@@ -93,7 +93,18 @@ const Dashboard = ({
           <Experience experience={profile.experience || []} />
           <Education education={profile.education || []} />
           <div className="my-2">
-            <button className="btn btn-danger" onClick={() => deleteAccount()}>
+            <button
+              className="btn btn-danger"
+              onClick={() => {
+                if (
+                  window.confirm(
+                    'Are you sure you want to permanently delete your account and all of your data?'
+                  )
+                ) {
+                  deleteAccount();
+                }
+              }}
+            >
               <i className="fas fa-user-minus" /> Delete My Account
             </button>
           </div>

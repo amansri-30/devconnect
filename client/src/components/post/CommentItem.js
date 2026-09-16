@@ -1,16 +1,41 @@
-import React from 'react';
+import React, { Fragment, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
-import { deleteComment } from '../../actions/post';
+import { deleteComment, editComment } from '../../actions/post';
 
 const CommentItem = ({
   postId,
   comment: { _id, text, name, avatar, user, date },
   auth,
-  deleteComment
+  deleteComment,
+  editComment
 }) => {
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState('');
+
+  const isOwner =
+    !auth.loading && auth.user && user === auth.user._id;
+
+  const startEdit = () => {
+    setBody(text);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setBody('');
+    setEditing(false);
+  };
+
+  const submitEdit = (e) => {
+    e.preventDefault();
+    if (body.trim()) {
+      editComment(postId, _id, { text: body });
+      setEditing(false);
+    }
+  };
+
   const removeComment = () => {
     if (window.confirm('Are you sure you want to delete this comment?')) {
       deleteComment(postId, _id);
@@ -26,18 +51,57 @@ const CommentItem = ({
         </Link>
       </div>
       <div>
-        <p className="my-1">{text}</p>
-        <p className="post-date">
-          Posted <Moment fromNow>{date}</Moment>
-        </p>
-        {!auth.loading && user === auth.user._id && (
-          <button
-            onClick={removeComment}
-            type="button"
-            className="btn btn-danger"
-          >
-            <i className="fas fa-times" />
-          </button>
+        {editing ? (
+          <form className="form" onSubmit={submitEdit}>
+            <textarea
+              name="text"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              cols="30"
+              rows="3"
+              maxLength="1000"
+              required
+            />
+            <input
+              type="submit"
+              className="btn btn-dark my-1"
+              value="Save Changes"
+            />
+            <button
+              type="button"
+              className="btn btn-light my-1"
+              onClick={cancelEdit}
+            >
+              Cancel
+            </button>
+          </form>
+        ) : (
+          <Fragment>
+            <p className="my-1">{text}</p>
+            <p className="post-date">
+              Posted <Moment fromNow>{date}</Moment>
+            </p>
+          </Fragment>
+        )}
+        {isOwner && (
+          <Fragment>
+            {!editing && (
+              <button
+                onClick={startEdit}
+                type="button"
+                className="btn btn-light"
+              >
+                <i className="fas fa-edit" /> Edit
+              </button>
+            )}
+            <button
+              onClick={removeComment}
+              type="button"
+              className="btn btn-danger"
+            >
+              <i className="fas fa-times" />
+            </button>
+          </Fragment>
         )}
       </div>
     </div>
@@ -48,11 +112,14 @@ CommentItem.propTypes = {
   postId: PropTypes.string.isRequired,
   comment: PropTypes.object.isRequired,
   auth: PropTypes.object.isRequired,
-  deleteComment: PropTypes.func.isRequired
+  deleteComment: PropTypes.func.isRequired,
+  editComment: PropTypes.func.isRequired
 };
 
 const mapStateToProps = (state) => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { deleteComment })(CommentItem);
+export default connect(mapStateToProps, { deleteComment, editComment })(
+  CommentItem
+);

@@ -71,20 +71,19 @@ router.get('/', auth, async (req, res) => {
     const sort = req.query.sort === 'likes' ? 'likes' : 'recent';
     const sortSpec = sort === 'likes' ? { likesCount: -1, date: -1 } : { date: -1 };
 
-    const match = sort === 'likes' ? { likesCount: { $gt: 0 } } : {};
-
     // For like-based sorting we need a sortable field; use an aggregation
     // that projects a stable count while keeping the response shape intact.
+    // Every post is included (like count included), so switching between
+    // "Newest" and "Most Liked" never hides or drops posts from the feed.
     if (sort === 'likes') {
       const [docs, total] = await Promise.all([
         Post.aggregate([
-          { $match: match },
           { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
           { $sort: sortSpec },
           { $skip: skip },
           { $limit: limit }
         ]),
-        Post.countDocuments(match)
+        Post.countDocuments()
       ]);
 
       res.set({
@@ -387,5 +386,64 @@ router.delete('/comment/:post_id/:comment_id', auth, async (req, res) => {
     return res.status(500).send('Server Error');
   }
 });
+
+// @route   PUT api/posts/comment/:post_id/:comment_id
+// @desc    Edit a comment's text (owner only)
+// @access  Private
+router.put(
+  '/comment/:post_id/:comment_id',
+  [
+    auth,
+    [
+      check('text', 'Text is required')
+        .not()
+        .isEmpty()
+        .trim()
+        .isLength({ max: 1000 })
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const post = await Post.findById(req.params.post_id);
+
+      if (!post) {
+        return res.status(404).json({ msg: 'No post found' });
+      }
+
+      // Pull out comment
+      const comment = post.comments.find(
+        (item) => item.id.toString() === req.params.comment_id
+      );
+
+      // Make sure comment exists
+      if (!comment) {
+        return res.status(400).json({ msg: 'Comment does not exist' });
+      }
+
+      // Check the user owns the comment they want to edit
+      if (comment.user.toString() !== req.user.id) {
+        return res.status(401).json({ msg: 'User not authorized' });
+      }
+
+      comment.text = sanitizeHtml(req.body.text);
+      await post.save();
+
+      return res.json(post.comments);
+    } catch (err) {
+      console.error(err.message);
+
+      if (err.kind === 'ObjectId') {
+        return res.status(404).json({ msg: 'No post found' });
+      }
+
+      return res.status(500).send('Server Error');
+    }
+  }
+);
 
 module.exports = router;
