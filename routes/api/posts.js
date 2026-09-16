@@ -14,6 +14,18 @@ const User = require('../../models/User');
 // @access  Public
 router.get('/test', (req, res) => res.json({ message: 'Posts works' }));
 
+// Shape a raw post doc into the public response: hide the full savedBy list
+// and add a boolean `saved` flag relative to the requesting user.
+const shapePost = (doc, userId) => {
+  const plain =
+    typeof doc.toObject === 'function' ? doc.toObject() : doc;
+  const savedBy = Array.isArray(plain.savedBy)
+    ? plain.savedBy.map((id) => id.toString())
+    : [];
+  const { savedBy: _drop, ...rest } = plain;
+  return { ...rest, saved: savedBy.includes(userId) };
+};
+
 // @route   POST api/posts
 // @desc    Create a post
 // @access  Private
@@ -92,7 +104,7 @@ router.get('/', auth, async (req, res) => {
         'X-Per-Page': String(limit)
       });
 
-      return res.json(docs);
+      return res.json(docs.map((doc) => shapePost(doc, req.user.id)));
     }
 
     const docs = await Post.find()
@@ -110,7 +122,20 @@ router.get('/', auth, async (req, res) => {
       'X-Per-Page': String(limit)
     });
 
-    return res.json(docs);
+    return res.json(docs.map((doc) => shapePost(doc, req.user.id)));
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/posts/saved
+// @desc    Get the current user's saved posts (must precede /:id)
+// @access  Private
+router.get('/saved', auth, async (req, res) => {
+  try {
+    const posts = await Post.find({ savedBy: req.user.id }).sort({ date: -1 });
+    return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -128,7 +153,7 @@ router.get('/:id', auth, async (req, res) => {
       return res.status(404).json({ msg: 'No post found' });
     }
 
-    return res.json(post);
+    return res.json(shapePost(post, req.user.id));
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
@@ -214,6 +239,43 @@ router.put(
     }
   }
 );
+
+// @route   PUT api/posts/save/:id
+// @desc    Save or unsave a post for the current user
+// @access  Private
+router.put('/save/:id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const alreadySaved = post.savedBy.some(
+      (id) => id.toString() === req.user.id
+    );
+
+    if (alreadySaved) {
+      post.savedBy = post.savedBy.filter(
+        (id) => id.toString() !== req.user.id
+      );
+    } else {
+      post.savedBy.push(req.user.id);
+    }
+
+    await post.save();
+
+    return res.json({ saved: !alreadySaved });
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
 
 // @route   PUT api/posts/like/:id
 // @desc    Like a post

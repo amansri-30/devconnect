@@ -6,6 +6,9 @@ import {
   ADD_POST,
   GET_SINGLE_POST,
   UPDATE_POST,
+  SAVE_POST,
+  GET_SAVED_POSTS,
+  DELETE_SAVED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -14,6 +17,7 @@ import {
 const initialState = {
   posts: [],
   post: null,
+  savedPosts: [],
   loading: true,
   error: {},
   page: 1,
@@ -49,6 +53,37 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         post: action.payload,
+        loading: false
+      };
+    case GET_SAVED_POSTS:
+      return {
+        ...state,
+        savedPosts: action.payload,
+        loading: false
+      };
+    case SAVE_POST:
+      return {
+        ...state,
+        posts: state.posts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, saved: action.payload.saved }
+            : p
+        ),
+        post:
+          state.post && state.post._id === action.payload.postId
+            ? { ...state.post, saved: action.payload.saved }
+            : state.post,
+        savedPosts: state.savedPosts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, saved: action.payload.saved }
+            : p
+        ),
+        loading: false
+      };
+    case DELETE_SAVED_POST:
+      return {
+        ...state,
+        savedPosts: state.savedPosts.filter((p) => p._id !== action.payload),
         loading: false
       };
     case ADD_POST:

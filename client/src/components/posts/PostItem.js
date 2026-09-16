@@ -3,14 +3,15 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { connect } from 'react-redux';
-import { addLike, removeLike, deletePost } from '../../actions/post';
+import { addLike, removeLike, deletePost, toggleSavePost } from '../../actions/post';
 
 const PostItem = ({
   addLike,
   removeLike,
   deletePost,
+  toggleSavePost,
   auth,
-  post: { _id, text, name, avatar, user, likes, comments, date },
+  post: { _id, text, name, avatar, user, likes, comments, date, saved },
   showActions
 }) => {
   const [copied, setCopied] = useState(false);
@@ -88,6 +89,20 @@ const PostItem = ({
               <i className="fas fa-share-alt" />{' '}
               {copied ? <span>Copied!</span> : <span>Share</span>}
             </button>
+            <button
+              onClick={() => toggleSavePost(_id)}
+              type="button"
+              className={`btn btn-light ${saved ? 'btn-primary' : ''}`}
+              title={saved ? 'Remove from saved posts' : 'Save this post'}
+            >
+              <i
+                className={`${saved ? 'fas' : 'far'} fa-bookmark`}
+              />
+              <span className="hide-sm">
+                {' '}
+                {saved ? 'Saved' : 'Save'}
+              </span>
+            </button>
             {!auth.loading && user === auth.user._id && (
               <button onClick={removePost} type="button" className="btn btn-danger">
                 <i className="fas fa-times" />
@@ -110,6 +125,7 @@ PostItem.propTypes = {
   addLike: PropTypes.func.isRequired,
   removeLike: PropTypes.func.isRequired,
   deletePost: PropTypes.func.isRequired,
+  toggleSavePost: PropTypes.func.isRequired,
   showActions: PropTypes.bool.isRequired
 };
 
@@ -117,6 +133,9 @@ const mapStateToProps = (state) => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { addLike, removeLike, deletePost })(
-  PostItem
-);
+export default connect(mapStateToProps, {
+  addLike,
+  removeLike,
+  deletePost,
+  toggleSavePost
+})(PostItem);

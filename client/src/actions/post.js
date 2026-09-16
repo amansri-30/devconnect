@@ -8,6 +8,9 @@ import {
   ADD_POST,
   GET_SINGLE_POST,
   UPDATE_POST,
+  SAVE_POST,
+  GET_SAVED_POSTS,
+  DELETE_SAVED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -173,6 +176,63 @@ export const editPost = (postId, formData) => async dispatch => {
     dispatch(setAlert('Post updated', 'success'));
   } catch (err) {
     dispatch(setAlert('Could not update post', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the current user's saved posts
+export const getSavedPosts = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts/saved');
+
+    dispatch({
+      type: GET_SAVED_POSTS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Save or unsave a post for the current user
+export const toggleSavePost = (postId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/save/${postId}`);
+
+    dispatch({
+      type: SAVE_POST,
+      payload: { postId, saved: res.data.saved }
+    });
+  } catch (err) {
+    dispatch(setAlert('Could not save post', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Remove a saved post from the user's saved list
+export const unsavePost = (postId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/save/${postId}`);
+
+    dispatch({
+      type: SAVE_POST,
+      payload: { postId, saved: res.data.saved }
+    });
+    dispatch({
+      type: DELETE_SAVED_POST,
+      payload: postId
+    });
+  } catch (err) {
+    dispatch(setAlert('Could not unsave post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

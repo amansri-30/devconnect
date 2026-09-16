@@ -536,6 +536,12 @@ button {
   align-items: center;
 }
 
+.save-item {
+  border-bottom: 1px solid var(--light-color);
+  padding-bottom: 0.6rem;
+  margin-bottom: 0.6rem;
+}
+
 .post > div:first-child {
   text-align: center;
 }
