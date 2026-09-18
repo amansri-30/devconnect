@@ -1,4 +1,4 @@
-import React, { useState, Fragment, useEffect, useReducer } from 'react';
+import React, { useState, Fragment, useEffect, useReducer, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
@@ -53,6 +53,21 @@ const EditProfile = ({ profileSlice, createProfile, getCurrentProfile }) => {
     profileSlice,
     initializeState
   );
+
+  // The reducer initializer only runs once. On a direct visit to this page
+  // the profile loads AFTER mount, so populate the form once it arrives.
+  const hasProfile = Boolean(profileSlice.profile);
+  const populated = useRef(false);
+
+  useEffect(() => {
+    if (hasProfile && !populated.current) {
+      populated.current = true;
+      const loadedValues = initializeState(profileSlice);
+      Object.entries(loadedValues).forEach(([name, value]) =>
+        dispatch({ type: name, payload: value })
+      );
+    }
+  }, [hasProfile, profileSlice]);
 
   const {
     company,

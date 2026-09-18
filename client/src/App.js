@@ -15,6 +15,8 @@ import Landing from './components/layout/Landing';
 import Register from './components/auth/Register';
 import Login from './components/auth/Login';
 import Alert from './components/layout/Alert';
+import BackToTop from './components/layout/BackToTop';
+import ScrollToTop from './components/layout/ScrollToTop';
 import Dashboard from './components/dashboard/Dashboard';
 import PrivateRoute from './components/routing/PrivateRoute';
 import CreateProfile from './components/profile-forms/CreateProfile';
@@ -37,6 +39,7 @@ if (localStorage.token) {
 const ContentLayout = () => (
   <section className="container">
     <Outlet />
+    <BackToTop />
   </section>
 );
 
@@ -51,6 +54,7 @@ const App = () => {
         <Fragment>
           <Alert />
           <Navbar />
+          <ScrollToTop />
           <Routes>
             <Route path="/" element={<Landing />} />
             <Route element={<ContentLayout />}>

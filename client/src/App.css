@@ -536,6 +536,28 @@ button {
   align-items: center;
 }
 
+.back-to-top {
+  position: fixed;
+  bottom: 1.5rem;
+  right: 1.5rem;
+  z-index: 1000;
+  width: 2.75rem;
+  height: 2.75rem;
+  border-radius: 50%;
+  border: none;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+  transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.back-to-top:hover {
+  background: #3a4bd2;
+  transform: translateY(-2px);
+}
+
 .save-item {
   border-bottom: 1px solid var(--light-color);
   padding-bottom: 0.6rem;
