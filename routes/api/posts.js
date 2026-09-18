@@ -142,6 +142,19 @@ router.get('/saved', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/posts/mine
+// @desc    Get the current user's posts (must precede /:id)
+// @access  Private
+router.get('/mine', auth, async (req, res) => {
+  try {
+    const posts = await Post.find({ user: req.user.id }).sort({ date: -1 });
+    return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/posts/:id
 // @desc    Get post by id
 // @access  Private

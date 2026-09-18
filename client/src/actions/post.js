@@ -8,9 +8,10 @@ import {
   ADD_POST,
   GET_SINGLE_POST,
   UPDATE_POST,
-  SAVE_POST,
+SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
+  GET_MY_POSTS,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -176,6 +177,23 @@ export const editPost = (postId, formData) => async dispatch => {
     dispatch(setAlert('Post updated', 'success'));
   } catch (err) {
     dispatch(setAlert('Could not update post', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the current user's own posts (for the dashboard)
+export const getMyPosts = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts/mine');
+
+    dispatch({
+      type: GET_MY_POSTS,
+      payload: res.data
+    });
+  } catch (err) {
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

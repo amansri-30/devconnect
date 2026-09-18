@@ -9,6 +9,7 @@ import {
   SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
+  GET_MY_POSTS,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -18,6 +19,7 @@ const initialState = {
   posts: [],
   post: null,
   savedPosts: [],
+  myPosts: [],
   loading: true,
   error: {},
   page: 1,
@@ -61,6 +63,12 @@ export default function postReducer(state = initialState, action) {
         savedPosts: action.payload,
         loading: false
       };
+    case GET_MY_POSTS:
+      return {
+        ...state,
+        myPosts: action.payload,
+        loading: false
+      };
     case SAVE_POST:
       return {
         ...state,
@@ -90,6 +98,7 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         posts: [action.payload, ...state.posts],
+        myPosts: [action.payload, ...state.myPosts],
         total: state.total + 1,
         loading: false
       };
@@ -98,6 +107,12 @@ export default function postReducer(state = initialState, action) {
         ...state,
         post: action.payload,
         posts: state.posts.map((p) =>
+          p._id === action.payload._id ? action.payload : p
+        ),
+        myPosts: state.myPosts.map((p) =>
+          p._id === action.payload._id ? action.payload : p
+        ),
+        savedPosts: state.savedPosts.map((p) =>
           p._id === action.payload._id ? action.payload : p
         ),
         loading: false
@@ -122,10 +137,17 @@ export default function postReducer(state = initialState, action) {
             : state.post,
         loading: false
       };
-    case DELETE_POST:
+case DELETE_POST:
       return {
         ...state,
-        posts: state.posts.filter(post => post._id !== action.payload),
+        posts: state.posts.filter((post) => post._id !== action.payload),
+        post:
+          state.post && state.post._id === action.payload ? null : state.post,
+        savedPosts: state.savedPosts.filter(
+          (p) => p._id !== action.payload
+        ),
+        myPosts: state.myPosts.filter((p) => p._id !== action.payload),
+        total: Math.max(state.total - 1, 0),
         loading: false
       };
     case ADD_COMMENT:
