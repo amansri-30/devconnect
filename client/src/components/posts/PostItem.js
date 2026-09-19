@@ -4,6 +4,7 @@ import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { connect } from 'react-redux';
 import { addLike, removeLike, deletePost, toggleSavePost } from '../../actions/post';
+import linkify from '../../utils/linkify';
 
 const PostItem = ({
   addLike,
@@ -60,7 +61,10 @@ const PostItem = ({
         </Link>
       </div>
       <div>
-        <p className="my-1">{text}</p>
+        <p
+          className="my-1"
+          dangerouslySetInnerHTML={{ __html: linkify(text) }}
+        />
         <p className="post-date">
           Posted <Moment fromNow>{date}</Moment>
         </p>

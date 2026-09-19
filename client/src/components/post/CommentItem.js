@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { deleteComment, editComment } from '../../actions/post';
+import linkify from '../../utils/linkify';
 
 const CommentItem = ({
   postId,
@@ -77,7 +78,10 @@ const CommentItem = ({
           </form>
         ) : (
           <Fragment>
-            <p className="my-1">{text}</p>
+            <p
+              className="my-1"
+              dangerouslySetInnerHTML={{ __html: linkify(text) }}
+            />
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
             </p>

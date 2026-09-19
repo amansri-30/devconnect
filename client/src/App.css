@@ -572,6 +572,12 @@ button {
   width: 100px;
 }
 
+.post .my-1 a {
+  color: var(--primary-color);
+  text-decoration: underline;
+  word-break: break-all;
+}
+
 .post .comment-count {
   background: var(--light-color);
   color: var(--primary-color);
