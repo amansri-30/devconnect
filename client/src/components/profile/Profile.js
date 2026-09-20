@@ -9,6 +9,7 @@ import ProfileAbout from './ProfileAbout';
 import ProfileExperience from './ProfileExperience';
 import ProfileEducation from './ProfileEducation';
 import ProfileGithub from './ProfileGithub';
+import ProfilePosts from './ProfilePosts';
 
 const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
   const { id } = useParams();
@@ -38,6 +39,7 @@ const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
           <div className="profile-grid my-1">
             <ProfileTop profile={profile} />
             <ProfileAbout profile={profile} />
+            <ProfilePosts userId={profile.user ? profile.user._id : null} />
             <div className="profile-exp bg-white p-2">
               <h2 className="text-primary">Experience</h2>
               {profile.experience.length > 0 ? (

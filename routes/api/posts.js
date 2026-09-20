@@ -155,6 +155,26 @@ router.get('/mine', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/posts/user/:user_id
+// @desc    Get a user's latest posts (public profile activity)
+// @access  Public
+router.get('/user/:user_id', async (req, res) => {
+  try {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.user_id)) {
+      return res.status(404).json({ msg: 'No posts found' });
+    }
+
+    const posts = await Post.find({ user: req.params.user_id })
+      .sort({ date: -1 })
+      .limit(5);
+
+    return res.json(posts.map((doc) => shapePost(doc, req.params.user_id)));
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/posts/:id
 // @desc    Get post by id
 // @access  Private

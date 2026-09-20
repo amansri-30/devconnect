@@ -12,6 +12,7 @@ SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
+  GET_USER_POSTS,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -191,6 +192,23 @@ export const getMyPosts = () => async (dispatch) => {
 
     dispatch({
       type: GET_MY_POSTS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get a user's latest posts (for their public profile)
+export const getUserPosts = (userId) => async (dispatch) => {
+  try {
+    const res = await axios.get(`/api/posts/user/${userId}`);
+
+    dispatch({
+      type: GET_USER_POSTS,
       payload: res.data
     });
   } catch (err) {

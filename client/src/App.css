@@ -430,6 +430,7 @@ button {
   grid-template-areas:
     'top top'
     'about about'
+    'posts posts'
     'exp edu'
     'github github';
   grid-gap: 1rem;
@@ -497,6 +498,20 @@ button {
 .profile-exp p,
 .profile-edu p {
   margin: 0.5rem 0;
+}
+
+.profile-posts {
+  grid-area: posts;
+}
+
+.profile-post-item {
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: #ccc 1px dotted;
+}
+
+.profile-post-item:last-child {
+  border: 0;
 }
 
 .profile-github {
@@ -741,7 +756,8 @@ button {
 }
 
 [data-theme='dark'] .profile-exp > div,
-[data-theme='dark'] .profile-edu > div {
+[data-theme='dark'] .profile-edu > div,
+[data-theme='dark'] .profile-post-item {
   border-bottom-color: #3a424a;
 }
 

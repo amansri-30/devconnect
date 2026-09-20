@@ -10,6 +10,7 @@ import {
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
+  GET_USER_POSTS,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -20,6 +21,7 @@ const initialState = {
   post: null,
   savedPosts: [],
   myPosts: [],
+  userPosts: [],
   loading: true,
   error: {},
   page: 1,
@@ -67,6 +69,12 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         myPosts: action.payload,
+        loading: false
+      };
+    case GET_USER_POSTS:
+      return {
+        ...state,
+        userPosts: action.payload,
         loading: false
       };
     case SAVE_POST:
