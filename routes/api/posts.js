@@ -168,7 +168,9 @@ router.get('/user/:user_id', async (req, res) => {
       .sort({ date: -1 })
       .limit(5);
 
-    return res.json(posts.map((doc) => shapePost(doc, req.params.user_id)));
+    // Public endpoint: the `saved` flag is meaningless here, never derive it
+    // from the viewed user's id.
+    return res.json(posts.map((doc) => shapePost(doc, null)));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');

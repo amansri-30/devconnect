@@ -1,16 +1,26 @@
 import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
+import { useSearchParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import ProfileItem from './ProfileItem';
 import { getProfiles } from '../../actions/profile';
 
 const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
-  const [query, setQuery] = useState('');
+  // Support a shareable ?skill= search (linked from profile skill chips).
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [query, setQuery] = useState(() => searchParams.get('skill') || '');
 
   useEffect(() => {
     getProfiles();
   }, [getProfiles]);
+
+  const onQueryChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    // Keep the URL in sync (replace so it doesn't stack history entries).
+    setSearchParams(value ? { skill: value } : {}, { replace: true });
+  };
 
   // Client-side filter across name, status/company and skills.
   const filtered = profiles.filter((profile) => {
@@ -47,7 +57,7 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
               type="text"
               placeholder="Search developers by name, skill or company..."
               value={query}
-              onChange={(e) => setQuery(e.target.value)}
+              onChange={onQueryChange}
             />
           </div>
           <div className="profiles">
