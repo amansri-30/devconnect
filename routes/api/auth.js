@@ -78,4 +78,52 @@ router.post(
   }
 );
 
+// @route   PUT api/auth/password
+// @desc    Change the current user's password
+// @access  Private
+router.put(
+  '/password',
+  [
+    auth,
+    [
+      check('currentPassword', 'Current password is required').not().isEmpty(),
+      check('newPassword', 'New password must be at least 6 characters').isLength(
+        { min: 6 }
+      )
+    ]
+  ],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) {
+      return res.status(400).json({ errors: errors.array() });
+    }
+
+    try {
+      const user = await User.findById(req.user.id);
+
+      if (!user) {
+        return res.status(404).json({ msg: 'User not found' });
+      }
+
+      const isMatch = await bcrypt.compare(
+        req.body.currentPassword,
+        user.password
+      );
+
+      if (!isMatch) {
+        return res.status(400).json({ msg: 'Current password is incorrect' });
+      }
+
+      const salt = await bcrypt.genSalt(10);
+      user.password = await bcrypt.hash(req.body.newPassword, salt);
+      await user.save();
+
+      return res.json({ msg: 'Password updated' });
+    } catch (err) {
+      console.error(err.message);
+      return res.status(500).send('Server error');
+    }
+  }
+);
+
 module.exports = router;

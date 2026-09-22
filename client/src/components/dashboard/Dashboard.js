@@ -8,6 +8,7 @@ import DashboardActions from './DashboardActions';
 import Experience from './Experience';
 import Education from './Education';
 import MyPosts from './MyPosts';
+import ChangePassword from './ChangePassword';
 
 const Dashboard = ({
   getCurrentProfile,
@@ -121,6 +122,7 @@ const Dashboard = ({
           </Link>
         </Fragment>
       )}
+      <ChangePassword />
       <MyPosts />
     </Fragment>
   );

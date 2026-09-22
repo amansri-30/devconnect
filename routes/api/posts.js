@@ -50,6 +50,10 @@ router.post(
     try {
       const user = await User.findById(req.user.id).select('-password');
 
+      if (!user) {
+        return res.status(401).json({ msg: 'Token belongs to a removed account' });
+      }
+
       const newPost = new Post({
         text: sanitizeHtml(req.body.text),
         name: user.name,
@@ -409,6 +413,10 @@ router.post(
     try {
       const user = await User.findById(req.user.id).select('-password');
       const post = await Post.findById(req.params.id);
+
+      if (!user) {
+        return res.status(401).json({ msg: 'Token belongs to a removed account' });
+      }
 
       if (!post) {
         return res.status(404).json({ msg: 'No post found' });

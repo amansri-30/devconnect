@@ -110,3 +110,23 @@ export const logout = () => (dispatch) => {
   dispatch({ type: CLEAR_PROFILE });
   dispatch({ type: LOGOUT });
 };
+
+// Change the current user's password; force a re-login on success so the
+// updated credential is what continues from here on.
+export const changePassword = (formData, navigate) => async (dispatch) => {
+  const config = {
+    headers: {
+      'Content-Type': 'application/json'
+    }
+  };
+
+  try {
+    await axios.put('/api/auth/password', formData, config);
+
+    dispatch(setAlert('Password updated. Please sign in again.', 'success'));
+    dispatch(logout());
+    navigate('/login');
+  } catch (err) {
+    getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
+  }
+};
