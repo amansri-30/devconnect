@@ -3,7 +3,13 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { connect } from 'react-redux';
-import { addLike, removeLike, deletePost, toggleSavePost } from '../../actions/post';
+import {
+  addLike,
+  removeLike,
+  deletePost,
+  toggleSavePost,
+  editPost
+} from '../../actions/post';
 import linkify from '../../utils/linkify';
 
 const PostItem = ({
@@ -11,17 +17,38 @@ const PostItem = ({
   removeLike,
   deletePost,
   toggleSavePost,
+  editPost,
   auth,
   post: { _id, text, name, avatar, user, likes, comments, date, saved },
   showActions
 }) => {
   const [copied, setCopied] = useState(false);
+  const [editing, setEditing] = useState(false);
+  const [body, setBody] = useState('');
 
   // Whether the current user has already liked this post.
   const likedByMe =
     !auth.loading &&
     auth.user &&
     likes.some((like) => like.user === auth.user._id);
+
+  const startEdit = () => {
+    setBody(text);
+    setEditing(true);
+  };
+
+  const cancelEdit = () => {
+    setBody('');
+    setEditing(false);
+  };
+
+  const submitEdit = (e) => {
+    e.preventDefault();
+    if (body.trim()) {
+      editPost(_id, { text: body });
+      setEditing(false);
+    }
+  };
 
   const removePost = (e) => {
     if (window.confirm('Are you sure you want to delete this post?')) {
@@ -61,13 +88,44 @@ const PostItem = ({
         </Link>
       </div>
       <div>
-        <p
-          className="my-1"
-          dangerouslySetInnerHTML={{ __html: linkify(text) }}
-        />
-        <p className="post-date">
-          Posted <Moment fromNow>{date}</Moment>
-        </p>
+        {editing ? (
+          <form onSubmit={submitEdit}>
+            <textarea
+              className="my-1"
+              name="text"
+              value={body}
+              onChange={(e) => setBody(e.target.value)}
+              cols="30"
+              rows="4"
+              maxLength="1000"
+              required
+            />
+            <div>
+              <input
+                type="submit"
+                className="btn btn-dark my-1"
+                value="Save Changes"
+              />
+              <button
+                type="button"
+                className="btn btn-light my-1"
+                onClick={cancelEdit}
+              >
+                Cancel
+              </button>
+            </div>
+          </form>
+        ) : (
+          <Fragment>
+            <p
+              className="my-1"
+              dangerouslySetInnerHTML={{ __html: linkify(text) }}
+            />
+            <p className="post-date">
+              Posted <Moment fromNow>{date}</Moment>
+            </p>
+          </Fragment>
+        )}
         {showActions && (
           <Fragment>
             <button
@@ -108,9 +166,25 @@ const PostItem = ({
               </span>
             </button>
             {!auth.loading && user === auth.user._id && (
-              <button onClick={removePost} type="button" className="btn btn-danger">
-                <i className="fas fa-times" />
-              </button>
+              <Fragment>
+                {!editing && (
+                  <button
+                    onClick={startEdit}
+                    type="button"
+                    className="btn btn-light"
+                    title="Edit this post"
+                  >
+                    <i className="fas fa-edit" />
+                  </button>
+                )}
+                <button
+                  onClick={removePost}
+                  type="button"
+                  className="btn btn-danger"
+                >
+                  <i className="fas fa-times" />
+                </button>
+              </Fragment>
             )}
           </Fragment>
         )}
@@ -130,6 +204,7 @@ PostItem.propTypes = {
   removeLike: PropTypes.func.isRequired,
   deletePost: PropTypes.func.isRequired,
   toggleSavePost: PropTypes.func.isRequired,
+  editPost: PropTypes.func.isRequired,
   showActions: PropTypes.bool.isRequired
 };
 
@@ -141,5 +216,6 @@ export default connect(mapStateToProps, {
   addLike,
   removeLike,
   deletePost,
-  toggleSavePost
+  toggleSavePost,
+  editPost
 })(PostItem);

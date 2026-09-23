@@ -266,7 +266,7 @@ router.put(
       post.text = sanitizeHtml(req.body.text);
       await post.save();
 
-      return res.json(post);
+      return res.json(shapePost(post, req.user.id));
     } catch (err) {
       console.error(err.message);
 
