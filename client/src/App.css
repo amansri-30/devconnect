@@ -649,7 +649,38 @@ button {
     font-size: 1rem;
   }
 
-  /* Navbar */
+.activity-stats {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.activity-stat {
+  flex: 1;
+  min-width: 160px;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.activity-stat > i {
+  font-size: 1.5rem;
+  color: var(--primary-color);
+}
+
+.activity-stat-value {
+  display: block;
+  font-size: 1.4rem;
+  font-weight: 700;
+  line-height: 1.1;
+}
+
+.activity-stat-label {
+  color: var(--dark-color);
+  font-size: 0.85rem;
+}
+
+/* Navbar */
   .navbar {
     display: block;
     text-align: center;

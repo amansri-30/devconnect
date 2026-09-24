@@ -9,6 +9,7 @@ import Experience from './Experience';
 import Education from './Education';
 import MyPosts from './MyPosts';
 import ChangePassword from './ChangePassword';
+import ActivityStats from './ActivityStats';
 
 const Dashboard = ({
   getCurrentProfile,
@@ -72,6 +73,7 @@ const Dashboard = ({
       {profile !== null ? (
         <Fragment>
           <DashboardActions />
+          <ActivityStats />
           <div className="completion-card my-2 bg-white p-1">
             <div className="completion-header">
               <span>
