@@ -3,21 +3,26 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
-import { deleteComment, editComment } from '../../actions/post';
+import { deleteComment, editComment, toggleCommentLike } from '../../actions/post';
 import linkify from '../../utils/linkify';
 
 const CommentItem = ({
   postId,
-  comment: { _id, text, name, avatar, user, date },
+  comment: { _id, text, name, avatar, user, date, likes },
   auth,
   deleteComment,
-  editComment
+  editComment,
+  toggleCommentLike
 }) => {
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState('');
 
   const isOwner =
     !auth.loading && auth.user && user === auth.user._id;
+
+  const commentLikes = Array.isArray(likes) ? likes : [];
+  const likedByMe = !auth.loading && auth.user &&
+    commentLikes.some((like) => like.user === auth.user._id);
 
   const startEdit = () => {
     setBody(text);
@@ -107,6 +112,14 @@ const CommentItem = ({
             </button>
           </Fragment>
         )}
+        <button
+          onClick={() => toggleCommentLike(postId, _id)}
+          type="button"
+          className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
+          title={likedByMe ? 'Unlike comment' : 'Like comment'}
+        >
+          <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
+        </button>
       </div>
     </div>
   );
@@ -117,13 +130,16 @@ CommentItem.propTypes = {
   comment: PropTypes.object.isRequired,
   auth: PropTypes.object.isRequired,
   deleteComment: PropTypes.func.isRequired,
-  editComment: PropTypes.func.isRequired
+  editComment: PropTypes.func.isRequired,
+  toggleCommentLike: PropTypes.func.isRequired
 };
 
 const mapStateToProps = (state) => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { deleteComment, editComment })(
-  CommentItem
-);
+export default connect(mapStateToProps, {
+  deleteComment,
+  editComment,
+  toggleCommentLike
+})(CommentItem);

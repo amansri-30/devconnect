@@ -11,6 +11,7 @@ import {
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
+  UPDATE_COMMENT_LIKES,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -168,6 +169,20 @@ case DELETE_POST:
       return {
         ...state,
         post: { ...state.post, comments: action.payload },
+        loading: false
+      };
+    case UPDATE_COMMENT_LIKES:
+      return {
+        ...state,
+        post:
+          state.post && state.post._id === action.payload.postId
+            ? { ...state.post, comments: action.payload.comments }
+            : state.post,
+        posts: state.posts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, comments: action.payload.comments }
+            : p
+        ),
         loading: false
       };
     case REMOVE_COMMENT:

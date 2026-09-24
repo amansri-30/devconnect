@@ -446,6 +446,50 @@ router.post(
   }
 );
 
+// @route   PUT api/posts/comment/like/:post_id/:comment_id
+// @desc    Like or unlike a comment
+// @access  Private
+router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.post_id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const comment = post.comments.id(req.params.comment_id);
+
+    if (!comment) {
+      return res.status(400).json({ msg: 'Comment does not exist' });
+    }
+
+    const likes = comment.likes || [];
+    const alreadyLiked = likes.some(
+      (like) => like.user.toString() === req.user.id
+    );
+
+    if (alreadyLiked) {
+      comment.likes = likes.filter(
+        (like) => like.user.toString() !== req.user.id
+      );
+    } else {
+      comment.likes = [...likes, { user: req.user.id }];
+    }
+
+    await post.save();
+
+    return res.json(post.comments);
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   DELETE api/posts/comment/:post_id/:comment_id
 // @desc    Remove comment from a post
 // @access  Private

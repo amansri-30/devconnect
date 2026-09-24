@@ -23,6 +23,7 @@ export const GET_SAVED_POSTS = 'GET_SAVED_POSTS';
 export const DELETE_SAVED_POST = 'DELETE_SAVED_POST';
 export const GET_MY_POSTS = 'GET_MY_POSTS';
 export const GET_USER_POSTS = 'GET_USER_POSTS';
+export const UPDATE_COMMENT_LIKES = 'UPDATE_COMMENT_LIKES';
 export const POST_ERROR = 'POST_ERROR';
 export const UPDATE_LIKES = 'UPDATE_LIKES';
 export const DELETE_POST = 'DELETE_POST';

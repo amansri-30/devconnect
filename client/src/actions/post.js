@@ -13,6 +13,7 @@ SAVE_POST,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
+  UPDATE_COMMENT_LIKES,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -329,6 +330,26 @@ export const editComment = (postId, commentId, formData) => async dispatch => {
     dispatch(setAlert('Comment updated', 'success'));
   } catch (err) {
     dispatch(setAlert('Could not update comment', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Like or unlike a comment on a post (returns the updated comments list)
+export const toggleCommentLike = (postId, commentId) => async (dispatch) => {
+  try {
+    const res = await axios.put(
+      `/api/posts/comment/like/${postId}/${commentId}`
+    );
+
+    dispatch({
+      type: UPDATE_COMMENT_LIKES,
+      payload: { postId, comments: res.data }
+    });
+  } catch (err) {
+    dispatch(setAlert('Could not like comment', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
