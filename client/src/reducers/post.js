@@ -114,7 +114,10 @@ export default function postReducer(state = initialState, action) {
     case UPDATE_POST:
       return {
         ...state,
-        post: action.payload,
+        post:
+          state.post && state.post._id === action.payload._id
+            ? action.payload
+            : state.post,
         posts: state.posts.map((p) =>
           p._id === action.payload._id ? action.payload : p
         ),
@@ -160,15 +163,19 @@ case DELETE_POST:
         loading: false
       };
     case ADD_COMMENT:
-      return {
-        ...state,
-        post: { ...state.post, comments: action.payload },
-        loading: false
-      };
     case UPDATE_COMMENT:
       return {
         ...state,
         post: { ...state.post, comments: action.payload },
+        posts: state.posts.map((p) =>
+          p._id === state.post._id ? { ...p, comments: action.payload } : p
+        ),
+        myPosts: state.myPosts.map((p) =>
+          p._id === state.post._id ? { ...p, comments: action.payload } : p
+        ),
+        savedPosts: state.savedPosts.map((p) =>
+          p._id === state.post._id ? { ...p, comments: action.payload } : p
+        ),
         loading: false
       };
     case UPDATE_COMMENT_LIKES:
@@ -183,6 +190,16 @@ case DELETE_POST:
             ? { ...p, comments: action.payload.comments }
             : p
         ),
+        myPosts: state.myPosts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, comments: action.payload.comments }
+            : p
+        ),
+        savedPosts: state.savedPosts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, comments: action.payload.comments }
+            : p
+        ),
         loading: false
       };
     case REMOVE_COMMENT:
@@ -191,9 +208,39 @@ case DELETE_POST:
         post: {
           ...state.post,
           comments: state.post.comments.filter(
-            comment => action.payload !== comment._id
+            (comment) => action.payload !== comment._id
           )
         },
+        posts: state.posts.map((p) =>
+          p._id === state.post._id
+            ? {
+                ...p,
+                comments: p.comments.filter(
+                  (comment) => action.payload !== comment._id
+                )
+              }
+            : p
+        ),
+        myPosts: state.myPosts.map((p) =>
+          p._id === state.post._id
+            ? {
+                ...p,
+                comments: p.comments.filter(
+                  (comment) => action.payload !== comment._id
+                )
+              }
+            : p
+        ),
+        savedPosts: state.savedPosts.map((p) =>
+          p._id === state.post._id
+            ? {
+                ...p,
+                comments: p.comments.filter(
+                  (comment) => action.payload !== comment._id
+                )
+              }
+            : p
+        ),
         loading: false
       };
     default:

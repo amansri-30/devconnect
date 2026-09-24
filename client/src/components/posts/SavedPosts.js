@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -6,12 +6,25 @@ import Spinner from '../layout/Spinner';
 import PostItem from '../posts/PostItem';
 import { getSavedPosts, unsavePost } from '../../actions/post';
 
-const SavedPosts = ({ getSavedPosts, unsavePost, post: { savedPosts, loading } }) => {
+const SavedPosts = ({
+  getSavedPosts,
+  unsavePost,
+  post: { savedPosts, loading }
+}) => {
+  const [query, setQuery] = useState('');
+
   useEffect(() => {
     getSavedPosts();
   }, [getSavedPosts]);
 
-  const savedCount = savedPosts.length;
+  const term = query.trim().toLowerCase();
+  const filtered = term
+    ? savedPosts.filter((post) => {
+        const text = (post.text || '').toLowerCase();
+        const author = (post.name || '').toLowerCase();
+        return text.includes(term) || author.includes(term);
+      })
+    : savedPosts;
 
   return loading ? (
     <Spinner />
@@ -24,27 +37,39 @@ const SavedPosts = ({ getSavedPosts, unsavePost, post: { savedPosts, loading } }
       <Link to="/posts" className="btn btn-dark my-1">
         Back to Posts
       </Link>
+      <input
+        type="text"
+        className="my-1"
+        placeholder={`Search ${savedPosts.length} saved post${savedPosts.length === 1 ? '' : 's'} by text or author...`}
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
       <div className="posts">
         {savedPosts.length > 0 ? (
-          savedPosts.map((post) => (
-            <div key={post._id} className="save-item">
-              <PostItem post={post} />
-              <div className="my-1">
-                <button
-                  onClick={() => unsavePost(post._id)}
-                  type="button"
-                  className="btn btn-light"
-                >
-                  <i className="far fa-bookmark" /> Unsave this post
-                </button>
+          filtered.length > 0 ? (
+            filtered.map((post) => (
+              <div key={post._id} className="save-item">
+                <PostItem post={post} />
+                <div className="my-1">
+                  <button
+                    onClick={() => unsavePost(post._id)}
+                    type="button"
+                    className="btn btn-light"
+                  >
+                    <i className="far fa-bookmark" /> Unsave this post
+                  </button>
+                </div>
               </div>
-            </div>
-          ))
+            ))
+          ) : (
+            <p className="my-1">
+              No saved posts match "{query.trim()}".
+            </p>
+          )
         ) : (
           <p className="my-1">
-            {savedCount === 0
-              ? 'You have no saved posts yet. Click the bookmark on any post to save it for later.'
-              : 'No saved posts.'}
+            You have no saved posts yet. Click the bookmark on any post to save
+            it for later.
           </p>
         )}
       </div>
