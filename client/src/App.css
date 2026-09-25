@@ -835,3 +835,61 @@ button {
     padding: 0.3rem 0.4rem;
   }
 }
+
+/* Print / Save-as-PDF resume: only the profile content, single column, light */
+@media print {
+  body {
+    background: #fff;
+  }
+
+  .navbar,
+  .alert,
+  .back-to-top,
+  .profile-grid + .my-1,
+  .landing {
+    display: none !important;
+  }
+
+  .container .btn {
+    display: none !important;
+  }
+
+  .profile-grid {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    padding: 0;
+    margin: 0;
+  }
+
+  .profile-grid > div {
+    margin: 0 0 1rem;
+    page-break-inside: avoid;
+  }
+
+  .profile-grid .bg-white,
+  .profile-grid .bg-light,
+  .profile-grid .badge-light {
+    background: #fff !important;
+    color: #000 !important;
+    border-color: #ddd;
+  }
+
+  .profile-grid h1,
+  .profile-grid h2,
+  .profile-grid h3,
+  .profile-grid h4 {
+    color: #000 !important;
+  }
+
+  .profile-grid a {
+    color: #007bff;
+    text-decoration: underline;
+  }
+
+  .activity-stat {
+    border: 1px solid #ddd;
+  }
+}

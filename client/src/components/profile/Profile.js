@@ -27,6 +27,14 @@ const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
           <Link to="/profiles" className="btn btn-dark">
             Back to Profiles
           </Link>
+          <button
+            type="button"
+            className="btn btn-dark"
+            onClick={() => window.print()}
+            title="Print or save this profile as a PDF resume"
+          >
+            <i className="fas fa-print" /> Print / Save as PDF
+          </button>
           {auth.isAuthenticated &&
             auth.loading === false &&
             auth.user &&
