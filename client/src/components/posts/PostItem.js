@@ -11,6 +11,7 @@ import {
   editPost
 } from '../../actions/post';
 import linkify from '../../utils/linkify';
+import MediaPreview from '../layout/MediaPreview';
 
 const PostItem = ({
   addLike,
@@ -121,6 +122,7 @@ const PostItem = ({
               className="my-1"
               dangerouslySetInnerHTML={{ __html: linkify(text) }}
             />
+            <MediaPreview text={text} />
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
             </p>

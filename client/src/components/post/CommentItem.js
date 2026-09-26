@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { deleteComment, editComment, toggleCommentLike } from '../../actions/post';
 import linkify from '../../utils/linkify';
+import MediaPreview from '../layout/MediaPreview';
 
 const CommentItem = ({
   postId,
@@ -87,6 +88,7 @@ const CommentItem = ({
               className="my-1"
               dangerouslySetInnerHTML={{ __html: linkify(text) }}
             />
+            <MediaPreview text={text} />
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
             </p>

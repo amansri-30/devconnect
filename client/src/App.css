@@ -612,6 +612,22 @@ button {
   word-break: break-all;
 }
 
+.media-preview img {
+  display: block;
+  max-width: 100%;
+  max-height: 420px;
+  object-fit: contain;
+  border-radius: 4px;
+  border: 1px solid var(--light-color);
+}
+
+.media-preview iframe {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: none;
+  border-radius: 4px;
+}
+
 .post .comment-count {
   background: var(--light-color);
   color: var(--primary-color);
