@@ -14,6 +14,8 @@ SAVE_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
   UPDATE_COMMENT_LIKES,
+  GET_LIKED_POSTS,
+  DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -88,6 +90,12 @@ export const removeLike = postId => async dispatch => {
         postId,
         likes: res.data
       }
+    });
+
+    // Keep the "Liked Posts" page in sync when unliking from it.
+    dispatch({
+      type: DELETE_LIKED_POST,
+      payload: postId
     });
   } catch (err) {
     dispatch(setAlert('Could not unlike post', 'danger'));
@@ -227,6 +235,23 @@ export const getSavedPosts = () => async (dispatch) => {
 
     dispatch({
       type: GET_SAVED_POSTS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the posts the current user has liked
+export const getLikedPosts = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts/liked');
+
+    dispatch({
+      type: GET_LIKED_POSTS,
       payload: res.data
     });
   } catch (err) {

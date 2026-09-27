@@ -12,6 +12,8 @@ import {
   GET_MY_POSTS,
   GET_USER_POSTS,
   UPDATE_COMMENT_LIKES,
+  GET_LIKED_POSTS,
+  DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT
@@ -21,6 +23,7 @@ const initialState = {
   posts: [],
   post: null,
   savedPosts: [],
+  likedPosts: [],
   myPosts: [],
   userPosts: [],
   loading: true,
@@ -64,6 +67,18 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         savedPosts: action.payload,
+        loading: false
+      };
+    case GET_LIKED_POSTS:
+      return {
+        ...state,
+        likedPosts: action.payload,
+        loading: false
+      };
+    case DELETE_LIKED_POST:
+      return {
+        ...state,
+        likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         loading: false
       };
     case GET_MY_POSTS:
@@ -158,6 +173,7 @@ case DELETE_POST:
         savedPosts: state.savedPosts.filter(
           (p) => p._id !== action.payload
         ),
+        likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
         total: Math.max(state.total - 1, 0),
         loading: false

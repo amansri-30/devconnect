@@ -88,7 +88,10 @@ const AddEducation = ({ addEducation }) => {
               checked={current}
               value={current}
               onChange={(e) => {
-                setFormData({ ...formData, current: !current });
+                const checking = !current;
+                // Clear any stale "to" date when marking as current study so
+                // it doesn't linger (and then come back when un-checked).
+                setFormData({ ...formData, current: checking, to: checking ? '' : to });
                 toggleDisabled(!toDateDisabled);
               }}
             />{' '}

@@ -87,7 +87,10 @@ const AddExperience = ({ addExperience }) => {
               checked={current}
               value={current}
               onChange={(e) => {
-                setFormData({ ...formData, current: !current });
+                const checking = !current;
+                // Clear any stale "to" date when marking as the current job so
+                // it doesn't linger (and then come back when un-checked).
+                setFormData({ ...formData, current: checking, to: checking ? '' : to });
                 toggleDisabled(!toDateDisabled);
               }}
             />{' '}
