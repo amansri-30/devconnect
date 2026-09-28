@@ -5,13 +5,17 @@ import {
   UPDATE_PROFILE,
   GET_PROFILES,
   GET_REPOS,
-  REPOS_ERROR
+  REPOS_ERROR,
+  FOLLOW_UPDATE,
+  GET_FOLLOWING
 } from '../actions/types';
 
 const initialState = {
   profile: null,
   profiles: [],
   repos: [],
+  following: [],
+  isFollowing: false,
   loading: true,
   error: {}
 };
@@ -19,6 +23,21 @@ const initialState = {
 export default function profileReducer(state = initialState, action) {
   switch (action.type) {
     case GET_PROFILE:
+      // The "profile by id" endpoint wraps its response with follow state;
+      // the other producers send a plain profile document.
+      return action.payload && action.payload.profile
+        ? {
+            ...state,
+            profile: action.payload.profile,
+            isFollowing: Boolean(action.payload.isFollowing),
+            loading: false
+          }
+        : {
+            ...state,
+            profile: action.payload,
+            isFollowing: false,
+            loading: false
+          };
     case UPDATE_PROFILE:
       return {
         ...state,
@@ -29,6 +48,18 @@ export default function profileReducer(state = initialState, action) {
       return {
         ...state,
         profiles: action.payload,
+        loading: false
+      };
+    case FOLLOW_UPDATE:
+      return {
+        ...state,
+        isFollowing: action.payload.isFollowing,
+        loading: false
+      };
+    case GET_FOLLOWING:
+      return {
+        ...state,
+        following: action.payload,
         loading: false
       };
     case PROFILE_ERROR:
@@ -43,6 +74,8 @@ export default function profileReducer(state = initialState, action) {
         ...state,
         profile: null,
         repos: [],
+        following: [],
+        isFollowing: false,
         loading: false
       };
     case GET_REPOS:

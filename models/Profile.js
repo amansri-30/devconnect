@@ -30,6 +30,18 @@ const ProfileSchema = new Schema({
   githubusername: {
     type: String
   },
+  followers: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'users'
+    }
+  ],
+  following: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'users'
+    }
+  ],
   experience: [
     {
       title: {

@@ -30,6 +30,7 @@ import Posts from './components/posts/Posts';
 import Post from './components/post/Post';
 import SavedPosts from './components/posts/SavedPosts';
 import LikedPosts from './components/posts/LikedPosts';
+import Following from './components/profiles/Following';
 import NotFound from './components/layout/NotFound';
 
 if (localStorage.token) {
@@ -125,6 +126,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <LikedPosts />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/following"
+                element={
+                  <PrivateRoute>
+                    <Following />
                   </PrivateRoute>
                 }
               />

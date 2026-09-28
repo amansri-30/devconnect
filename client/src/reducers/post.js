@@ -94,6 +94,8 @@ export default function postReducer(state = initialState, action) {
         loading: false
       };
     case SAVE_POST:
+      // Un-saving removes the post from the saved list, no matter where the
+      // toggle happened (bookmark icon or the Saved page's own button).
       return {
         ...state,
         posts: state.posts.map((p) =>
@@ -105,11 +107,13 @@ export default function postReducer(state = initialState, action) {
           state.post && state.post._id === action.payload.postId
             ? { ...state.post, saved: action.payload.saved }
             : state.post,
-        savedPosts: state.savedPosts.map((p) =>
-          p._id === action.payload.postId
-            ? { ...p, saved: action.payload.saved }
-            : p
-        ),
+        savedPosts: action.payload.saved
+          ? state.savedPosts.map((p) =>
+              p._id === action.payload.postId
+                ? { ...p, saved: true }
+                : p
+            )
+          : state.savedPosts.filter((p) => p._id !== action.payload.postId),
         loading: false
       };
     case DELETE_SAVED_POST:

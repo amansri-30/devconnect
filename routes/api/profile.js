@@ -1,6 +1,8 @@
 const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
+const jwt = require('jsonwebtoken');
+const config = require('config');
 const { check, validationResult } = require('express-validator');
 const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require('../../config/keys');
 const moment = require('moment');
@@ -62,7 +64,7 @@ router.get('/', async (req, res) => {
 
 // @route   GET api/profile/user/:user_id
 // @desc    Get profile by user ID
-// @access  Public
+// @access  Public (includes isFollowing when a valid token is supplied)
 router.get('/user/:user_id', async (req, res) => {
   try {
     const profile = await Profile.findOne({
@@ -73,12 +75,103 @@ router.get('/user/:user_id', async (req, res) => {
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
-    return res.json(profile);
+    let isFollowing = false;
+    const token = req.header('x-auth-token');
+
+    if (token) {
+      try {
+        const decoded = jwt.verify(token, config.get('jwtSecret'));
+        const followers = (profile.followers || []).map((f) => f.toString());
+        isFollowing = followers.includes(decoded.user.id);
+      } catch (err) {
+        // Missing/invalid token simply means "not following".
+      }
+    }
+
+    return res.json({ profile, isFollowing });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'Profile not found' });
     }
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/profile/follow/:user_id
+// @desc    Follow or unfollow another user
+// @access  Private
+router.put('/follow/:user_id', auth, async (req, res) => {
+  try {
+    if (req.params.user_id === req.user.id) {
+      return res.status(400).json({ msg: "You can't follow yourself" });
+    }
+
+    const target = await Profile.findOne({ user: req.params.user_id });
+
+    if (!target) {
+      return res.status(404).json({ msg: 'No profile found' });
+    }
+
+    const followerIndex = (target.followers || []).findIndex(
+      (f) => f.toString() === req.user.id
+    );
+    const wasFollowing = followerIndex !== -1;
+
+    if (wasFollowing) {
+      target.followers.splice(followerIndex, 1);
+    } else {
+      target.followers.push(req.user.id);
+    }
+
+    // Maintain the current user's own "following" list for the Following page.
+    const me = await Profile.findOne({ user: req.user.id });
+
+    if (me) {
+      const followingIndex = (me.following || []).findIndex(
+        (f) => f.toString() === req.params.user_id
+      );
+
+      if (wasFollowing && followingIndex !== -1) {
+        me.following.splice(followingIndex, 1);
+      } else if (!wasFollowing && followingIndex === -1) {
+        me.following.push(req.params.user_id);
+      }
+      await me.save();
+    }
+
+    await target.save();
+
+    return res.json({
+      following: !wasFollowing,
+      followers: (target.followers || []).length
+    });
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No profile found' });
+    }
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/profile/following
+// @desc    Get the users the current user follows
+// @access  Private
+router.get('/following', auth, async (req, res) => {
+  try {
+    const me = await Profile.findOne({ user: req.user.id }).populate(
+      'following',
+      ['name', 'avatar']
+    );
+
+    if (!me) {
+      return res.json([]);
+    }
+
+    return res.json(me.following || []);
+  } catch (err) {
+    console.error(err.message);
     return res.status(500).send('Server Error');
   }
 });

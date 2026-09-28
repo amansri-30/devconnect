@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
-import { getProfileById } from '../../actions/profile';
+import { getProfileById, toggleFollow } from '../../actions/profile';
 import ProfileTop from './ProfileTop';
 import ProfileAbout from './ProfileAbout';
 import ProfileExperience from './ProfileExperience';
@@ -11,8 +11,20 @@ import ProfileEducation from './ProfileEducation';
 import ProfileGithub from './ProfileGithub';
 import ProfilePosts from './ProfilePosts';
 
-const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
+const Profile = ({
+  getProfileById,
+  toggleFollow,
+  profile: { profile, loading, isFollowing },
+  auth
+}) => {
   const { id } = useParams();
+
+  const isOwnProfile =
+    !auth.loading &&
+    auth.user &&
+    profile &&
+    profile.user &&
+    auth.user._id === (profile.user._id || profile.user.toString());
 
   useEffect(() => {
     getProfileById(id);
@@ -35,6 +47,20 @@ const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
           >
             <i className="fas fa-print" /> Print / Save as PDF
           </button>
+          {auth.isAuthenticated &&
+            auth.loading === false &&
+            auth.user &&
+            profile.user &&
+            !isOwnProfile && (
+              <button
+                type="button"
+                onClick={() => toggleFollow(profile.user._id || profile.user)}
+                className={`btn ${isFollowing ? 'btn-light' : 'btn-primary'}`}
+              >
+                <i className={`fas ${isFollowing ? 'fa-user-minus' : 'fa-user-plus'}`} />{' '}
+                {isFollowing ? 'Unfollow' : 'Follow'}
+              </button>
+            )}
           {auth.isAuthenticated &&
             auth.loading === false &&
             auth.user &&
@@ -90,6 +116,7 @@ const Profile = ({ getProfileById, profile: { profile, loading }, auth }) => {
 
 Profile.propTypes = {
   getProfileById: PropTypes.func.isRequired,
+  toggleFollow: PropTypes.func.isRequired,
   profile: PropTypes.object.isRequired,
   auth: PropTypes.object.isRequired
 };
@@ -99,4 +126,6 @@ const mapStateToProps = (state) => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { getProfileById })(Profile);
+export default connect(mapStateToProps, { getProfileById, toggleFollow })(
+  Profile
+);

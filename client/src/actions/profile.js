@@ -8,7 +8,9 @@ GET_PROFILE,
   UPDATE_PROFILE,
   ACCOUNT_DELETED,
   GET_REPOS,
-  REPOS_ERROR
+  REPOS_ERROR,
+  FOLLOW_UPDATE,
+  GET_FOLLOWING
 } from './types';
 
 // Safely derive an error payload, guarding against network errors where no
@@ -76,6 +78,39 @@ export const getProfileById = (userId) => async (dispatch) => {
 
     dispatch({
       type: GET_PROFILE,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: PROFILE_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Follow or unfollow another user
+export const toggleFollow = (userId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/profile/follow/${userId}`);
+
+    dispatch({
+      type: FOLLOW_UPDATE,
+      payload: { isFollowing: res.data.following }
+    });
+  } catch (err) {
+    const data = err.response && err.response.data;
+    const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update follow status';
+    dispatch(setAlert(msg, 'danger'));
+  }
+};
+
+// Get the users the logged-in user follows
+export const getFollowing = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/profile/following');
+
+    dispatch({
+      type: GET_FOLLOWING,
       payload: res.data
     });
   } catch (err) {
