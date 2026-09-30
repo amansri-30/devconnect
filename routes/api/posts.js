@@ -3,6 +3,7 @@ const router = express.Router();
 const { check, validationResult } = require('express-validator');
 const auth = require('../../middleware/auth');
 const { sanitizeHtml } = require('../../util/sanitize');
+const notify = require('../../util/notify');
 
 // Load Post model
 const Post = require('../../models/Post');
@@ -355,6 +356,8 @@ router.put('/like/:id', auth, async (req, res) => {
 
     await post.save();
 
+    notify({ recipient: post.user, from: req.user.id, type: 'like', post: post._id });
+
     return res.json(post.likes);
   } catch (err) {
     console.error(err.message);
@@ -449,6 +452,8 @@ router.post(
 
       await post.save();
 
+      notify({ recipient: post.user, from: req.user.id, type: 'comment', post: post._id });
+
       return res.json(post.comments);
     } catch (err) {
       console.error(err.message);
@@ -490,6 +495,7 @@ router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
       );
     } else {
       comment.likes = [...likes, { user: req.user.id }];
+      notify({ recipient: comment.user, from: req.user.id, type: 'comment_like', post: post._id });
     }
 
     await post.save();

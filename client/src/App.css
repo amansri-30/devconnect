@@ -628,6 +628,25 @@ button {
   border-radius: 4px;
 }
 
+.nav-bell {
+  position: relative;
+}
+
+.unread-badge {
+  position: absolute;
+  top: -6px;
+  right: -10px;
+  background: var(--danger-color);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 0.25rem 0.4rem;
+  border-radius: 10px;
+  min-width: 18px;
+  text-align: center;
+}
+
 .post .comment-count {
   background: var(--light-color);
   color: var(--primary-color);

@@ -6,6 +6,7 @@ const config = require('config');
 const { check, validationResult } = require('express-validator');
 const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require('../../config/keys');
 const moment = require('moment');
+const notify = require('../../util/notify');
 
 // Load Profile and User Models
 const Profile = require('../../models/Profile');
@@ -122,6 +123,7 @@ router.put('/follow/:user_id', auth, async (req, res) => {
       target.followers.splice(followerIndex, 1);
     } else {
       target.followers.push(req.user.id);
+      notify({ recipient: target.user, from: req.user.id, type: 'follow' });
     }
 
     // Maintain the current user's own "following" list for the Following page.

@@ -1,12 +1,27 @@
-import React, { Fragment } from 'react';
+import React, { Fragment, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { connect } from 'react-redux';
 import PropTypes from 'prop-types';
 import { logout } from '../../actions/auth';
+import { getUnreadCount } from '../../actions/notifications';
 import useDarkMode from '../../utils/useDarkMode';
 
-const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
+const Navbar = ({
+  auth: { isAuthenticated, loading },
+  logout,
+  unreadCount,
+  getUnreadCount
+}) => {
   const [dark, toggleDark] = useDarkMode();
+
+  // Poll for new notifications while the user is signed in.
+  useEffect(() => {
+    if (!isAuthenticated || loading) return;
+    getUnreadCount();
+    const interval = setInterval(getUnreadCount, 45000);
+    return () => clearInterval(interval);
+  }, [isAuthenticated, loading, getUnreadCount]);
+
   const authLinks = (
     <ul>
       <li>
@@ -14,6 +29,14 @@ const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
       </li>
       <li>
         <Link to="/posts">Posts</Link>
+      </li>
+      <li>
+        <Link to="/notifications" className="nav-bell" title="Notifications">
+          <i className="fas fa-bell" />
+          {unreadCount > 0 && (
+            <span className="unread-badge">{unreadCount}</span>
+          )}
+        </Link>
       </li>
       <li>
         <Link to="/saved-posts">
@@ -84,11 +107,14 @@ const Navbar = ({ auth: { isAuthenticated, loading }, logout }) => {
 
 Navbar.propTypes = {
   logout: PropTypes.func.isRequired,
+  getUnreadCount: PropTypes.func.isRequired,
+  unreadCount: PropTypes.number.isRequired,
   auth: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-  auth: state.auth
+  auth: state.auth,
+  unreadCount: state.notification.unreadCount
 });
 
-export default connect(mapStateToProps, { logout })(Navbar);
+export default connect(mapStateToProps, { logout, getUnreadCount })(Navbar);
