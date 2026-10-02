@@ -9,6 +9,8 @@ const notify = require('../../util/notify');
 const Post = require('../../models/Post');
 // Load User model
 const User = require('../../models/User');
+// Load Profile model (for the "following" feed scope)
+const Profile = require('../../models/Profile');
 
 // @route   GET api/posts/test
 // @desc    Tests post route
@@ -88,6 +90,19 @@ router.get('/', auth, async (req, res) => {
     const sort = req.query.sort === 'likes' ? 'likes' : 'recent';
     const sortSpec = sort === 'likes' ? { likesCount: -1, date: -1 } : { date: -1 };
 
+    // Optional scope=following limits the feed to posts by developers the
+    // current user follows.
+    const scope = req.query.scope === 'following' ? 'following' : 'all';
+    let filter = {};
+
+    if (scope === 'following') {
+      const me = await Profile.findOne({ user: req.user.id }).select('following');
+      const followingIds = (me && me.following ? me.following : []).map(
+        (id) => id.toString()
+      );
+      filter = { user: { $in: followingIds } };
+    }
+
     // For like-based sorting we need a sortable field; use an aggregation
     // that projects a stable count while keeping the response shape intact.
     // Every post is included (like count included), so switching between
@@ -95,12 +110,13 @@ router.get('/', auth, async (req, res) => {
     if (sort === 'likes') {
       const [docs, total] = await Promise.all([
         Post.aggregate([
+          { $match: filter },
           { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
           { $sort: sortSpec },
           { $skip: skip },
           { $limit: limit }
         ]),
-        Post.countDocuments()
+        Post.countDocuments(filter)
       ]);
 
       res.set({
@@ -112,12 +128,12 @@ router.get('/', auth, async (req, res) => {
       return res.json(docs.map((doc) => shapePost(doc, req.user.id)));
     }
 
-    const docs = await Post.find()
+    const docs = await Post.find(filter)
       .sort(sortSpec)
       .skip(skip)
       .limit(limit);
 
-    const total = await Post.countDocuments();
+    const total = await Post.countDocuments(filter);
 
     // Keep the response body backward-compatible (array) and surface
     // pagination metadata in the headers.

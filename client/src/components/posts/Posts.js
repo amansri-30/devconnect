@@ -10,20 +10,26 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
   const [moreLoading, setMoreLoading] = useState(false);
   const [query, setQuery] = useState('');
   const [sort, setSort] = useState('recent');
+  const [scope, setScope] = useState('all');
 
   useEffect(() => {
-    getPosts(1, sort);
-  }, [getPosts, sort]);
+    getPosts(1, sort, scope);
+  }, [getPosts, sort, scope]);
 
   const loadMore = async () => {
     setMoreLoading(true);
-    await getPosts(page + 1, sort);
+    await getPosts(page + 1, sort, scope);
     setMoreLoading(false);
   };
 
   const onSortChange = (e) => {
     const value = e.target.value;
     setSort(value);
+    setQuery('');
+  };
+
+  const onScopeChange = (value) => {
+    setScope(value);
     setQuery('');
   };
 
@@ -60,6 +66,22 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
             onChange={(e) => setQuery(e.target.value)}
           />
         </div>
+        <div className="scope-toggle" role="group" aria-label="Feed scope">
+          <button
+            type="button"
+            className={`btn ${scope === 'all' ? 'btn-primary' : 'btn-light'}`}
+            onClick={() => onScopeChange('all')}
+          >
+            Everyone
+          </button>
+          <button
+            type="button"
+            className={`btn ${scope === 'following' ? 'btn-primary' : 'btn-light'}`}
+            onClick={() => onScopeChange('following')}
+          >
+            Following
+          </button>
+        </div>
         <select
           className="btn btn-light my-1"
           style={{ marginLeft: '1rem' }}
@@ -78,6 +100,8 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
           <p className="my-1">
             {q
               ? `No posts match "${query.trim()}".`
+              : scope === 'following'
+              ? 'No posts from people you follow yet. Follow developers to see their posts here.'
               : 'No posts yet. Be the first to start a discussion!'}
           </p>
         )}
