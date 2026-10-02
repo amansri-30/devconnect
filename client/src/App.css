@@ -152,6 +152,10 @@ img {
   color: #333;
 }
 
+.follow-stats .badge:first-child {
+  margin-left: 0;
+}
+
 .alert {
   padding: 0.8rem;
   margin: 1rem 0;

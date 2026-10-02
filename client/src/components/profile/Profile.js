@@ -14,7 +14,14 @@ import ProfilePosts from './ProfilePosts';
 const Profile = ({
   getProfileById,
   toggleFollow,
-  profile: { profile, loading, isFollowing },
+  profile: {
+    profile,
+    loading,
+    isFollowing,
+    followsYou,
+    followersCount,
+    followingCount
+  },
   auth
 }) => {
   const { id } = useParams();
@@ -61,6 +68,19 @@ const Profile = ({
                 {isFollowing ? 'Unfollow' : 'Follow'}
               </button>
             )}
+          {profile.user && (
+            <p className="my-1 follow-stats">
+              <span className="badge badge-light">
+                <i className="fas fa-users" /> {followersCount} follower
+                {followersCount === 1 ? '' : 's'} · {followingCount} following
+              </span>
+              {!isOwnProfile && followsYou && (
+                <span className="badge badge-success">
+                  <i className="fas fa-check" /> Follows you
+                </span>
+              )}
+            </p>
+          )}
           {auth.isAuthenticated &&
             auth.loading === false &&
             auth.user &&

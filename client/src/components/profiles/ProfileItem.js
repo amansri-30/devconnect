@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { Link } from 'react-router-dom';
 
 const ProfileItem = ({
-  profile: { user, status, company, location, skills }
+  profile: { user, status, company, location, skills, followers }
 }) => {
   // Guard against a user record missing from a profile (e.g. user deleted
   // their account or profile was created without a populated user reference).
@@ -13,6 +13,7 @@ const ProfileItem = ({
 
   const { _id, name, avatar } = user;
   const profileSkills = Array.isArray(skills) ? skills : [];
+  const followerCount = Array.isArray(followers) ? followers.length : 0;
 
   return (
     <div className="profile bg-light">
@@ -22,7 +23,14 @@ const ProfileItem = ({
         <p>
           {status} {company && <span>at {company}</span>}
         </p>
-        <p className="my-1">{location && <span>{location}</span>}</p>
+        <p className="my-1">
+          {location && <span>{location}</span>}
+          {followerCount > 0 && (
+            <span className="badge badge-light">
+              <i className="fas fa-users" /> {followerCount}
+            </span>
+          )}
+        </p>
         <Link to={`/profile/${_id}`} className="btn btn-primary">
           View Profile
         </Link>

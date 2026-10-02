@@ -16,6 +16,9 @@ const initialState = {
   repos: [],
   following: [],
   isFollowing: false,
+  followsYou: false,
+  followersCount: 0,
+  followingCount: 0,
   loading: true,
   error: {}
 };
@@ -30,12 +33,16 @@ export default function profileReducer(state = initialState, action) {
             ...state,
             profile: action.payload.profile,
             isFollowing: Boolean(action.payload.isFollowing),
+            followsYou: Boolean(action.payload.followsYou),
+            followersCount: action.payload.followersCount || 0,
+            followingCount: action.payload.followingCount || 0,
             loading: false
           }
         : {
             ...state,
             profile: action.payload,
             isFollowing: false,
+            followsYou: false,
             loading: false
           };
     case UPDATE_PROFILE:
@@ -54,6 +61,10 @@ export default function profileReducer(state = initialState, action) {
       return {
         ...state,
         isFollowing: action.payload.isFollowing,
+        followersCount:
+          action.payload.followersCount !== undefined
+            ? action.payload.followersCount
+            : state.followersCount,
         loading: false
       };
     case GET_FOLLOWING:
@@ -76,6 +87,9 @@ export default function profileReducer(state = initialState, action) {
         repos: [],
         following: [],
         isFollowing: false,
+        followsYou: false,
+        followersCount: 0,
+        followingCount: 0,
         loading: false
       };
     case GET_REPOS:

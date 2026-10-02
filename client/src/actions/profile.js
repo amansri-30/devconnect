@@ -95,7 +95,10 @@ export const toggleFollow = (userId) => async (dispatch) => {
 
     dispatch({
       type: FOLLOW_UPDATE,
-      payload: { isFollowing: res.data.following }
+      payload: {
+        isFollowing: res.data.following,
+        followersCount: res.data.followers
+      }
     });
   } catch (err) {
     const data = err.response && err.response.data;

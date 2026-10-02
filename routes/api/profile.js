@@ -77,19 +77,28 @@ router.get('/user/:user_id', async (req, res) => {
     }
 
     let isFollowing = false;
+    let followsYou = false;
     const token = req.header('x-auth-token');
 
     if (token) {
       try {
         const decoded = jwt.verify(token, config.get('jwtSecret'));
         const followers = (profile.followers || []).map((f) => f.toString());
+        const following = (profile.following || []).map((f) => f.toString());
         isFollowing = followers.includes(decoded.user.id);
+        followsYou = following.includes(decoded.user.id);
       } catch (err) {
         // Missing/invalid token simply means "not following".
       }
     }
 
-    return res.json({ profile, isFollowing });
+    return res.json({
+      profile,
+      isFollowing,
+      followsYou,
+      followersCount: (profile.followers || []).length,
+      followingCount: (profile.following || []).length
+    });
   } catch (err) {
     console.error(err.message);
     if (err.kind === 'ObjectId') {
