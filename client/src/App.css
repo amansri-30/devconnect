@@ -156,6 +156,33 @@ img {
   margin-left: 0;
 }
 
+.checklist {
+  list-style: none;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.5rem;
+  padding: 0;
+}
+
+.checklist li {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.checklist .badge {
+  margin: 0;
+  min-width: 26px;
+}
+
+.checklist-label {
+  font-size: 0.9rem;
+}
+
+.checklist li .text-muted {
+  color: var(--dark-color);
+}
+
 .alert {
   padding: 0.8rem;
   margin: 1rem 0;

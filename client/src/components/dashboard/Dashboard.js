@@ -10,6 +10,7 @@ import Education from './Education';
 import MyPosts from './MyPosts';
 import ChangePassword from './ChangePassword';
 import ActivityStats from './ActivityStats';
+import CommunityChecklist from './CommunityChecklist';
 
 const Dashboard = ({
   getCurrentProfile,
@@ -70,6 +71,7 @@ const Dashboard = ({
       <p className="lead">
         <i className="fas fa-user" /> Welcome {user && user.name}
       </p>
+      <CommunityChecklist />
       {profile !== null ? (
         <Fragment>
           <DashboardActions />

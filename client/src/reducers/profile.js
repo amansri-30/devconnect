@@ -1,5 +1,6 @@
 import {
   GET_PROFILE,
+  PROFILE_LOADING,
   PROFILE_ERROR,
   CLEAR_PROFILE,
   UPDATE_PROFILE,
@@ -25,6 +26,11 @@ const initialState = {
 
 export default function profileReducer(state = initialState, action) {
   switch (action.type) {
+    case PROFILE_LOADING:
+      return {
+        ...state,
+        loading: true
+      };
     case GET_PROFILE:
       // The "profile by id" endpoint wraps its response with follow state;
       // the other producers send a plain profile document.

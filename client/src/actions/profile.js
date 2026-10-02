@@ -2,6 +2,7 @@ import axios from 'axios';
 import { setAlert } from './alert';
 import {
 GET_PROFILE,
+  PROFILE_LOADING,
   GET_PROFILES,
   PROFILE_ERROR,
   CLEAR_PROFILE,
@@ -73,6 +74,8 @@ export const getProfiles = () => async (dispatch) => {
 
 // Get profile by ID
 export const getProfileById = (userId) => async (dispatch) => {
+  dispatch({ type: PROFILE_LOADING });
+
   try {
     const res = await axios.get(`/api/profile/user/${userId}`);
 
