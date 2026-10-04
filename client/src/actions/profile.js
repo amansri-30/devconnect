@@ -11,7 +11,8 @@ GET_PROFILE,
   GET_REPOS,
   REPOS_ERROR,
   FOLLOW_UPDATE,
-  GET_FOLLOWING
+  GET_FOLLOWING,
+  GET_FOLLOWERS
 } from './types';
 
 // Safely derive an error payload, guarding against network errors where no
@@ -107,6 +108,23 @@ export const toggleFollow = (userId) => async (dispatch) => {
     const data = err.response && err.response.data;
     const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update follow status';
     dispatch(setAlert(msg, 'danger'));
+  }
+};
+
+// Get the users who follow the logged-in user
+export const getFollowers = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/profile/followers');
+
+    dispatch({
+      type: GET_FOLLOWERS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: PROFILE_ERROR,
+      payload: getErrorPayload(err)
+    });
   }
 };
 

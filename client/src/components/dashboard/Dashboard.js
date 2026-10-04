@@ -3,7 +3,8 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import Spinner from '../layout/Spinner';
-import { getCurrentProfile, deleteAccount } from '../../actions/profile';
+import { getCurrentProfile, deleteAccount, getFollowing } from '../../actions/profile';
+import { getMyPosts, getSavedPosts, getLikedPosts } from '../../actions/post';
 import DashboardActions from './DashboardActions';
 import Experience from './Experience';
 import Education from './Education';
@@ -15,12 +16,20 @@ import CommunityChecklist from './CommunityChecklist';
 const Dashboard = ({
   getCurrentProfile,
   deleteAccount,
+  getFollowing,
+  getMyPosts,
+  getSavedPosts,
+  getLikedPosts,
   auth: { user },
   profile: { profile, loading }
 }) => {
   useEffect(() => {
     getCurrentProfile();
-  }, [getCurrentProfile]);
+    getFollowing();
+    getMyPosts();
+    getSavedPosts();
+    getLikedPosts();
+  }, [getCurrentProfile, getFollowing, getMyPosts, getSavedPosts, getLikedPosts]);
 
   // Compute a rough profile-completeness percentage from the key fields.
   const completion = () => {
@@ -134,9 +143,13 @@ const Dashboard = ({
 
 Dashboard.propTypes = {
   getCurrentProfile: PropTypes.func.isRequired,
+  deleteAccount: PropTypes.func.isRequired,
+  getFollowing: PropTypes.func.isRequired,
+  getMyPosts: PropTypes.func.isRequired,
+  getSavedPosts: PropTypes.func.isRequired,
+  getLikedPosts: PropTypes.func.isRequired,
   auth: PropTypes.object.isRequired,
-  profile: PropTypes.object.isRequired,
-  deleteAccount: PropTypes.func.isRequired
+  profile: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
@@ -144,6 +157,11 @@ const mapStateToProps = (state) => ({
   profile: state.profile
 });
 
-export default connect(mapStateToProps, { getCurrentProfile, deleteAccount })(
-  Dashboard
-);
+export default connect(mapStateToProps, {
+  getCurrentProfile,
+  deleteAccount,
+  getFollowing,
+  getMyPosts,
+  getSavedPosts,
+  getLikedPosts
+})(Dashboard);

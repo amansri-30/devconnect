@@ -54,6 +54,11 @@ const Navbar = ({
         </Link>
       </li>
       <li>
+        <Link to="/followers">
+          <i className="fas fa-users" /> <span className="hide-sm">Followers</span>
+        </Link>
+      </li>
+      <li>
         <Link to="/dashboard">
           <i className="fas fa-user" />{' '}
           <span className="hide-sm">Dashboard</span>

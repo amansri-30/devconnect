@@ -8,7 +8,8 @@ import {
   GET_REPOS,
   REPOS_ERROR,
   FOLLOW_UPDATE,
-  GET_FOLLOWING
+  GET_FOLLOWING,
+  GET_FOLLOWERS
 } from '../actions/types';
 
 const initialState = {
@@ -16,6 +17,7 @@ const initialState = {
   profiles: [],
   repos: [],
   following: [],
+  followers: [],
   isFollowing: false,
   followsYou: false,
   followersCount: 0,
@@ -29,6 +31,7 @@ export default function profileReducer(state = initialState, action) {
     case PROFILE_LOADING:
       return {
         ...state,
+        repos: [],
         loading: true
       };
     case GET_PROFILE:
@@ -79,6 +82,12 @@ export default function profileReducer(state = initialState, action) {
         following: action.payload,
         loading: false
       };
+    case GET_FOLLOWERS:
+      return {
+        ...state,
+        followers: action.payload,
+        loading: false
+      };
     case PROFILE_ERROR:
       return {
         ...state,
@@ -92,6 +101,7 @@ export default function profileReducer(state = initialState, action) {
         profile: null,
         repos: [],
         following: [],
+        followers: [],
         isFollowing: false,
         followsYou: false,
         followersCount: 0,

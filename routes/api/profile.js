@@ -166,6 +166,37 @@ router.put('/follow/:user_id', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/profile/followers
+// @desc    Get the users who follow the current user (with mutual-follow flag)
+// @access  Private
+router.get('/followers', auth, async (req, res) => {
+  try {
+    const me = await Profile.findOne({ user: req.user.id })
+      .select('followers following')
+      .populate('followers', ['name', 'avatar']);
+
+    if (!me) {
+      return res.json([]);
+    }
+
+    const followingSet = new Set(
+      (me.following || []).map((id) => id.toString())
+    );
+
+    return res.json(
+      (me.followers || []).map((f) => ({
+        _id: f._id,
+        name: f.name,
+        avatar: f.avatar,
+        isFollowing: followingSet.has(f._id.toString())
+      }))
+    );
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/profile/following
 // @desc    Get the users the current user follows
 // @access  Private
