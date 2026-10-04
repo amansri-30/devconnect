@@ -1,6 +1,7 @@
 import {
   GET_NOTIFICATIONS,
   GET_UNREAD_COUNT,
+  MARK_NOTIFICATION_READ,
   NOTIFICATIONS_ERROR
 } from '../actions/types';
 
@@ -24,6 +25,14 @@ export default function notificationReducer(state = initialState, action) {
         ...state,
         unreadCount: action.payload,
         loading: false
+      };
+    case MARK_NOTIFICATION_READ:
+      return {
+        ...state,
+        notifications: state.notifications.map((n) =>
+          n._id === action.payload ? { ...n, read: true } : n
+        ),
+        unreadCount: Math.max(0, state.unreadCount - 1)
       };
     case NOTIFICATIONS_ERROR:
       return {

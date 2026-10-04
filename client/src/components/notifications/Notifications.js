@@ -1,7 +1,7 @@
 import React, { Fragment, useEffect } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import Moment from 'react-moment';
 import Spinner from '../layout/Spinner';
 import {
@@ -14,13 +14,19 @@ const Notifications = ({
   getNotifications,
   markNotificationsRead,
   clearNotifications,
-  notification: { notifications, loading }
+  notification: { notifications, unreadCount, loading }
 }) => {
-  // Fetch, then instantly clear the unread badge since the list is in view.
+  const navigate = useNavigate();
+
+  // Fetch without clearing the unread badge, so unread items stay visible.
   useEffect(() => {
     getNotifications();
-    markNotificationsRead();
-  }, [getNotifications, markNotificationsRead]);
+  }, [getNotifications]);
+
+  const onOpen = (n) => {
+    if (!n.read) markNotificationsRead(n._id);
+    navigate(n.type === 'follow' || !n.post ? `/profile/${n.from._id}` : `/post/${n.post}`);
+  };
 
   const badge = (type) => {
     switch (type) {
@@ -68,6 +74,15 @@ const Notifications = ({
         <i className="fas fa-bell" /> Notifications
       </h1>
       <p className="lead">Stay up to date with activity on your posts and profile</p>
+      {unreadCount > 0 && (
+        <button
+          type="button"
+          className="btn btn-primary my-1"
+          onClick={() => markNotificationsRead()}
+        >
+          <i className="fas fa-check-double" /> Mark all as read
+        </button>
+      )}
       {notifications.length > 0 && (
         <button
           type="button"
@@ -81,22 +96,34 @@ const Notifications = ({
         notifications.map((n) => {
           const meta = badge(n.type);
           return (
-            <div key={n._id} className="profile bg-white p-1 my-1">
-              <Link to={notificationLink(n)}>
+            <div
+              key={n._id}
+              className={`profile bg-white p-1 my-1 ${
+                n.read ? '' : 'notification-unread'
+              }`}
+            >
+              <Link to={notificationLink(n)} onClick={() => !n.read && markNotificationsRead(n._id)}>
                 <img
                   className="round-img"
                   src={n.from.avatar}
                   alt={n.from.name}
                 />
               </Link>
-              <div>
-                <span className={`badge ${meta.className}`}>
-                  <i className={meta.icon} />{' '}
-                </span>
-                <p className="my-1">{message(n)}</p>
+              <div className="notification-body">
+                <button
+                  type="button"
+                  className="notification-link"
+                  onClick={() => onOpen(n)}
+                >
+                  <span className={`badge ${meta.className}`}>
+                    <i className={meta.icon} />{' '}
+                  </span>
+                  <span className="my-1">{message(n)}</span>
+                </button>
                 <p className="post-date">
                   <Moment fromNow>{n.date}</Moment>
                 </p>
+                {!n.read && <span className="unread-dot" title="Unread" />}
               </div>
             </div>
           );

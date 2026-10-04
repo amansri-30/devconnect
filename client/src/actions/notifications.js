@@ -2,6 +2,7 @@ import axios from 'axios';
 import {
   GET_NOTIFICATIONS,
   GET_UNREAD_COUNT,
+  MARK_NOTIFICATION_READ,
   NOTIFICATIONS_ERROR
 } from './types';
 
@@ -52,7 +53,9 @@ export const markNotificationsRead = (id) => async (dispatch) => {
     await axios.put(`/api/notifications/read/${id || ''}`);
 
     dispatch(getUnreadCount());
-    if (id) dispatch(getNotifications());
+    if (id) {
+      dispatch({ type: MARK_NOTIFICATION_READ, payload: id });
+    }
   } catch (err) {
     dispatch({
       type: NOTIFICATIONS_ERROR,
