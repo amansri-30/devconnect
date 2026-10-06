@@ -166,6 +166,16 @@ export default function postReducer(state = initialState, action) {
           state.post && state.post._id === action.payload.postId
             ? { ...state.post, likes: action.payload.likes }
             : state.post,
+        myPosts: state.myPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
+        likedPosts: state.likedPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
         loading: false
       };
 case DELETE_POST:

@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import Spinner from '../layout/Spinner';
-import { getCurrentProfile, deleteAccount, getFollowing } from '../../actions/profile';
+import { getCurrentProfile, deleteAccount, getFollowing, getLeaderboard } from '../../actions/profile';
 import { getMyPosts, getSavedPosts, getLikedPosts } from '../../actions/post';
 import DashboardActions from './DashboardActions';
 import Experience from './Experience';
@@ -12,11 +12,13 @@ import MyPosts from './MyPosts';
 import ChangePassword from './ChangePassword';
 import ActivityStats from './ActivityStats';
 import CommunityChecklist from './CommunityChecklist';
+import TopDevelopers from './TopDevelopers';
 
 const Dashboard = ({
   getCurrentProfile,
   deleteAccount,
   getFollowing,
+  getLeaderboard,
   getMyPosts,
   getSavedPosts,
   getLikedPosts,
@@ -26,10 +28,11 @@ const Dashboard = ({
   useEffect(() => {
     getCurrentProfile();
     getFollowing();
+    getLeaderboard();
     getMyPosts();
     getSavedPosts();
     getLikedPosts();
-  }, [getCurrentProfile, getFollowing, getMyPosts, getSavedPosts, getLikedPosts]);
+  }, [getCurrentProfile, getFollowing, getLeaderboard, getMyPosts, getSavedPosts, getLikedPosts]);
 
   // Compute a rough profile-completeness percentage from the key fields.
   const completion = () => {
@@ -81,6 +84,7 @@ const Dashboard = ({
         <i className="fas fa-user" /> Welcome {user && user.name}
       </p>
       <CommunityChecklist />
+      <TopDevelopers />
       {profile !== null ? (
         <Fragment>
           <DashboardActions />
@@ -145,6 +149,7 @@ Dashboard.propTypes = {
   getCurrentProfile: PropTypes.func.isRequired,
   deleteAccount: PropTypes.func.isRequired,
   getFollowing: PropTypes.func.isRequired,
+  getLeaderboard: PropTypes.func.isRequired,
   getMyPosts: PropTypes.func.isRequired,
   getSavedPosts: PropTypes.func.isRequired,
   getLikedPosts: PropTypes.func.isRequired,
@@ -161,6 +166,7 @@ export default connect(mapStateToProps, {
   getCurrentProfile,
   deleteAccount,
   getFollowing,
+  getLeaderboard,
   getMyPosts,
   getSavedPosts,
   getLikedPosts

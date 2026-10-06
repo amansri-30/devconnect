@@ -9,15 +9,17 @@ import {
   REPOS_ERROR,
   FOLLOW_UPDATE,
   GET_FOLLOWING,
-  GET_FOLLOWERS
+  GET_FOLLOWERS,
+  GET_LEADERBOARD
 } from '../actions/types';
 
 const initialState = {
   profile: null,
   profiles: [],
   repos: [],
-  following: [],
-  followers: [],
+following: [],
+        followers: [],
+        leaderboard: [],
   isFollowing: false,
   followsYou: false,
   followersCount: 0,
@@ -88,6 +90,12 @@ export default function profileReducer(state = initialState, action) {
         followers: action.payload,
         loading: false
       };
+    case GET_LEADERBOARD:
+      return {
+        ...state,
+        leaderboard: action.payload,
+        loading: false
+      };
     case PROFILE_ERROR:
       return {
         ...state,
@@ -101,7 +109,8 @@ export default function profileReducer(state = initialState, action) {
         profile: null,
         repos: [],
         following: [],
-        followers: [],
+followers: [],
+  leaderboard: [],
         isFollowing: false,
         followsYou: false,
         followersCount: 0,

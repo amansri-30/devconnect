@@ -27,6 +27,47 @@ const normalizeUrl = (value) => {
 // @access  Public
 router.get('/test', (req, res) => res.json({ message: 'Profile works' }));
 
+// @route   GET api/profile/leaderboard
+// @desc    Get the top developers by follower count
+// @access  Public
+router.get('/leaderboard', async (req, res) => {
+  try {
+    const top = await Profile.aggregate([
+      { $match: { status: { $exists: true, $ne: '' } } },
+      {
+        $addFields: {
+          followersCount: { $size: { $ifNull: ['$followers', []] } }
+        }
+      },
+      { $sort: { followersCount: -1, date: 1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'dev'
+        }
+      },
+      { $unwind: '$dev' },
+      {
+        $project: {
+          _id: 1,
+          name: '$dev.name',
+          avatar: '$dev.avatar',
+          status: 1,
+          followersCount: 1
+        }
+      }
+    ]);
+
+    return res.json(top);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/profile/me
 // @desc    Get current user's profile
 // @access  Private

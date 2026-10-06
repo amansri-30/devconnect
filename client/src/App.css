@@ -702,6 +702,50 @@ button {
   background: var(--primary-color);
 }
 
+.leaderboard {
+  list-style: none;
+  padding: 0;
+}
+
+.leaderboard li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.leaderboard li:last-child {
+  border-bottom: none;
+}
+
+.leaderboard li .badge {
+  margin: 0;
+}
+
+.leaderboard li a {
+  color: var(--dark-color);
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.leaderboard-avatar {
+  width: 36px;
+  height: 36px;
+  object-fit: cover;
+}
+
+.leaderboard-status {
+  margin-left: auto;
+  color: var(--dark-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 40%;
+}
+
 .scope-toggle .btn {
   margin: 0;
   border-radius: 0;
