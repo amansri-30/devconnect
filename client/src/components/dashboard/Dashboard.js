@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import Spinner from '../layout/Spinner';
-import { getCurrentProfile, deleteAccount, getFollowing, getLeaderboard } from '../../actions/profile';
+import { getCurrentProfile, deleteAccount, getFollowing, getLeaderboard, getSuggestions } from '../../actions/profile';
 import { getMyPosts, getSavedPosts, getLikedPosts } from '../../actions/post';
 import DashboardActions from './DashboardActions';
 import Experience from './Experience';
@@ -13,12 +13,14 @@ import ChangePassword from './ChangePassword';
 import ActivityStats from './ActivityStats';
 import CommunityChecklist from './CommunityChecklist';
 import TopDevelopers from './TopDevelopers';
+import WhoToFollow from './WhoToFollow';
 
 const Dashboard = ({
   getCurrentProfile,
   deleteAccount,
   getFollowing,
   getLeaderboard,
+  getSuggestions,
   getMyPosts,
   getSavedPosts,
   getLikedPosts,
@@ -29,10 +31,11 @@ const Dashboard = ({
     getCurrentProfile();
     getFollowing();
     getLeaderboard();
+    getSuggestions();
     getMyPosts();
     getSavedPosts();
     getLikedPosts();
-  }, [getCurrentProfile, getFollowing, getLeaderboard, getMyPosts, getSavedPosts, getLikedPosts]);
+  }, [getCurrentProfile, getFollowing, getLeaderboard, getSuggestions, getMyPosts, getSavedPosts, getLikedPosts]);
 
   // Compute a rough profile-completeness percentage from the key fields.
   const completion = () => {
@@ -85,6 +88,7 @@ const Dashboard = ({
       </p>
       <CommunityChecklist />
       <TopDevelopers />
+      <WhoToFollow />
       {profile !== null ? (
         <Fragment>
           <DashboardActions />
@@ -150,6 +154,7 @@ Dashboard.propTypes = {
   deleteAccount: PropTypes.func.isRequired,
   getFollowing: PropTypes.func.isRequired,
   getLeaderboard: PropTypes.func.isRequired,
+  getSuggestions: PropTypes.func.isRequired,
   getMyPosts: PropTypes.func.isRequired,
   getSavedPosts: PropTypes.func.isRequired,
   getLikedPosts: PropTypes.func.isRequired,
@@ -167,6 +172,7 @@ export default connect(mapStateToProps, {
   deleteAccount,
   getFollowing,
   getLeaderboard,
+  getSuggestions,
   getMyPosts,
   getSavedPosts,
   getLikedPosts

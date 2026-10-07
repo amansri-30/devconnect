@@ -25,7 +25,11 @@ const Notifications = ({
 
   const onOpen = (n) => {
     if (!n.read) markNotificationsRead(n._id);
-    navigate(n.type === 'follow' || !n.post ? `/profile/${n.from._id}` : `/post/${n.post}`);
+    if (n.from && (n.type === 'follow' || !n.post)) {
+      navigate(`/profile/${n.from._id}`);
+    } else {
+      navigate(`/post/${n.post}`);
+    }
   };
 
   const badge = (type) => {
@@ -60,8 +64,9 @@ const Notifications = ({
   };
 
   const notificationLink = (n) => {
-    if (n.type === 'follow' || !n.post) return `/profile/${n.from._id}`;
-    return `/post/${n.post}`;
+    if (n.from && (n.type === 'follow' || !n.post))
+      return `/profile/${n.from._id}`;
+    return n.post ? `/post/${n.post}` : '#';
   };
 
   if (loading) {
@@ -105,8 +110,8 @@ const Notifications = ({
               <Link to={notificationLink(n)} onClick={() => !n.read && markNotificationsRead(n._id)}>
                 <img
                   className="round-img"
-                  src={n.from.avatar}
-                  alt={n.from.name}
+                  src={(n.from && n.from.avatar) || `https://www.gravatar.com/avatar/?d=retro`}
+                  alt={(n.from && n.from.name) || 'Deleted user'}
                 />
               </Link>
               <div className="notification-body">

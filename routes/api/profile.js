@@ -12,6 +12,7 @@ const notify = require('../../util/notify');
 const Profile = require('../../models/Profile');
 const User = require('../../models/User');
 const Post = require('../../models/Post');
+const Notification = require('../../models/Notification');
 
 // Ensure a user-entered URL always has a protocol so it never turns into a
 // broken relative anchor on the profile page.
@@ -62,6 +63,55 @@ router.get('/leaderboard', async (req, res) => {
     ]);
 
     return res.json(top);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/profile/suggestions
+// @desc    Suggest developers the current user isn't following yet
+// @access  Private
+router.get('/suggestions', auth, async (req, res) => {
+  try {
+    const me = await Profile.findOne({ user: req.user.id }).select('following');
+    const followed = (me && me.following) || [];
+
+    const suggestions = await Profile.aggregate([
+      {
+        $match: {
+          user: { $ne: req.user.id, $nin: followed },
+          status: { $exists: true, $ne: '' }
+        }
+      },
+      {
+        $addFields: {
+          followersCount: { $size: { $ifNull: ['$followers', []] } }
+        }
+      },
+      { $sort: { followersCount: -1, date: 1 } },
+      { $limit: 5 },
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'dev'
+        }
+      },
+      { $unwind: '$dev' },
+      {
+        $project: {
+          _id: 1,
+          name: '$dev.name',
+          avatar: '$dev.avatar',
+          status: 1,
+          followersCount: 1
+        }
+      }
+    ]);
+
+    return res.json(suggestions);
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -654,6 +704,19 @@ router.delete('/', auth, async (req, res) => {
 
     // Remove profile
     await Profile.findOneAndDelete({ user: req.user.id });
+
+    // Remove the user from other users' follow/follower lists
+    await Profile.updateMany(
+      { followers: req.user.id },
+      { $pull: { followers: req.user.id } }
+    );
+    await Profile.updateMany(
+      { following: req.user.id },
+      { $pull: { following: req.user.id } }
+    );
+
+    // Drop notifications sent by the deleted account
+    await Notification.deleteMany({ from: req.user.id });
 
     // Remove user
     await User.findByIdAndDelete(req.user.id);

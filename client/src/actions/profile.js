@@ -13,7 +13,8 @@ GET_PROFILE,
   FOLLOW_UPDATE,
   GET_FOLLOWING,
   GET_FOLLOWERS,
-  GET_LEADERBOARD
+  GET_LEADERBOARD,
+  GET_SUGGESTIONS
 } from './types';
 
 // Safely derive an error payload, guarding against network errors where no
@@ -109,6 +110,23 @@ export const toggleFollow = (userId) => async (dispatch) => {
     const data = err.response && err.response.data;
     const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update follow status';
     dispatch(setAlert(msg, 'danger'));
+  }
+};
+
+// Get suggested developers the current user isn't following yet
+export const getSuggestions = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/profile/suggestions');
+
+    dispatch({
+      type: GET_SUGGESTIONS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: PROFILE_ERROR,
+      payload: getErrorPayload(err)
+    });
   }
 };
 

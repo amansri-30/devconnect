@@ -746,6 +746,42 @@ button {
   max-width: 40%;
 }
 
+.who-to-follow {
+  list-style: none;
+  padding: 0;
+}
+
+.who-to-follow li {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.35rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.who-to-follow li:last-child {
+  border-bottom: none;
+}
+
+.who-name {
+  color: var(--dark-color);
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.who-status {
+  margin-left: auto;
+  color: var(--dark-color);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 38%;
+}
+
+.who-to-follow li .btn {
+  margin: 0;
+}
+
 .scope-toggle .btn {
   margin: 0;
   border-radius: 0;
