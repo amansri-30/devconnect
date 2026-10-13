@@ -233,12 +233,16 @@ case DELETE_POST:
         loading: false
       };
     case REMOVE_COMMENT:
+      // Drop the comment and any replies threaded under it (the backend
+      // removes replies too, so the UI stays consistent without a refetch).
       return {
         ...state,
         post: {
           ...state.post,
           comments: state.post.comments.filter(
-            (comment) => action.payload !== comment._id
+            (comment) =>
+              action.payload !== comment._id &&
+              String(comment.parent) !== String(action.payload)
           )
         },
         posts: state.posts.map((p) =>
@@ -246,7 +250,9 @@ case DELETE_POST:
             ? {
                 ...p,
                 comments: p.comments.filter(
-                  (comment) => action.payload !== comment._id
+                  (comment) =>
+                    action.payload !== comment._id &&
+                    String(comment.parent) !== String(action.payload)
                 )
               }
             : p
@@ -256,7 +262,9 @@ case DELETE_POST:
             ? {
                 ...p,
                 comments: p.comments.filter(
-                  (comment) => action.payload !== comment._id
+                  (comment) =>
+                    action.payload !== comment._id &&
+                    String(comment.parent) !== String(action.payload)
                 )
               }
             : p
@@ -266,7 +274,9 @@ case DELETE_POST:
             ? {
                 ...p,
                 comments: p.comments.filter(
-                  (comment) => action.payload !== comment._id
+                  (comment) =>
+                    action.payload !== comment._id &&
+                    String(comment.parent) !== String(action.payload)
                 )
               }
             : p

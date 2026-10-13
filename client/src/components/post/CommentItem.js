@@ -6,16 +6,20 @@ import Moment from 'react-moment';
 import { deleteComment, editComment, toggleCommentLike } from '../../actions/post';
 import linkify from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
+import CommentForm from './CommentForm';
 
 const CommentItem = ({
   postId,
   comment: { _id, text, name, avatar, user, date, likes },
+  replies = [],
+  isReply,
   auth,
   deleteComment,
   editComment,
   toggleCommentLike
 }) => {
   const [editing, setEditing] = useState(false);
+  const [replying, setReplying] = useState(false);
   const [body, setBody] = useState('');
 
   const isOwner =
@@ -50,7 +54,7 @@ const CommentItem = ({
   };
 
   return (
-    <div className="post bg-white p-1 my-1">
+    <div className={`post bg-white p-1 my-1 ${isReply ? 'comment-reply' : ''}`}>
       <div>
         <Link to={`/profile/${user}`}>
           <img className="round-img" src={avatar} alt={name} />
@@ -94,6 +98,24 @@ const CommentItem = ({
             </p>
           </Fragment>
         )}
+        <button
+          onClick={() => toggleCommentLike(postId, _id)}
+          type="button"
+          className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
+          title={likedByMe ? 'Unlike comment' : 'Like comment'}
+        >
+          <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
+        </button>
+        {!isReply && (
+          <button
+            onClick={() => setReplying((prev) => !prev)}
+            type="button"
+            className="btn btn-light"
+            title="Reply to this comment"
+          >
+            <i className="fas fa-reply" /> Reply
+          </button>
+        )}
         {isOwner && (
           <Fragment>
             {!editing && (
@@ -114,14 +136,28 @@ const CommentItem = ({
             </button>
           </Fragment>
         )}
-        <button
-          onClick={() => toggleCommentLike(postId, _id)}
-          type="button"
-          className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
-          title={likedByMe ? 'Unlike comment' : 'Like comment'}
-        >
-          <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
-        </button>
+        {replying && (
+          <CommentForm
+            postId={postId}
+            parentId={_id}
+            rows={3}
+            placeholder={`Reply to ${name}...`}
+            small
+            onDone={() => setReplying(false)}
+          />
+        )}
+        {replies.length > 0 && (
+          <div className="comment-replies">
+            {replies.map((reply) => (
+              <CommentItem
+                key={reply._id}
+                comment={reply}
+                postId={postId}
+                isReply
+              />
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -130,6 +166,8 @@ const CommentItem = ({
 CommentItem.propTypes = {
   postId: PropTypes.string.isRequired,
   comment: PropTypes.object.isRequired,
+  replies: PropTypes.array,
+  isReply: PropTypes.bool,
   auth: PropTypes.object.isRequired,
   deleteComment: PropTypes.func.isRequired,
   editComment: PropTypes.func.isRequired,

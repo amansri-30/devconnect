@@ -40,6 +40,8 @@ const Notifications = ({
         return { icon: 'fas fa-thumbs-up', className: 'badge-primary' };
       case 'comment':
         return { icon: 'fas fa-comment', className: 'badge-light' };
+      case 'reply':
+        return { icon: 'fas fa-reply', className: 'badge-light' };
       case 'comment_like':
         return { icon: 'fas fa-heart', className: 'badge-danger' };
       default:
@@ -56,6 +58,8 @@ const Notifications = ({
         return <Fragment>{who} liked your post</Fragment>;
       case 'comment':
         return <Fragment>{who} commented on your post</Fragment>;
+      case 'reply':
+        return <Fragment>{who} replied to your comment</Fragment>;
       case 'comment_like':
         return <Fragment>{who} liked your comment</Fragment>;
       default:

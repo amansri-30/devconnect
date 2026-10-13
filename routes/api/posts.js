@@ -464,11 +464,39 @@ router.post(
         user: user.id
       };
 
+      // Threaded replies: when a parent comment id is supplied, validate it
+      // belongs to this post and thread this comment under it.
+      let parentComment = null;
+      if (req.body.parent) {
+        if (!/^[0-9a-fA-F]{24}$/.test(req.body.parent)) {
+          return res.status(400).json({ msg: 'Invalid parent comment' });
+        }
+        parentComment = post.comments.id(req.body.parent);
+        if (!parentComment) {
+          return res.status(400).json({ msg: 'Parent comment does not exist' });
+        }
+        newComment.parent = parentComment._id;
+      }
+
       post.comments.push(newComment);
 
       await post.save();
 
-      notify({ recipient: post.user, from: req.user.id, type: 'comment', post: post._id });
+      if (parentComment) {
+        notify({
+          recipient: parentComment.user,
+          from: req.user.id,
+          type: 'reply',
+          post: post._id
+        });
+      } else {
+        notify({
+          recipient: post.user,
+          from: req.user.id,
+          type: 'comment',
+          post: post._id
+        });
+      }
 
       return res.json(post.comments);
     } catch (err) {
@@ -554,11 +582,19 @@ router.delete('/comment/:post_id/:comment_id', auth, async (req, res) => {
       return res.status(401).json({ msg: 'User not authorized' });
     }
 
-    const removeIndex = post.comments
-      .map((comment) => comment.id)
-      .indexOf(req.params.comment_id);
+    // Also drop any replies that were threaded under this comment, so we
+    // don't leave orphaned comments pointing at a missing parent.
+    const replyIds = post.comments
+      .filter(
+        (c) => c.parent && c.parent.toString() === req.params.comment_id
+      )
+      .map((c) => c.id);
 
-    post.comments.splice(removeIndex, 1);
+    post.comments = post.comments.filter(
+      (c) =>
+        c.id !== req.params.comment_id &&
+        !replyIds.includes(c.id)
+    );
 
     await post.save();
 

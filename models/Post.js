@@ -55,6 +55,10 @@ const PostSchema = new Schema({
           }
         }
       ],
+      parent: {
+        type: Schema.Types.ObjectId,
+        default: null
+      },
       date: {
         type: Date,
         default: Date.now

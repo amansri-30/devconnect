@@ -3,32 +3,44 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { addComment } from '../../actions/post';
 
-const CommentForm = ({ postId, addComment }) => {
+const CommentForm = ({
+  postId,
+  parentId,
+  onDone,
+  placeholder = 'Write a comment',
+  rows = 5,
+  small,
+  addComment
+}) => {
   const [text, setText] = useState('');
   const MAX_LENGTH = 1000;
 
+  const onSubmit = (e) => {
+    e.preventDefault();
+    if (text.trim()) {
+      const payload = { text };
+      if (parentId) payload.parent = parentId;
+      addComment(postId, payload);
+      setText('');
+      if (onDone) onDone();
+    }
+  };
+
   return (
-    <div className="post-form">
-      <div className="bg-primary p">
-        <h3>Leave a Comment</h3>
-      </div>
-      <form
-        className="form my-1"
-        onSubmit={(e) => {
-          e.preventDefault();
-          if (text.trim()) {
-            addComment(postId, { text });
-            setText('');
-          }
-        }}
-      >
+    <div className={small ? '' : 'post-form'}>
+      {!small && (
+        <div className="bg-primary p">
+          <h3>{parentId ? 'Reply' : 'Leave a Comment'}</h3>
+        </div>
+      )}
+      <form className="form my-1" onSubmit={onSubmit}>
         <textarea
           name="text"
           value={text}
           onChange={(e) => setText(e.target.value)}
           cols="30"
-          rows="5"
-          placeholder="Write a comment"
+          rows={rows}
+          placeholder={placeholder}
           maxLength={MAX_LENGTH}
           required
         />
@@ -37,7 +49,20 @@ const CommentForm = ({ postId, addComment }) => {
             {text.length}/{MAX_LENGTH}
           </span>
         </div>
-        <input type="submit" className="btn btn-dark my-1" value="Submit" />
+        <input
+          type="submit"
+          className="btn btn-dark my-1"
+          value={parentId ? 'Reply' : 'Submit'}
+        />
+        {parentId && onDone && (
+          <button
+            type="button"
+            className="btn btn-light my-1"
+            onClick={onDone}
+          >
+            Cancel
+          </button>
+        )}
       </form>
     </div>
   );
@@ -45,6 +70,11 @@ const CommentForm = ({ postId, addComment }) => {
 
 CommentForm.propTypes = {
   postId: PropTypes.string.isRequired,
+  parentId: PropTypes.string,
+  onDone: PropTypes.func,
+  placeholder: PropTypes.string,
+  rows: PropTypes.number,
+  small: PropTypes.bool,
   addComment: PropTypes.func.isRequired
 };
 

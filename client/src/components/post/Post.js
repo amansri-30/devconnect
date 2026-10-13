@@ -44,6 +44,21 @@ const Post = ({
     }
   };
 
+  // Group threaded replies under their parent comment. Replies whose parent
+  // no longer exists fall back to the top level so nothing is hidden.
+  const allComments = (post && post.comments) || [];
+  const commentIds = new Set(allComments.map((c) => c._id));
+  const repliesByParent = {};
+  allComments.forEach((c) => {
+    if (c.parent) {
+      repliesByParent[c.parent] = repliesByParent[c.parent] || [];
+      repliesByParent[c.parent].push(c);
+    }
+  });
+  const topLevelComments = allComments.filter(
+    (c) => !c.parent || !commentIds.has(c.parent)
+  );
+
   return loading || post === null ? (
     <Spinner />
   ) : (
@@ -93,11 +108,12 @@ const Post = ({
           <CommentForm postId={post._id} />
           <div className="comments">
             {post.comments.length > 0 ? (
-              post.comments.map((comment) => (
+              topLevelComments.map((comment) => (
                 <CommentItem
                   key={comment._id}
                   comment={comment}
                   postId={post._id}
+                  replies={repliesByParent[comment._id] || []}
                 />
               ))
             ) : (

@@ -782,6 +782,21 @@ button {
   margin: 0;
 }
 
+.comment-replies {
+  margin-top: 0.5rem;
+  padding-left: 1rem;
+  border-left: 2px solid #e0e0e0;
+}
+
+.comment-reply {
+  background: #fafafa;
+}
+
+.comment-reply .round-img {
+  width: 32px;
+  height: 32px;
+}
+
 .scope-toggle .btn {
   margin: 0;
   border-radius: 0;
