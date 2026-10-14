@@ -11,7 +11,8 @@ import {
   GET_FOLLOWING,
   GET_FOLLOWERS,
   GET_LEADERBOARD,
-  GET_SUGGESTIONS
+  GET_SUGGESTIONS,
+  GET_NETWORK_USERS
 } from '../actions/types';
 
 const initialState = {
@@ -22,6 +23,7 @@ following: [],
         followers: [],
         leaderboard: [],
         suggestions: [],
+        networkUsers: [],
   isFollowing: false,
   followsYou: false,
   followersCount: 0,
@@ -104,6 +106,12 @@ export default function profileReducer(state = initialState, action) {
         suggestions: action.payload,
         loading: false
       };
+    case GET_NETWORK_USERS:
+      return {
+        ...state,
+        networkUsers: action.payload,
+        loading: false
+      };
     case PROFILE_ERROR:
       return {
         ...state,
@@ -120,6 +128,7 @@ export default function profileReducer(state = initialState, action) {
 followers: [],
   leaderboard: [],
   suggestions: [],
+  networkUsers: [],
         isFollowing: false,
         followsYou: false,
         followersCount: 0,

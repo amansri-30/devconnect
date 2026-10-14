@@ -14,7 +14,8 @@ GET_PROFILE,
   GET_FOLLOWING,
   GET_FOLLOWERS,
   GET_LEADERBOARD,
-  GET_SUGGESTIONS
+  GET_SUGGESTIONS,
+  GET_NETWORK_USERS
 } from './types';
 
 // Safely derive an error payload, guarding against network errors where no
@@ -110,6 +111,40 @@ export const toggleFollow = (userId) => async (dispatch) => {
     const data = err.response && err.response.data;
     const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update follow status';
     dispatch(setAlert(msg, 'danger'));
+  }
+};
+
+// Get any user's followers (public)
+export const getNetworkFollowers = (userId) => async (dispatch) => {
+  try {
+    const res = await axios.get(`/api/profile/followers/${userId}`);
+
+    dispatch({
+      type: GET_NETWORK_USERS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: PROFILE_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the users any user follows (public)
+export const getNetworkFollowing = (userId) => async (dispatch) => {
+  try {
+    const res = await axios.get(`/api/profile/following/${userId}`);
+
+    dispatch({
+      type: GET_NETWORK_USERS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: PROFILE_ERROR,
+      payload: getErrorPayload(err)
+    });
   }
 };
 

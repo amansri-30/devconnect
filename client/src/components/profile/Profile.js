@@ -71,8 +71,18 @@ const Profile = ({
           {profile.user && (
             <p className="my-1 follow-stats">
               <span className="badge badge-light">
-                <i className="fas fa-users" /> {followersCount} follower
-                {followersCount === 1 ? '' : 's'} · {followingCount} following
+                <i className="fas fa-users" />{' '}
+                <Link
+                  to={`/network/${profile.user._id || profile.user}?tab=followers`}
+                >
+                  {followersCount} follower{followersCount === 1 ? '' : 's'}
+                </Link>{' '}
+                ·{' '}
+                <Link
+                  to={`/network/${profile.user._id || profile.user}?tab=following`}
+                >
+                  {followingCount} following
+                </Link>
               </span>
               {!isOwnProfile && followsYou && (
                 <span className="badge badge-success">
@@ -81,22 +91,18 @@ const Profile = ({
               )}
             </p>
           )}
-          {auth.isAuthenticated &&
-            auth.loading === false &&
-            auth.user &&
-            profile.user &&
-            auth.user._id === profile.user._id && (
-              <Link to="/edit-profile" className="btn btn-dark">
-                Edit Profile
-              </Link>
-            )}
+          {isOwnProfile && (
+            <Link to="/edit-profile" className="btn btn-dark">
+              Edit Profile
+            </Link>
+          )}
           <div className="profile-grid my-1">
             <ProfileTop profile={profile} />
             <ProfileAbout profile={profile} />
             <ProfilePosts userId={profile.user ? profile.user._id : null} />
             <div className="profile-exp bg-white p-2">
               <h2 className="text-primary">Experience</h2>
-              {profile.experience.length > 0 ? (
+              {(profile.experience || []).length > 0 ? (
                 <Fragment>
                   {profile.experience.map((experience) => (
                     <ProfileExperience
@@ -111,7 +117,7 @@ const Profile = ({
             </div>
             <div className="profile-edu bg-white p-2">
               <h2 className="text-primary">Education</h2>
-              {profile.education.length > 0 ? (
+              {(profile.education || []).length > 0 ? (
                 <Fragment>
                   {profile.education.map((education) => (
                     <ProfileEducation

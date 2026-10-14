@@ -32,6 +32,7 @@ import SavedPosts from './components/posts/SavedPosts';
 import LikedPosts from './components/posts/LikedPosts';
 import Following from './components/profiles/Following';
 import Followers from './components/profiles/Followers';
+import Network from './components/profiles/Network';
 import Notifications from './components/notifications/Notifications';
 import NotFound from './components/layout/NotFound';
 
@@ -144,6 +145,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Followers />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/network/:userId"
+                element={
+                  <PrivateRoute>
+                    <Network />
                   </PrivateRoute>
                 }
               />

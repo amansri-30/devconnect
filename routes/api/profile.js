@@ -257,6 +257,54 @@ router.put('/follow/:user_id', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/profile/followers/:user_id
+// @desc    Get the followers of any user
+// @access  Public
+router.get('/followers/:user_id', async (req, res) => {
+  try {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.user_id)) {
+      return res.status(404).json({ msg: 'No user found' });
+    }
+
+    const profile = await Profile.findOne({
+      user: req.params.user_id
+    }).populate('followers', ['name', 'avatar']);
+
+    if (!profile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
+    return res.json(profile.followers || []);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/profile/following/:user_id
+// @desc    Get the users a given user follows
+// @access  Public
+router.get('/following/:user_id', async (req, res) => {
+  try {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.user_id)) {
+      return res.status(404).json({ msg: 'No user found' });
+    }
+
+    const profile = await Profile.findOne({
+      user: req.params.user_id
+    }).populate('following', ['name', 'avatar']);
+
+    if (!profile) {
+      return res.status(404).json({ msg: 'Profile not found' });
+    }
+
+    return res.json(profile.following || []);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/profile/followers
 // @desc    Get the users who follow the current user (with mutual-follow flag)
 // @access  Private

@@ -156,6 +156,15 @@ img {
   margin-left: 0;
 }
 
+.follow-stats a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.follow-stats a:hover {
+  color: var(--primary-color);
+}
+
 .checklist {
   list-style: none;
   display: grid;
