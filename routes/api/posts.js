@@ -87,8 +87,17 @@ router.get('/', auth, async (req, res) => {
     );
     const skip = (page - 1) * limit;
 
-    const sort = req.query.sort === 'likes' ? 'likes' : 'recent';
-    const sortSpec = sort === 'likes' ? { likesCount: -1, date: -1 } : { date: -1 };
+    const requested = req.query.sort;
+    const sort =
+      requested === 'likes' || requested === 'trending'
+        ? requested
+        : 'recent';
+    const sortSpec =
+      sort === 'likes'
+        ? { likesCount: -1, date: -1 }
+        : sort === 'trending'
+        ? { score: -1, date: -1 }
+        : { date: -1 };
 
     // Optional scope=following limits the feed to posts by developers the
     // current user follows.
@@ -103,15 +112,31 @@ router.get('/', auth, async (req, res) => {
       filter = { user: { $in: followingIds } };
     }
 
-    // For like-based sorting we need a sortable field; use an aggregation
-    // that projects a stable count while keeping the response shape intact.
-    // Every post is included (like count included), so switching between
-    // "Newest" and "Most Liked" never hides or drops posts from the feed.
-    if (sort === 'likes') {
+    // Like- and trend-based sorting need a sortable field; use an aggregation
+    // that projects stable counts while keeping the response shape intact.
+    // Every post is included, so switching sort never hides or drops posts.
+    if (sort === 'likes' || sort === 'trending') {
+      const addFields = {
+        likesCount: { $size: { $ifNull: ['$likes', []] } }
+      };
+
+      if (sort === 'trending') {
+        // Weight likes twice as heavily as comments, computed inline so it
+        // doesn't depend on another field added in the same stage.
+        addFields.score = {
+          $add: [
+            {
+              $multiply: [{ $size: { $ifNull: ['$likes', []] } }, 2]
+            },
+            { $size: { $ifNull: ['$comments', []] } }
+          ]
+        };
+      }
+
       const [docs, total] = await Promise.all([
         Post.aggregate([
           { $match: filter },
-          { $addFields: { likesCount: { $size: { $ifNull: ['$likes', []] } } } },
+          { $addFields: addFields },
           { $sort: sortSpec },
           { $skip: skip },
           { $limit: limit }

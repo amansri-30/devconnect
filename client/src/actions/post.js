@@ -39,7 +39,7 @@ export const getPosts = (page = 1, sort = 'recent', scope = 'all') => async (
 ) => {
   try {
     const params = { page, limit: 8 };
-    if (sort === 'likes') params.sort = 'likes';
+    if (sort === 'likes' || sort === 'trending') params.sort = sort;
     if (scope === 'following') params.scope = 'following';
 
     const res = await axios.get('/api/posts', { params });

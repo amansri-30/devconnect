@@ -91,6 +91,7 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
         >
           <option value="recent">Newest First</option>
           <option value="likes">Most Liked</option>
+          <option value="trending">Trending</option>
         </select>
       </div>
       <div className="posts">
