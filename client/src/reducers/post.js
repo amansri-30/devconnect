@@ -11,6 +11,8 @@ import {
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
+  CLEAR_USER_POSTS,
+  GET_FOLLOWING_FEED,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
   DELETE_LIKED_POST,
@@ -26,6 +28,7 @@ const initialState = {
   likedPosts: [],
   myPosts: [],
   userPosts: [],
+  followingFeed: [],
   loading: true,
   error: {},
   page: 1,
@@ -91,6 +94,17 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         userPosts: action.payload,
+        loading: false
+      };
+    case CLEAR_USER_POSTS:
+      return {
+        ...state,
+        userPosts: []
+      };
+    case GET_FOLLOWING_FEED:
+      return {
+        ...state,
+        followingFeed: action.payload,
         loading: false
       };
     case SAVE_POST:
@@ -176,6 +190,11 @@ export default function postReducer(state = initialState, action) {
             ? { ...post, likes: action.payload.likes }
             : post
         ),
+        followingFeed: state.followingFeed.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
         loading: false
       };
 case DELETE_POST:
@@ -189,6 +208,9 @@ case DELETE_POST:
         ),
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
+        followingFeed: state.followingFeed.filter(
+          (p) => p._id !== action.payload
+        ),
         total: Math.max(state.total - 1, 0),
         loading: false
       };

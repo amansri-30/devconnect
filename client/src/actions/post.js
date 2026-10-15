@@ -13,6 +13,8 @@ SAVE_POST,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
+  CLEAR_USER_POSTS,
+  GET_FOLLOWING_FEED,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
   DELETE_LIKED_POST,
@@ -217,11 +219,33 @@ export const getMyPosts = () => async (dispatch) => {
 
 // Get a user's latest posts (for their public profile)
 export const getUserPosts = (userId) => async (dispatch) => {
+  // Clear the previous user's posts so a profile switch never shows stale data.
+  dispatch({ type: CLEAR_USER_POSTS });
+
   try {
     const res = await axios.get(`/api/posts/user/${userId}`);
 
     dispatch({
       type: GET_USER_POSTS,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the latest posts from developers the current user follows
+export const getFollowingFeed = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts', {
+      params: { limit: 3, scope: 'following' }
+    });
+
+    dispatch({
+      type: GET_FOLLOWING_FEED,
       payload: res.data
     });
   } catch (err) {

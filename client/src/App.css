@@ -806,6 +806,24 @@ button {
   height: 32px;
 }
 
+.following-feed-item {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.following-feed-item:last-child {
+  border-bottom: none;
+}
+
+.following-feed-meta {
+  font-size: 0.85rem;
+  color: var(--dark-color);
+}
+
+.following-feed-meta a {
+  color: var(--primary-color);
+}
+
 .scope-toggle .btn {
   margin: 0;
   border-radius: 0;
