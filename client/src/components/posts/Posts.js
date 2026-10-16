@@ -12,40 +12,34 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
   const [sort, setSort] = useState('recent');
   const [scope, setScope] = useState('all');
 
+  // Server-side search: debounce typing, then re-query page 1 whenever the
+  // search term, sort, or scope changes.
   useEffect(() => {
-    getPosts(1, sort, scope);
-  }, [getPosts, sort, scope]);
+    const delay = query.trim() ? 350 : 0;
+    const timer = setTimeout(() => {
+      getPosts(1, sort, scope, query);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [getPosts, sort, scope, query]);
 
   const loadMore = async () => {
     setMoreLoading(true);
-    await getPosts(page + 1, sort, scope);
+    await getPosts(page + 1, sort, scope, query);
     setMoreLoading(false);
   };
 
   const onSortChange = (e) => {
-    const value = e.target.value;
-    setSort(value);
-    setQuery('');
+    setSort(e.target.value);
   };
 
   const onScopeChange = (value) => {
     setScope(value);
-    setQuery('');
   };
 
-  // Array of loaded posts (used for the "Load More" hint).
+  // Number of currently loaded posts (used for the "Load More" hint).
   const loadedCount = posts.length;
 
-  // Client-side filter across post text and author name.
-  const q = query.trim().toLowerCase();
-  const filtered = q
-    ? posts.filter((p) => {
-        const text = `${p.text || ''}`.toLowerCase();
-        const name = `${p.name || ''}`.toLowerCase();
-        return text.includes(q) || name.includes(q);
-      })
-    : posts;
-
+  const q = query.trim();
   const hasMore = loadedCount < total;
 
   return loading ? (
@@ -95,19 +89,19 @@ const Posts = ({ getPosts, post: { posts, loading, page, total } }) => {
         </select>
       </div>
       <div className="posts">
-        {filtered.length > 0 ? (
-          filtered.map((post) => <PostItem key={post._id} post={post} />)
+        {posts.length > 0 ? (
+          posts.map((post) => <PostItem key={post._id} post={post} />)
         ) : (
           <p className="my-1">
             {q
-              ? `No posts match "${query.trim()}".`
+              ? `No posts match "${q}".`
               : scope === 'following'
               ? 'No posts from people you follow yet. Follow developers to see their posts here.'
               : 'No posts yet. Be the first to start a discussion!'}
           </p>
         )}
       </div>
-      {!q && hasMore && (
+      {hasMore && (
         <div className="my-1" style={{ textAlign: 'center' }}>
           <button
             className="btn btn-light"

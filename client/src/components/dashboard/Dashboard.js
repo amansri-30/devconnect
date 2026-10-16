@@ -4,7 +4,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import Spinner from '../layout/Spinner';
 import { getCurrentProfile, deleteAccount, getFollowing, getLeaderboard, getSuggestions } from '../../actions/profile';
-import { getMyPosts, getSavedPosts, getLikedPosts } from '../../actions/post';
+import { getSavedPosts, getLikedPosts } from '../../actions/post';
 import DashboardActions from './DashboardActions';
 import Experience from './Experience';
 import Education from './Education';
@@ -22,7 +22,6 @@ const Dashboard = ({
   getFollowing,
   getLeaderboard,
   getSuggestions,
-  getMyPosts,
   getSavedPosts,
   getLikedPosts,
   auth: { user },
@@ -33,10 +32,9 @@ const Dashboard = ({
     getFollowing();
     getLeaderboard();
     getSuggestions();
-    getMyPosts();
     getSavedPosts();
     getLikedPosts();
-  }, [getCurrentProfile, getFollowing, getLeaderboard, getSuggestions, getMyPosts, getSavedPosts, getLikedPosts]);
+  }, [getCurrentProfile, getFollowing, getLeaderboard, getSuggestions, getSavedPosts, getLikedPosts]);
 
   // Compute a rough profile-completeness percentage from the key fields.
   const completion = () => {
@@ -157,7 +155,6 @@ Dashboard.propTypes = {
   getFollowing: PropTypes.func.isRequired,
   getLeaderboard: PropTypes.func.isRequired,
   getSuggestions: PropTypes.func.isRequired,
-  getMyPosts: PropTypes.func.isRequired,
   getSavedPosts: PropTypes.func.isRequired,
   getLikedPosts: PropTypes.func.isRequired,
   auth: PropTypes.object.isRequired,
@@ -175,7 +172,6 @@ export default connect(mapStateToProps, {
   getFollowing,
   getLeaderboard,
   getSuggestions,
-  getMyPosts,
   getSavedPosts,
   getLikedPosts
 })(Dashboard);

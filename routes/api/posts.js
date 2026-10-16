@@ -112,6 +112,16 @@ router.get('/', auth, async (req, res) => {
       filter = { user: { $in: followingIds } };
     }
 
+    // Optional free-text search across post text and denormalized author name.
+    const search = (req.query.search || '').trim();
+    if (search) {
+      const rx = new RegExp(
+        search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
+        'i'
+      );
+      filter = { ...filter, $or: [{ text: rx }, { name: rx }] };
+    }
+
     // Like- and trend-based sorting need a sortable field; use an aggregation
     // that projects stable counts while keeping the response shape intact.
     // Every post is included, so switching sort never hides or drops posts.

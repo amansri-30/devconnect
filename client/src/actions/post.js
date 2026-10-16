@@ -36,13 +36,18 @@ const getErrorPayload = (err) => ({
 // Get posts (paginated; page 1 replaces the list, later pages append).
 // sort may be 'recent' (default) or 'likes' (most liked first).
 // scope may be 'all' (default) or 'following' (posts from developers you follow).
-export const getPosts = (page = 1, sort = 'recent', scope = 'all') => async (
-  dispatch
-) => {
+// search filters by post text or author name (server-side, across all posts).
+export const getPosts = (
+  page = 1,
+  sort = 'recent',
+  scope = 'all',
+  search = ''
+) => async (dispatch) => {
   try {
     const params = { page, limit: 8 };
     if (sort === 'likes' || sort === 'trending') params.sort = sort;
     if (scope === 'following') params.scope = 'following';
+    if (search.trim()) params.search = search.trim();
 
     const res = await axios.get('/api/posts', { params });
 
