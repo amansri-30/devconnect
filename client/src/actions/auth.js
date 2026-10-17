@@ -27,9 +27,14 @@ const getErrorMessages = (err) => {
 
 // Load User
 export const loadUser = () => async dispatch => {
-  if (localStorage.token) {
-    setAuthToken(localStorage.token);
+  // No stored session: don't call the private /api/auth route, which would
+  // only 401 and trigger the global "session expired" alert for a guest.
+  if (!localStorage.token) {
+    dispatch({ type: AUTH_ERROR });
+    return;
   }
+
+  setAuthToken(localStorage.token);
 
   try {
     const res = await axios.get('/api/auth');

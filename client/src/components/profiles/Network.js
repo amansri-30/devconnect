@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link, useParams, useSearchParams } from 'react-router-dom';
@@ -19,13 +19,24 @@ const Network = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const tab = searchParams.get('tab') === 'following' ? 'following' : 'followers';
 
+  // Track a fetch for the active tab/user so the previous list never shows
+  // under the new heading while the request is in flight.
+  const [switching, setSwitching] = useState(false);
+
   useEffect(() => {
     if (!userId) return;
-    if (tab === 'following') {
-      getNetworkFollowing(userId);
-    } else {
-      getNetworkFollowers(userId);
-    }
+    let active = true;
+    setSwitching(true);
+    const request =
+      tab === 'following'
+        ? getNetworkFollowing(userId)
+        : getNetworkFollowers(userId);
+    Promise.resolve(request).finally(() => {
+      if (active) setSwitching(false);
+    });
+    return () => {
+      active = false;
+    };
   }, [userId, tab, getNetworkFollowers, getNetworkFollowing]);
 
   const switchTab = (next) => {
@@ -34,7 +45,7 @@ const Network = ({
 
   const label = tab === 'following' ? 'Following' : 'Followers';
 
-  return loading ? (
+  return loading || switching ? (
     <Spinner />
   ) : (
     <Fragment>

@@ -11,6 +11,13 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('skill') || '');
 
+  // Keep the filter in sync with the URL: /profiles and /profiles?skill=X are
+  // the same route, so React Router won't remount us when the param changes
+  // (e.g. leaving a skill-filtered view via the navbar must clear the filter).
+  useEffect(() => {
+    setQuery(searchParams.get('skill') || '');
+  }, [searchParams]);
+
   useEffect(() => {
     getProfiles();
   }, [getProfiles]);

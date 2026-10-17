@@ -164,6 +164,10 @@ export const addPost = formData => async dispatch => {
 
 // Get single post
 export const getSinglePost = postId => async dispatch => {
+  // Clear any previously loaded post so navigating between posts (or to a
+  // deleted one) never shows the previous post's content.
+  dispatch({ type: GET_SINGLE_POST, payload: null });
+
   try {
     const res = await axios.get(`/api/posts/${postId}`);
 

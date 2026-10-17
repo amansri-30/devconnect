@@ -254,7 +254,12 @@ router.get('/user/:user_id', async (req, res) => {
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
-    const post = await Post.findById(req.params.id);
+    // Atomic view counter: increments on every open and returns the updated doc.
+    const post = await Post.findByIdAndUpdate(
+      req.params.id,
+      { $inc: { views: 1 } },
+      { new: true }
+    );
 
     if (!post) {
       return res.status(404).json({ msg: 'No post found' });

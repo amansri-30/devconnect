@@ -55,6 +55,9 @@ export const markNotificationsRead = (id) => async (dispatch) => {
     dispatch(getUnreadCount());
     if (id) {
       dispatch({ type: MARK_NOTIFICATION_READ, payload: id });
+    } else {
+      // Mark-all: refetch so every item's read flag clears, not just the badge.
+      dispatch(getNotifications());
     }
   } catch (err) {
     dispatch({

@@ -39,8 +39,17 @@ const Profile = ({
 
   return (
     <Fragment>
-      {profile === null || loading ? (
+      {loading ? (
         <Spinner />
+      ) : profile === null ? (
+        <Fragment>
+          <Link to="/profiles" className="btn btn-dark">
+            Back to Profiles
+          </Link>
+          <p className="my-1">
+            We couldn't find a profile at that address. It may have been removed.
+          </p>
+        </Fragment>
       ) : (
         <Fragment>
           <Link to="/profiles" className="btn btn-dark">

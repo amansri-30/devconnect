@@ -59,8 +59,17 @@ const Post = ({
     (c) => !c.parent || !commentIds.has(c.parent)
   );
 
-  return loading || post === null ? (
+  return loading ? (
     <Spinner />
+  ) : !post ? (
+    <Fragment>
+      <Link to="/posts" className="btn btn-dark">
+        Back to Posts
+      </Link>
+      <p className="my-1">
+        This post is unavailable. It may have been deleted by its author.
+      </p>
+    </Fragment>
   ) : (
     <Fragment>
       <Link to="/posts" className="btn btn-dark">

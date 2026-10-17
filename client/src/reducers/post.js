@@ -61,10 +61,12 @@ export default function postReducer(state = initialState, action) {
       };
     }
     case GET_SINGLE_POST:
+      // A null payload is the "clear before fetch" signal: keep the spinner up
+      // until the real post (or an error) arrives.
       return {
         ...state,
         post: action.payload,
-        loading: false
+        loading: action.payload === null
       };
     case GET_SAVED_POSTS:
       return {
@@ -186,6 +188,16 @@ export default function postReducer(state = initialState, action) {
             : post
         ),
         likedPosts: state.likedPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
+        savedPosts: state.savedPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
+        userPosts: state.userPosts.map((post) =>
           post._id === action.payload.postId
             ? { ...post, likes: action.payload.likes }
             : post

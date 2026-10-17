@@ -20,7 +20,7 @@ const PostItem = ({
   toggleSavePost,
   editPost,
   auth,
-  post: { _id, text, name, avatar, user, likes, comments, date, saved },
+  post: { _id, text, name, avatar, user, likes, comments, date, saved, views },
   showActions
 }) => {
   const [copied, setCopied] = useState(false);
@@ -125,6 +125,10 @@ const PostItem = ({
             <MediaPreview text={text} />
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
+              <span className="post-views" title="Number of times this post has been viewed">
+                <i className="fas fa-eye" /> {views || 0} view
+                {(views || 0) === 1 ? '' : 's'}
+              </span>
             </p>
           </Fragment>
         )}

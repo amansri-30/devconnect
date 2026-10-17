@@ -53,7 +53,9 @@ router.get('/leaderboard', async (req, res) => {
       { $unwind: '$dev' },
       {
         $project: {
-          _id: 1,
+          // Expose the USER id as _id: clients link to /profile/:id and
+          // call /api/profile/follow/:user_id with it, not the profile id.
+          _id: '$user',
           name: '$dev.name',
           avatar: '$dev.avatar',
           status: 1,
@@ -102,7 +104,8 @@ router.get('/suggestions', auth, async (req, res) => {
       { $unwind: '$dev' },
       {
         $project: {
-          _id: 1,
+          // Expose the USER id as _id (see leaderboard above).
+          _id: '$user',
           name: '$dev.name',
           avatar: '$dev.avatar',
           status: 1,

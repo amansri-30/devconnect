@@ -876,6 +876,10 @@ button {
   margin-bottom: 0.5rem;
 }
 
+.post .post-views {
+  margin-left: 0.75rem;
+}
+
 /* Mobile Styles */
 @media (max-width: 700px) {
   .container {

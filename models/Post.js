@@ -31,6 +31,10 @@ const PostSchema = new Schema({
       ref: 'users'
     }
   ],
+  views: {
+    type: Number,
+    default: 0
+  },
   comments: [
     {
       user: {
