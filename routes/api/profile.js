@@ -3,6 +3,7 @@ const router = express.Router();
 const auth = require('../../middleware/auth');
 const jwt = require('jsonwebtoken');
 const config = require('config');
+const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
 const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require('../../config/keys');
 const moment = require('moment');
@@ -79,10 +80,14 @@ router.get('/suggestions', auth, async (req, res) => {
     const me = await Profile.findOne({ user: req.user.id }).select('following');
     const followed = (me && me.following) || [];
 
+    // Aggregation pipelines are not cast by Mongoose, so the exclusion must be
+    // a real ObjectId — otherwise $ne always passes and you'd suggest yourself.
+    const myId = new mongoose.Types.ObjectId(req.user.id);
+
     const suggestions = await Profile.aggregate([
       {
         $match: {
-          user: { $ne: req.user.id, $nin: followed },
+          user: { $ne: myId, $nin: followed },
           status: { $exists: true, $ne: '' }
         }
       },
@@ -211,6 +216,17 @@ router.put('/follow/:user_id', auth, async (req, res) => {
       return res.status(400).json({ msg: "You can't follow yourself" });
     }
 
+    // Following is recorded on BOTH profiles, so the follower needs one of
+    // their own — otherwise the follow is applied to the target but silently
+    // lost from the follower's "following" list.
+    const me = await Profile.findOne({ user: req.user.id });
+
+    if (!me) {
+      return res
+        .status(400)
+        .json({ msg: 'Create a profile before following other developers' });
+    }
+
     const target = await Profile.findOne({ user: req.params.user_id });
 
     if (!target) {
@@ -229,22 +245,19 @@ router.put('/follow/:user_id', auth, async (req, res) => {
       notify({ recipient: target.user, from: req.user.id, type: 'follow' });
     }
 
-    // Maintain the current user's own "following" list for the Following page.
-    const me = await Profile.findOne({ user: req.user.id });
+    // Maintain my own "following" list for the Following page, basing the
+    // change on my list (not the target's) so any past desync self-heals.
+    const followingIndex = (me.following || []).findIndex(
+      (f) => f.toString() === req.params.user_id
+    );
 
-    if (me) {
-      const followingIndex = (me.following || []).findIndex(
-        (f) => f.toString() === req.params.user_id
-      );
-
-      if (wasFollowing && followingIndex !== -1) {
-        me.following.splice(followingIndex, 1);
-      } else if (!wasFollowing && followingIndex === -1) {
-        me.following.push(req.params.user_id);
-      }
-      await me.save();
+    if (wasFollowing) {
+      if (followingIndex !== -1) me.following.splice(followingIndex, 1);
+    } else if (followingIndex === -1) {
+      me.following.push(req.params.user_id);
     }
 
+    await me.save();
     await target.save();
 
     return res.json({
@@ -381,18 +394,25 @@ router.post(
     // Build profile object
     const profileFields = {};
     profileFields.user = req.user.id;
-    if (req.body.company) profileFields.company = req.body.company;
-    if (req.body.website)
-      profileFields.website = normalizeUrl(req.body.website);
-    if (req.body.location) profileFields.location = req.body.location;
-    if (req.body.bio) profileFields.bio = req.body.bio;
-    if (req.body.status) profileFields.status = req.body.status;
-    if (req.body.githubusername)
+    // The profile form always submits every field, sending an empty string when
+    // the user clears one. Test for presence rather than truthiness so clearing
+    // a field actually clears it instead of silently keeping the old value.
+    if (req.body.company !== undefined)
+      profileFields.company = req.body.company;
+    if (req.body.website !== undefined)
+      profileFields.website = req.body.website
+        ? normalizeUrl(req.body.website)
+        : '';
+    if (req.body.location !== undefined)
+      profileFields.location = req.body.location;
+    if (req.body.bio !== undefined) profileFields.bio = req.body.bio;
+    if (req.body.status !== undefined) profileFields.status = req.body.status;
+    if (req.body.githubusername !== undefined)
       profileFields.githubusername = req.body.githubusername;
 
     // skills - split csv into array
-    if (req.body.skills) {
-      profileFields.skills = req.body.skills
+    if (req.body.skills !== undefined) {
+      profileFields.skills = (req.body.skills || '')
         .split(',')
         .map((skill) => skill.trim())
         .filter(Boolean);
@@ -400,16 +420,15 @@ router.post(
 
     // social links
     profileFields.social = {};
-    if (req.body.youtube)
-      profileFields.social.youtube = normalizeUrl(req.body.youtube);
-    if (req.body.twitter)
-      profileFields.social.twitter = normalizeUrl(req.body.twitter);
-    if (req.body.facebook)
-      profileFields.social.facebook = normalizeUrl(req.body.facebook);
-    if (req.body.linkedin)
-      profileFields.social.linkedin = normalizeUrl(req.body.linkedin);
-    if (req.body.instagram)
-      profileFields.social.instagram = normalizeUrl(req.body.instagram);
+    ['youtube', 'twitter', 'facebook', 'linkedin', 'instagram'].forEach(
+      (field) => {
+        if (req.body[field] !== undefined) {
+          profileFields.social[field] = req.body[field]
+            ? normalizeUrl(req.body[field])
+            : '';
+        }
+      }
+    );
 
     try {
       let profile = await Profile.findOne({ user: req.user.id });
@@ -766,8 +785,21 @@ router.delete('/', auth, async (req, res) => {
       { $pull: { following: req.user.id } }
     );
 
+    // Remove the user's likes and comments from other people's posts, so the
+    // deleted account leaves no un-removable likes or orphaned comments behind.
+    await Post.updateMany(
+      { 'likes.user': req.user.id },
+      { $pull: { likes: { user: req.user.id } } }
+    );
+    await Post.updateMany(
+      { 'comments.user': req.user.id },
+      { $pull: { comments: { user: req.user.id } } }
+    );
+
     // Drop notifications sent by the deleted account
     await Notification.deleteMany({ from: req.user.id });
+    // ...and any it received
+    await Notification.deleteMany({ recipient: req.user.id });
 
     // Remove user
     await User.findByIdAndDelete(req.user.id);

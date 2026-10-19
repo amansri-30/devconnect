@@ -103,6 +103,7 @@ export const toggleFollow = (userId) => async (dispatch) => {
     dispatch({
       type: FOLLOW_UPDATE,
       payload: {
+        userId,
         isFollowing: res.data.following,
         followersCount: res.data.followers
       }

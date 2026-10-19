@@ -106,9 +106,10 @@ router.get('/', auth, async (req, res) => {
 
     if (scope === 'following') {
       const me = await Profile.findOne({ user: req.user.id }).select('following');
-      const followingIds = (me && me.following ? me.following : []).map(
-        (id) => id.toString()
-      );
+      // Keep the raw ObjectIds. Mongoose casts ids for `find`, but NOT for
+      // aggregation pipelines (sort=likes/trending), where string ids would
+      // match nothing and the "Following" feed would come back empty.
+      const followingIds = (me && me.following) || [];
       filter = { user: { $in: followingIds } };
     }
 
@@ -121,6 +122,34 @@ router.get('/', auth, async (req, res) => {
       );
       filter = { ...filter, $or: [{ text: rx }, { name: rx }] };
     }
+
+    // Whether the current user already follows each post's author, so the feed
+    // can offer an inline Follow button. In the "following" scope every author
+    // is by definition followed, so no extra lookup is needed there.
+    let followingSet = null;
+    if (scope === 'all') {
+      const viewer = await Profile.findOne({ user: req.user.id }).select(
+        'following'
+      );
+      followingSet = new Set(
+        ((viewer && viewer.following) || []).map((id) => id.toString())
+      );
+    }
+
+    // Shape each post and tag it with the follow state relative to the viewer.
+    const respondWithFollowState = (docs) =>
+      res.json(
+        docs.map((doc) => {
+          const shaped = shapePost(doc, req.user.id);
+          return {
+            ...shaped,
+            isFollowing:
+              followingSet === null
+                ? true
+                : followingSet.has(String(shaped.user))
+          };
+        })
+      );
 
     // Like- and trend-based sorting need a sortable field; use an aggregation
     // that projects stable counts while keeping the response shape intact.
@@ -160,7 +189,7 @@ router.get('/', auth, async (req, res) => {
         'X-Per-Page': String(limit)
       });
 
-      return res.json(docs.map((doc) => shapePost(doc, req.user.id)));
+      return respondWithFollowState(docs);
     }
 
     const docs = await Post.find(filter)
@@ -178,7 +207,7 @@ router.get('/', auth, async (req, res) => {
       'X-Per-Page': String(limit)
     });
 
-    return res.json(docs.map((doc) => shapePost(doc, req.user.id)));
+    return respondWithFollowState(docs);
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');

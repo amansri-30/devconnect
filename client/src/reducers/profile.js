@@ -72,7 +72,16 @@ export default function profileReducer(state = initialState, action) {
         profiles: action.payload,
         loading: false
       };
-    case FOLLOW_UPDATE:
+    case FOLLOW_UPDATE: {
+      // Follows can also come from an inline feed button targeting any author.
+      // Only apply to the profile being viewed so its button/count stay correct.
+      const viewedUser =
+        state.profile &&
+        state.profile.user &&
+        (state.profile.user._id || state.profile.user).toString();
+      if (action.payload.userId && viewedUser !== action.payload.userId) {
+        return state;
+      }
       return {
         ...state,
         isFollowing: action.payload.isFollowing,
@@ -82,6 +91,7 @@ export default function profileReducer(state = initialState, action) {
             : state.followersCount,
         loading: false
       };
+    }
     case GET_FOLLOWING:
       return {
         ...state,

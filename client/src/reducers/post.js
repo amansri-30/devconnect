@@ -13,6 +13,7 @@ import {
   GET_USER_POSTS,
   CLEAR_USER_POSTS,
   GET_FOLLOWING_FEED,
+  FOLLOW_UPDATE,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
   DELETE_LIKED_POST,
@@ -109,6 +110,18 @@ export default function postReducer(state = initialState, action) {
         followingFeed: action.payload,
         loading: false
       };
+    case FOLLOW_UPDATE: {
+      // Reflect an inline feed follow/unfollow on every card by that author that
+      // carries follow state (the GET /api/posts lists).
+      const { userId, isFollowing } = action.payload;
+      const apply = (list) =>
+        list.map((p) => (p.user === userId ? { ...p, isFollowing } : p));
+      return {
+        ...state,
+        posts: apply(state.posts),
+        followingFeed: apply(state.followingFeed)
+      };
+    }
     case SAVE_POST:
       // Un-saving removes the post from the saved list, no matter where the
       // toggle happened (bookmark icon or the Saved page's own button).
@@ -130,6 +143,11 @@ export default function postReducer(state = initialState, action) {
                 : p
             )
           : state.savedPosts.filter((p) => p._id !== action.payload.postId),
+        likedPosts: state.likedPosts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, saved: action.payload.saved }
+            : p
+        ),
         loading: false
       };
     case DELETE_SAVED_POST:
@@ -160,6 +178,9 @@ export default function postReducer(state = initialState, action) {
           p._id === action.payload._id ? action.payload : p
         ),
         savedPosts: state.savedPosts.map((p) =>
+          p._id === action.payload._id ? action.payload : p
+        ),
+        likedPosts: state.likedPosts.map((p) =>
           p._id === action.payload._id ? action.payload : p
         ),
         loading: false

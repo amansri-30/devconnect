@@ -10,6 +10,7 @@ import {
   toggleSavePost,
   editPost
 } from '../../actions/post';
+import { toggleFollow } from '../../actions/profile';
 import linkify from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
 
@@ -19,8 +20,21 @@ const PostItem = ({
   deletePost,
   toggleSavePost,
   editPost,
+  toggleFollow,
   auth,
-  post: { _id, text, name, avatar, user, likes, comments, date, saved, views },
+  post: {
+    _id,
+    text,
+    name,
+    avatar,
+    user,
+    likes,
+    comments,
+    date,
+    saved,
+    views,
+    isFollowing
+  },
   showActions
 }) => {
   const [copied, setCopied] = useState(false);
@@ -32,6 +46,9 @@ const PostItem = ({
     !auth.loading &&
     auth.user &&
     likes.some((like) => like.user === auth.user._id);
+
+  // Whether the viewer is the post's own author (never offer to follow yourself).
+  const isOwnPost = !auth.loading && auth.user && user === auth.user._id;
 
   const startEdit = () => {
     setBody(text);
@@ -87,6 +104,27 @@ const PostItem = ({
           <img className="round-img" src={avatar} alt={name} />
           <h4>{name}</h4>
         </Link>
+        {auth.isAuthenticated &&
+          !auth.loading &&
+          auth.user &&
+          !isOwnPost &&
+          isFollowing !== undefined && (
+            <button
+              type="button"
+              className={`btn ${
+                isFollowing ? 'btn-light' : 'btn-primary'
+              } follow-toggle`}
+              onClick={() => toggleFollow(user)}
+              title={isFollowing ? 'Unfollow this developer' : 'Follow this developer'}
+            >
+              <i
+                className={`fas ${
+                  isFollowing ? 'fa-user-minus' : 'fa-user-plus'
+                }`}
+              />{' '}
+              {isFollowing ? 'Following' : 'Follow'}
+            </button>
+          )}
       </div>
       <div>
         {editing ? (
@@ -211,6 +249,7 @@ PostItem.propTypes = {
   deletePost: PropTypes.func.isRequired,
   toggleSavePost: PropTypes.func.isRequired,
   editPost: PropTypes.func.isRequired,
+  toggleFollow: PropTypes.func.isRequired,
   showActions: PropTypes.bool.isRequired
 };
 
@@ -223,5 +262,6 @@ export default connect(mapStateToProps, {
   removeLike,
   deletePost,
   toggleSavePost,
-  editPost
+  editPost,
+  toggleFollow
 })(PostItem);
