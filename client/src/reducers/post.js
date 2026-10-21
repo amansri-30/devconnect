@@ -264,96 +264,71 @@ case DELETE_POST:
         loading: false
       };
     case ADD_COMMENT:
-    case UPDATE_COMMENT:
+    case UPDATE_COMMENT: {
+      // The new comment list replaces the one on the post being viewed; mirror
+      // it onto every list that can render the same post, and bail out safely if
+      // no post is loaded (previously this dereferenced a null state.post).
+      const targetId = state.post && state.post._id;
+      if (!targetId) return state;
+      const setComments = (p) =>
+        p._id === targetId ? { ...p, comments: action.payload } : p;
       return {
         ...state,
         post: { ...state.post, comments: action.payload },
-        posts: state.posts.map((p) =>
-          p._id === state.post._id ? { ...p, comments: action.payload } : p
-        ),
-        myPosts: state.myPosts.map((p) =>
-          p._id === state.post._id ? { ...p, comments: action.payload } : p
-        ),
-        savedPosts: state.savedPosts.map((p) =>
-          p._id === state.post._id ? { ...p, comments: action.payload } : p
-        ),
+        posts: state.posts.map(setComments),
+        myPosts: state.myPosts.map(setComments),
+        savedPosts: state.savedPosts.map(setComments),
+        likedPosts: state.likedPosts.map(setComments),
+        userPosts: state.userPosts.map(setComments),
+        followingFeed: state.followingFeed.map(setComments),
+        trendingPosts: state.trendingPosts.map(setComments),
         loading: false
       };
-    case UPDATE_COMMENT_LIKES:
+    }
+    case UPDATE_COMMENT_LIKES: {
+      const { postId, comments } = action.payload;
+      const setComments = (p) => (p._id === postId ? { ...p, comments } : p);
       return {
         ...state,
         post:
-          state.post && state.post._id === action.payload.postId
-            ? { ...state.post, comments: action.payload.comments }
+          state.post && state.post._id === postId
+            ? { ...state.post, comments }
             : state.post,
-        posts: state.posts.map((p) =>
-          p._id === action.payload.postId
-            ? { ...p, comments: action.payload.comments }
-            : p
-        ),
-        myPosts: state.myPosts.map((p) =>
-          p._id === action.payload.postId
-            ? { ...p, comments: action.payload.comments }
-            : p
-        ),
-        savedPosts: state.savedPosts.map((p) =>
-          p._id === action.payload.postId
-            ? { ...p, comments: action.payload.comments }
-            : p
-        ),
+        posts: state.posts.map(setComments),
+        myPosts: state.myPosts.map(setComments),
+        savedPosts: state.savedPosts.map(setComments),
+        likedPosts: state.likedPosts.map(setComments),
+        userPosts: state.userPosts.map(setComments),
+        followingFeed: state.followingFeed.map(setComments),
+        trendingPosts: state.trendingPosts.map(setComments),
         loading: false
       };
-    case REMOVE_COMMENT:
-      // Drop the comment and any replies threaded under it (the backend
-      // removes replies too, so the UI stays consistent without a refetch).
+    }
+    case REMOVE_COMMENT: {
+      // Drop the comment and any replies threaded under it (the backend removes
+      // replies too, so the UI stays consistent without a refetch).
+      const removeFrom = (comments) =>
+        comments.filter(
+          (comment) =>
+            action.payload !== comment._id &&
+            String(comment.parent) !== String(action.payload)
+        );
+      const strip = (p) => ({ ...p, comments: removeFrom(p.comments) });
+      const targetId = state.post && state.post._id;
+      const stripIfTarget = (p) => (p._id === targetId ? strip(p) : p);
       return {
         ...state,
-        post: {
-          ...state.post,
-          comments: state.post.comments.filter(
-            (comment) =>
-              action.payload !== comment._id &&
-              String(comment.parent) !== String(action.payload)
-          )
-        },
-        posts: state.posts.map((p) =>
-          p._id === state.post._id
-            ? {
-                ...p,
-                comments: p.comments.filter(
-                  (comment) =>
-                    action.payload !== comment._id &&
-                    String(comment.parent) !== String(action.payload)
-                )
-              }
-            : p
-        ),
-        myPosts: state.myPosts.map((p) =>
-          p._id === state.post._id
-            ? {
-                ...p,
-                comments: p.comments.filter(
-                  (comment) =>
-                    action.payload !== comment._id &&
-                    String(comment.parent) !== String(action.payload)
-                )
-              }
-            : p
-        ),
-        savedPosts: state.savedPosts.map((p) =>
-          p._id === state.post._id
-            ? {
-                ...p,
-                comments: p.comments.filter(
-                  (comment) =>
-                    action.payload !== comment._id &&
-                    String(comment.parent) !== String(action.payload)
-                )
-              }
-            : p
-        ),
+        post: state.post ? strip(state.post) : state.post,
+        posts: state.posts.map(stripIfTarget),
+        myPosts: state.myPosts.map(stripIfTarget),
+        savedPosts: state.savedPosts.map(stripIfTarget),
+        likedPosts: state.likedPosts.map(stripIfTarget),
+        userPosts: state.userPosts.map(stripIfTarget),
+        followingFeed: state.followingFeed.map(stripIfTarget),
+        trendingPosts: state.trendingPosts.map(stripIfTarget),
         loading: false
       };
+    }
     default:
       return state;
   }

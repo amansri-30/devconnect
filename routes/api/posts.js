@@ -91,7 +91,7 @@ router.get('/', auth, async (req, res) => {
 
     const requested = req.query.sort;
     const sort =
-      requested === 'likes' || requested === 'trending'
+      requested === 'likes' || requested === 'trending' || requested === 'views'
         ? requested
         : 'recent';
     const sortSpec =
@@ -99,6 +99,8 @@ router.get('/', auth, async (req, res) => {
         ? { likesCount: -1, date: -1 }
         : sort === 'trending'
         ? { score: -1, date: -1 }
+        : sort === 'views'
+        ? { views: -1, date: -1 }
         : { date: -1 };
 
     // Optional scope=following limits the feed to posts by developers the
@@ -416,6 +418,37 @@ router.put('/save/:id', auth, async (req, res) => {
     await post.save();
 
     return res.json({ saved: !alreadySaved });
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   DELETE api/posts/save/:id
+// @desc    Remove a post from the current user's saved list (idempotent)
+// @access  Private
+router.delete('/save/:id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    // Unconditional pull: calling this twice is harmless, unlike the toggle
+    // PUT which would re-save the post on a second call.
+    post.savedBy = post.savedBy.filter(
+      (id) => id.toString() !== req.user.id
+    );
+
+    await post.save();
+
+    return res.json({ saved: false });
   } catch (err) {
     console.error(err.message);
 

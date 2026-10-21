@@ -44,6 +44,9 @@ export default function authReducer(state = initialState, action) {
         ...state,
         token: null,
         isAuthenticated: false,
+        // Drop the user too: otherwise a signed-out client keeps the previous
+        // account in state (e.g. PostItem's liked/own-post checks read it).
+        user: null,
         loading: false
       };
     default:

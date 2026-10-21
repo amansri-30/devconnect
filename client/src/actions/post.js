@@ -46,7 +46,8 @@ export const getPosts = (
 ) => async (dispatch) => {
   try {
     const params = { page, limit: 8 };
-    if (sort === 'likes' || sort === 'trending') params.sort = sort;
+    if (sort === 'likes' || sort === 'trending' || sort === 'views')
+      params.sort = sort;
     if (scope === 'following') params.scope = 'following';
     if (search.trim()) params.search = search.trim();
 
@@ -340,7 +341,8 @@ export const toggleSavePost = (postId) => async (dispatch) => {
 // Remove a saved post from the user's saved list
 export const unsavePost = (postId) => async (dispatch) => {
   try {
-    const res = await axios.put(`/api/posts/save/${postId}`);
+    // Dedicated idempotent endpoint: repeated calls never re-save the post.
+    const res = await axios.delete(`/api/posts/save/${postId}`);
 
     dispatch({
       type: SAVE_POST,
