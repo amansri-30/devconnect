@@ -13,6 +13,7 @@ import {
   GET_USER_POSTS,
   CLEAR_USER_POSTS,
   GET_FOLLOWING_FEED,
+  GET_TRENDING_POSTS,
   FOLLOW_UPDATE,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
@@ -30,6 +31,7 @@ const initialState = {
   myPosts: [],
   userPosts: [],
   followingFeed: [],
+  trendingPosts: [],
   loading: true,
   error: {},
   page: 1,
@@ -108,6 +110,12 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         followingFeed: action.payload,
+        loading: false
+      };
+    case GET_TRENDING_POSTS:
+      return {
+        ...state,
+        trendingPosts: action.payload,
         loading: false
       };
     case FOLLOW_UPDATE: {
@@ -228,6 +236,11 @@ export default function postReducer(state = initialState, action) {
             ? { ...post, likes: action.payload.likes }
             : post
         ),
+        trendingPosts: state.trendingPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
         loading: false
       };
 case DELETE_POST:
@@ -242,6 +255,9 @@ case DELETE_POST:
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
         followingFeed: state.followingFeed.filter(
+          (p) => p._id !== action.payload
+        ),
+        trendingPosts: state.trendingPosts.filter(
           (p) => p._id !== action.payload
         ),
         total: Math.max(state.total - 1, 0),

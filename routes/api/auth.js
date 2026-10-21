@@ -20,6 +20,14 @@ router.get('/test', (req, res) => {
 router.get('/', auth, async (req, res) => {
   try {
     const user = await User.findById(req.user.id).select('-password');
+
+    // A JWT can outlive its user (account deleted while a token was still
+    // valid). Report it as unauthorized so the client logs out cleanly instead
+    // of treating a null user as a signed-in session.
+    if (!user) {
+      return res.status(401).json({ msg: 'User no longer exists' });
+    }
+
     return res.json(user);
   } catch (err) {
     console.error(err.message);

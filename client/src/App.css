@@ -755,6 +755,15 @@ button {
   max-width: 40%;
 }
 
+.trending-body {
+  flex: 1;
+  min-width: 0;
+}
+
+.trending-body .following-feed-meta {
+  margin-top: 0.2rem;
+}
+
 .who-to-follow {
   list-style: none;
   padding: 0;

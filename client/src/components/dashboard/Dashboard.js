@@ -15,6 +15,7 @@ import CommunityChecklist from './CommunityChecklist';
 import TopDevelopers from './TopDevelopers';
 import WhoToFollow from './WhoToFollow';
 import FollowingFeed from './FollowingFeed';
+import TrendingPosts from './TrendingPosts';
 
 const Dashboard = ({
   getCurrentProfile,
@@ -89,6 +90,7 @@ const Dashboard = ({
       <TopDevelopers />
       <WhoToFollow />
       <FollowingFeed />
+      <TrendingPosts />
       {profile !== null ? (
         <Fragment>
           <DashboardActions />

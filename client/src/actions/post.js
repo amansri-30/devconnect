@@ -15,6 +15,7 @@ SAVE_POST,
   GET_USER_POSTS,
   CLEAR_USER_POSTS,
   GET_FOLLOWING_FEED,
+  GET_TRENDING_POSTS,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
   DELETE_LIKED_POST,
@@ -255,6 +256,25 @@ export const getFollowingFeed = () => async (dispatch) => {
 
     dispatch({
       type: GET_FOLLOWING_FEED,
+      payload: res.data
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the most engaging posts right now (likes + comments) for the dashboard
+export const getTrendingPosts = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts', {
+      params: { limit: 3, sort: 'trending' }
+    });
+
+    dispatch({
+      type: GET_TRENDING_POSTS,
       payload: res.data
     });
   } catch (err) {

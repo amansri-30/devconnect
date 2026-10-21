@@ -11,6 +11,8 @@ const Post = require('../../models/Post');
 const User = require('../../models/User');
 // Load Profile model (for the "following" feed scope)
 const Profile = require('../../models/Profile');
+// Load Notification model (to clean up when a post is removed)
+const Notification = require('../../models/Notification');
 
 // @route   GET api/posts/test
 // @desc    Tests post route
@@ -317,10 +319,17 @@ router.delete('/:id', auth, async (req, res) => {
 
     // Check if post owner is deleting the post
     if (post.user.toString() !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+      // 403 (not 401) so an authenticated client isn't force-logged-out by the
+      // global 401 handler over a mere authorization failure.
+      return res.status(403).json({ msg: 'User not authorized' });
     }
 
     await post.deleteOne();
+
+    // Drop notifications that pointed at this post (likes/comments/replies), so
+    // nobody keeps a notification linking to a post that no longer exists.
+    await Notification.deleteMany({ post: req.params.id });
+
     return res.json({ msg: 'Post removed' });
   } catch (err) {
     console.error(err.message);
@@ -362,7 +371,7 @@ router.put(
       }
 
       if (post.user.toString() !== req.user.id) {
-        return res.status(401).json({ msg: 'User not authorized' });
+        return res.status(403).json({ msg: 'User not authorized' });
       }
 
       post.text = sanitizeHtml(req.body.text);
@@ -648,7 +657,7 @@ router.delete('/comment/:post_id/:comment_id', auth, async (req, res) => {
 
     // Check it the user owns the comment they want to delete
     if (comment.user.toString() !== req.user.id) {
-      return res.status(401).json({ msg: 'User not authorized' });
+      return res.status(403).json({ msg: 'User not authorized' });
     }
 
     // Also drop any replies that were threaded under this comment, so we
@@ -719,7 +728,7 @@ router.put(
 
       // Check the user owns the comment they want to edit
       if (comment.user.toString() !== req.user.id) {
-        return res.status(401).json({ msg: 'User not authorized' });
+        return res.status(403).json({ msg: 'User not authorized' });
       }
 
       comment.text = sanitizeHtml(req.body.text);
