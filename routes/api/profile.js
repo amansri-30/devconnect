@@ -799,16 +799,66 @@ router.delete('/', auth, async (req, res) => {
       { $pull: { following: req.user.id } }
     );
 
-    // Remove the user's likes and comments from other people's posts, so the
-    // deleted account leaves no un-removable likes or orphaned comments behind.
+    // Remove the user's likes, saved posts and comments from other people's
+    // posts, so the deleted account leaves no un-removable likes, stale saves
+    // or orphaned comments behind.
     await Post.updateMany(
       { 'likes.user': req.user.id },
       { $pull: { likes: { user: req.user.id } } }
     );
     await Post.updateMany(
-      { 'comments.user': req.user.id },
-      { $pull: { comments: { user: req.user.id } } }
+      { savedBy: req.user.id },
+      { $pull: { savedBy: req.user.id } }
     );
+
+    // Replies to the deleted user's comments belong to other people, so a
+    // simple `$pull` of their comments would leave those replies behind as
+    // unreachable orphans (they would still inflate the comment count). Work
+    // out the full set of comments to drop, including chained replies, first.
+    const commentedPosts = await Post.find({ 'comments.user': req.user.id })
+      .select('comments')
+      .lean();
+
+    const userId = req.user.id.toString();
+    const commentIdsToRemove = [];
+
+    for (const post of commentedPosts) {
+      const comments = post.comments || [];
+      const doomed = new Set(
+        comments
+          .filter((c) => c.user && c.user.toString() === userId)
+          .map((c) => c._id.toString())
+      );
+
+      // Add replies to doomed comments (and replies to those replies).
+      let foundNew = true;
+      while (foundNew) {
+        foundNew = false;
+        for (const comment of comments) {
+          if (
+            comment.parent &&
+            !doomed.has(comment._id.toString()) &&
+            doomed.has(comment.parent.toString())
+          ) {
+            doomed.add(comment._id.toString());
+            foundNew = true;
+          }
+        }
+      }
+
+      doomed.forEach((id) => commentIdsToRemove.push(id));
+    }
+
+    if (commentIdsToRemove.length > 0) {
+      const objectIds = commentIdsToRemove.map(
+        (id) => new mongoose.Types.ObjectId(id)
+      );
+
+      await Post.updateMany(
+        { 'comments._id': { $in: objectIds } },
+        { $pull: { comments: { _id: { $in: objectIds } } } }
+      );
+    }
 
     // Drop notifications sent by the deleted account
     await Notification.deleteMany({ from: req.user.id });

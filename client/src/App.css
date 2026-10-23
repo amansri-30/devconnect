@@ -529,6 +529,62 @@ button {
   margin-right: 0.3rem;
 }
 
+.popular-skills {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.popular-skills-label {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #666;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.popular-skills-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.popular-skill-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.25rem 0.7rem;
+  border-radius: 1rem;
+  border: 1px solid var(--primary-color);
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease;
+}
+
+.popular-skill-chip:hover,
+.popular-skill-chip.active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.popular-skill-count {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0 0.35rem;
+  border-radius: 0.6rem;
+  background: rgba(0, 0, 0, 0.12);
+}
+
+.popular-skill-chip:hover .popular-skill-count,
+.popular-skill-chip.active .popular-skill-count {
+  background: rgba(255, 255, 255, 0.25);
+}
+
 .profile-exp {
   grid-area: exp;
 }

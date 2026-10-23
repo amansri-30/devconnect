@@ -22,12 +22,37 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
     getProfiles();
   }, [getProfiles]);
 
-  const onQueryChange = (e) => {
-    const value = e.target.value;
-    setQuery(value);
+  const applySkill = (skill) => {
+    setQuery(skill);
     // Keep the URL in sync (replace so it doesn't stack history entries).
-    setSearchParams(value ? { skill: value } : {}, { replace: true });
+    setSearchParams(skill ? { skill } : {}, { replace: true });
   };
+
+  const onQueryChange = (e) => applySkill(e.target.value);
+
+  // Build a "popular skills" summary from the developers we already fetched.
+  // Skills are grouped case-insensitively (React/reacT count together) and
+  // the most common ones become one-click search filters.
+  const skillUsage = new Map();
+  profiles.forEach((profile) => {
+    const seen = new Set();
+    (profile.skills || []).forEach((rawSkill) => {
+      const label = `${rawSkill || ''}`.trim();
+      const key = label.toLowerCase();
+      if (!key || seen.has(key)) return;
+      seen.add(key);
+
+      const existing = skillUsage.get(key);
+      if (existing) existing.count += 1;
+      else skillUsage.set(key, { label, count: 1 });
+    });
+  });
+
+  const popularSkills = Array.from(skillUsage.values())
+    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
+    .slice(0, 12);
+
+  const activeSkill = query.trim().toLowerCase();
 
   // Client-side filter across name, status/company and skills.
   const filtered = profiles.filter((profile) => {
@@ -67,6 +92,29 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
               onChange={onQueryChange}
             />
           </div>
+          {popularSkills.length > 0 && (
+            <div className="popular-skills my-1">
+              <span className="popular-skills-label">
+                <i className="fas fa-fire" /> Popular skills
+              </span>
+              <div className="popular-skills-list">
+                {popularSkills.map(({ label, count }) => (
+                  <button
+                    key={label}
+                    type="button"
+                    className={`popular-skill-chip ${
+                      activeSkill === label.toLowerCase() ? 'active' : ''
+                    }`}
+                    onClick={() => applySkill(label)}
+                    title={`Show developers who know ${label}`}
+                  >
+                    {label}
+                    <span className="popular-skill-count">{count}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="profiles">
             {filtered.length > 0 ? (
               filtered.map((profile) => (

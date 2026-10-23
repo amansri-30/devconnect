@@ -429,7 +429,11 @@ export const deleteEducation = (id) => async (dispatch) => {
 
 // Delete account & profile
 export const deleteAccount = () => async (dispatch) => {
-  if (window.confirm('Are you sure you want to delete your account?')) {
+  if (
+    window.confirm(
+      'Are you sure you want to permanently delete your account and all of your data?'
+    )
+  ) {
     try {
       await axios.delete('/api/profile');
 

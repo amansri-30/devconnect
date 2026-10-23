@@ -15,9 +15,20 @@ const formUpdateReducer = (state, action) => {
 
 // Logic to initialize starting state
 // Shape of state is set below when returning the object
-const initializeState = (profileStateSlice) => {
-  const { profile } = profileStateSlice;
-  const p = profile || {};
+const initializeState = (profileStateSlice, currentUserId) => {
+  const candidate = profileStateSlice.profile;
+  const owner = candidate && candidate.user;
+  const ownerId = owner && (owner._id || owner);
+
+  // Only seed the form from the signed-in user's own profile. Viewing another
+  // developer's profile leaves their profile in the store, and it must never
+  // leak into (and then overwrite) the current user's edit form.
+  const belongsToCurrentUser =
+    candidate &&
+    currentUserId &&
+    String(ownerId) === String(currentUserId);
+
+  const p = belongsToCurrentUser ? candidate : {};
   const social = p.social || {};
 
   return {
@@ -36,7 +47,14 @@ const initializeState = (profileStateSlice) => {
   };
 };
 
-const EditProfile = ({ profileSlice, createProfile, getCurrentProfile }) => {
+const EditProfile = ({
+  profileSlice,
+  auth,
+  createProfile,
+  getCurrentProfile
+}) => {
+  const currentUserId = auth.user && auth.user._id;
+
   useEffect(() => {
     getCurrentProfile();
   }, [getCurrentProfile]);
@@ -50,24 +68,30 @@ const EditProfile = ({ profileSlice, createProfile, getCurrentProfile }) => {
   // being updated before)
   const [profileInfo, dispatch] = useReducer(
     formUpdateReducer,
-    profileSlice,
-    initializeState
+    { profileSlice, currentUserId },
+    ({ profileSlice, currentUserId }) =>
+      initializeState(profileSlice, currentUserId)
   );
 
-  // The reducer initializer only runs once. On a direct visit to this page
-  // the profile loads AFTER mount, so populate the form once it arrives.
-  const hasProfile = Boolean(profileSlice.profile);
-  const populated = useRef(false);
+  // The reducer initializer only runs once. On a direct visit to this page the
+  // profile loads AFTER mount, so populate the form once it arrives. Track
+  // which owner the form was filled from so a stale profile (e.g. another
+  // developer viewed earlier) never wins.
+  const owner = profileSlice.profile && profileSlice.profile.user;
+  const ownerId = owner && (owner._id || owner);
+  const populatedFor = useRef(null);
 
   useEffect(() => {
-    if (hasProfile && !populated.current) {
-      populated.current = true;
-      const loadedValues = initializeState(profileSlice);
-      Object.entries(loadedValues).forEach(([name, value]) =>
-        dispatch({ type: name, payload: value })
-      );
-    }
-  }, [hasProfile, profileSlice]);
+    if (!currentUserId || !ownerId) return;
+    if (String(ownerId) !== String(currentUserId)) return;
+    if (populatedFor.current === String(ownerId)) return;
+
+    populatedFor.current = String(ownerId);
+    const loadedValues = initializeState(profileSlice, currentUserId);
+    Object.entries(loadedValues).forEach(([name, value]) =>
+      dispatch({ type: name, payload: value })
+    );
+  }, [currentUserId, ownerId, profileSlice]);
 
   const {
     company,
@@ -98,10 +122,9 @@ const EditProfile = ({ profileSlice, createProfile, getCurrentProfile }) => {
 
   return (
     <Fragment>
-      <h1 className="large text-primary">Create Your Profile</h1>
+      <h1 className="large text-primary">Edit Your Profile</h1>
       <p className="lead">
-        <i className="fas fa-user" /> Let's get some information to make your
-        profile stand out
+        <i className="fas fa-user" /> Keep your developer profile up to date
       </p>
       <small>* = required field</small>
       <form className="form" onSubmit={(e) => onSubmit(e)}>
@@ -274,11 +297,13 @@ const EditProfile = ({ profileSlice, createProfile, getCurrentProfile }) => {
 EditProfile.propTypes = {
   createProfile: PropTypes.func.isRequired,
   getCurrentProfile: PropTypes.func.isRequired,
-  profileSlice: PropTypes.object.isRequired
+  profileSlice: PropTypes.object.isRequired,
+  auth: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-  profileSlice: state.profile
+  profileSlice: state.profile,
+  auth: state.auth
 });
 
 export default connect(mapStateToProps, { createProfile, getCurrentProfile })(
