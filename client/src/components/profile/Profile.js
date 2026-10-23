@@ -98,6 +98,10 @@ const Profile = ({
                   <i className="fas fa-check" /> Follows you
                 </span>
               )}
+              <span className="badge badge-light" title="Profile views">
+                <i className="fas fa-eye" /> {profile.views || 0} view
+                {(profile.views || 0) === 1 ? '' : 's'}
+              </span>
             </p>
           )}
           {isOwnProfile && (

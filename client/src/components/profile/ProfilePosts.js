@@ -15,14 +15,18 @@ const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
   const preview = (text = '') =>
     text.length > 140 ? `${text.slice(0, 140)}...` : text;
 
+  // Without a valid user id we never fetched, so ignore whatever might still be
+  // in the shared userPosts slot from a previously viewed profile.
+  const posts = userId ? userPosts : [];
+
   return (
     <div className="profile-posts bg-white p-2">
       <h2 className="text-primary">Recent Activity</h2>
-      {userPosts.length === 0 ? (
+      {posts.length === 0 ? (
         <h4>No recent posts</h4>
       ) : (
         <Fragment>
-          {userPosts.slice(0, 3).map((post) => (
+          {posts.slice(0, 3).map((post) => (
             <div key={post._id} className="profile-post-item">
               <p>{preview(post.text)}</p>
               <div>

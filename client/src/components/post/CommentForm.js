@@ -13,14 +13,22 @@ const CommentForm = ({
   addComment
 }) => {
   const [text, setText] = useState('');
+  const [submitting, setSubmitting] = useState(false);
   const MAX_LENGTH = 1000;
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    if (text.trim()) {
-      const payload = { text };
-      if (parentId) payload.parent = parentId;
-      addComment(postId, payload);
+    if (!text.trim() || submitting) return;
+
+    const payload = { text };
+    if (parentId) payload.parent = parentId;
+
+    setSubmitting(true);
+    const ok = await addComment(postId, payload);
+    setSubmitting(false);
+
+    // Keep the text if the request failed, so nothing the user typed is lost.
+    if (ok) {
       setText('');
       if (onDone) onDone();
     }
@@ -52,7 +60,10 @@ const CommentForm = ({
         <input
           type="submit"
           className="btn btn-dark my-1"
-          value={parentId ? 'Reply' : 'Submit'}
+          value={
+            submitting ? 'Posting...' : parentId ? 'Reply' : 'Submit'
+          }
+          disabled={submitting}
         />
         {parentId && onDone && (
           <button

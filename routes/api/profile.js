@@ -175,20 +175,34 @@ router.get('/user/:user_id', async (req, res) => {
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
-    let isFollowing = false;
-    let followsYou = false;
+    // Resolve the viewer once (if signed in): used for both follow state and
+    // deciding whether this request counts as a profile view.
+    let viewerId = null;
     const token = req.header('x-auth-token');
 
     if (token) {
       try {
-        const decoded = jwt.verify(token, config.get('jwtSecret'));
-        const followers = (profile.followers || []).map((f) => f.toString());
-        const following = (profile.following || []).map((f) => f.toString());
-        isFollowing = followers.includes(decoded.user.id);
-        followsYou = following.includes(decoded.user.id);
+        viewerId = jwt.verify(token, config.get('jwtSecret')).user.id;
       } catch (err) {
-        // Missing/invalid token simply means "not following".
+        // Missing/invalid token simply means "not following" / anonymous view.
       }
+    }
+
+    // Count a view from everyone except the profile's own owner.
+    const ownerId = profile.user ? profile.user._id.toString() : null;
+    if (viewerId !== ownerId) {
+      profile.views = (profile.views || 0) + 1;
+      await profile.save();
+    }
+
+    let isFollowing = false;
+    let followsYou = false;
+
+    if (viewerId) {
+      const followers = (profile.followers || []).map((f) => f.toString());
+      const following = (profile.following || []).map((f) => f.toString());
+      isFollowing = followers.includes(viewerId);
+      followsYou = following.includes(viewerId);
     }
 
     return res.json({

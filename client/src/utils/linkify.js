@@ -1,6 +1,19 @@
-// Turns bare http(s) URLs in already-sanitized plain text into clickable
-// links. The text is HTML-escaped first, then URLs are wrapped in anchors,
-// so this is safe to inject via dangerouslySetInnerHTML.
+// Post/comment text arrives HTML-escaped from the API (sanitizeHtml). Escaping
+// it again here double-encoded it, so apostrophes/ampersands rendered as
+// "&#039;"/"&amp;". Decode the stored entities first, then escape exactly once
+// while turning bare URLs into links.
+const ENTITIES = {
+  '&amp;': '&',
+  '&lt;': '<',
+  '&gt;': '>',
+  '&quot;': '"',
+  '&#039;': "'",
+  '&#39;': "'"
+};
+
+const unescapeHtml = (text) =>
+  text.replace(/&(?:amp|lt|gt|quot|#0?39);/g, (entity) => ENTITIES[entity]);
+
 const escapeHtml = (text) =>
   text.replace(
     /[&<>"']/g,
@@ -14,14 +27,35 @@ const escapeHtml = (text) =>
       }[c])
   );
 
-const URL_REGEX = /(https?:\/\/[^\s<]+[^\s<.,;:!?)])/g;
+// Match the whole run; trailing sentence punctuation is trimmed below so a URL
+// at the end of a sentence doesn't swallow the period. Keeping "&" and ";"
+// inside the run is what lets query strings survive.
+const URL_REGEX = /https?:\/\/[^\s<]+/g;
+const TRAILING_PUNCTUATION = /[.,;:!?)\]]+$/;
 
 const linkify = (text) => {
-  const escaped = escapeHtml(text || '');
-  return escaped.replace(
-    URL_REGEX,
-    '<a href="$1" target="_blank" rel="noopener noreferrer">$1</a>'
-  );
+  const source = unescapeHtml(text || '');
+  let result = '';
+  let lastIndex = 0;
+  let match;
+
+  while ((match = URL_REGEX.exec(source)) !== null) {
+    const url = match[0].replace(TRAILING_PUNCTUATION, '');
+    const start = match.index;
+
+    result += escapeHtml(source.slice(lastIndex, start));
+
+    const safeUrl = escapeHtml(url);
+    result += `<a href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>`;
+
+    // Continue after the trimmed URL so any trailing punctuation is treated as
+    // ordinary text (and cannot start an overlapping match).
+    lastIndex = start + url.length;
+    URL_REGEX.lastIndex = lastIndex;
+  }
+
+  result += escapeHtml(source.slice(lastIndex));
+  return result;
 };
 
 export default linkify;

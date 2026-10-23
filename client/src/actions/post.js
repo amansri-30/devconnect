@@ -382,12 +382,14 @@ export const addComment = (postId, formData) => async dispatch => {
     });
 
     dispatch(setAlert('Comment added', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not add comment', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
