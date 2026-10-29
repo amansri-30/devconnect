@@ -14,7 +14,8 @@ const WhoToFollow = ({ suggestions, toggleFollow, getSuggestions }) => {
   const onFollow = async (id) => {
     setBusyId(id);
     await toggleFollow(id);
-    getSuggestions();
+    // Keep the Follow button busy until the refreshed list excludes this dev.
+    await getSuggestions();
     setBusyId(null);
   };
 

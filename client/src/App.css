@@ -654,9 +654,43 @@ button {
 }
 
 .char-counter {
-  text-align: right;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
   font-size: 0.8rem;
   color: #888;
+}
+
+.draft-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  color: #17a2b8;
+}
+
+.draft-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.75rem 0 0;
+  padding: 0.5rem 0.75rem;
+  font-size: 0.85rem;
+  background: #f4f8fa;
+  border: 1px solid #d5e3e8;
+  border-radius: 6px;
+}
+
+.draft-notice .draft-discard {
+  margin-left: auto;
+  padding: 0.2rem 0.6rem;
+  font-size: 0.78rem;
+}
+
+[data-theme='dark'] .draft-notice {
+  background: #1f2428;
+  border-color: #2f363d;
+  color: #d6dde3;
 }
 
 .post {

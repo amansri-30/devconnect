@@ -17,6 +17,7 @@ const Post = ({
   const { postId } = useParams();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
+  const [saving, setSaving] = useState(false);
 
   useEffect(() => {
     getSinglePost(postId);
@@ -36,12 +37,16 @@ const Post = ({
     post.user &&
     auth.user._id === post.user.toString();
 
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    if (text.trim()) {
-      editPost(post._id, { text });
-      setEditing(false);
-    }
+    if (!text.trim() || saving) return;
+
+    setSaving(true);
+    const updated = await editPost(post._id, { text });
+    setSaving(false);
+
+    // Keep the editor open when saving fails so the text isn't lost.
+    if (updated) setEditing(false);
   };
 
   // Group threaded replies under their parent comment. Replies whose parent
@@ -98,7 +103,8 @@ const Post = ({
           <input
             type="submit"
             className="btn btn-dark my-1"
-            value="Save Changes"
+            value={saving ? 'Saving...' : 'Save Changes'}
+            disabled={saving}
           />
           <button
             type="button"

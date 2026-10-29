@@ -21,6 +21,7 @@ const CommentItem = ({
   const [editing, setEditing] = useState(false);
   const [replying, setReplying] = useState(false);
   const [body, setBody] = useState('');
+  const [saving, setSaving] = useState(false);
 
   const isOwner =
     !auth.loading && auth.user && user === auth.user._id;
@@ -39,12 +40,16 @@ const CommentItem = ({
     setEditing(false);
   };
 
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    if (body.trim()) {
-      editComment(postId, _id, { text: body });
-      setEditing(false);
-    }
+    if (!body.trim() || saving) return;
+
+    setSaving(true);
+    const updated = await editComment(postId, _id, { text: body });
+    setSaving(false);
+
+    // Keep the editor open when saving fails so the text isn't lost.
+    if (updated) setEditing(false);
   };
 
   const removeComment = () => {
@@ -76,7 +81,8 @@ const CommentItem = ({
             <input
               type="submit"
               className="btn btn-dark my-1"
-              value="Save Changes"
+              value={saving ? 'Saving...' : 'Save Changes'}
+              disabled={saving}
             />
             <button
               type="button"

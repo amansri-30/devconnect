@@ -40,6 +40,7 @@ const PostItem = ({
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState('');
+  const [saving, setSaving] = useState(false);
 
   // Whether the current user has already liked this post.
   const likedByMe =
@@ -60,12 +61,16 @@ const PostItem = ({
     setEditing(false);
   };
 
-  const submitEdit = (e) => {
+  const submitEdit = async (e) => {
     e.preventDefault();
-    if (body.trim()) {
-      editPost(_id, { text: body });
-      setEditing(false);
-    }
+    if (!body.trim() || saving) return;
+
+    setSaving(true);
+    const updated = await editPost(_id, { text: body });
+    setSaving(false);
+
+    // Keep the editor open when saving fails so the text isn't lost.
+    if (updated) setEditing(false);
   };
 
   const removePost = (e) => {
@@ -143,7 +148,8 @@ const PostItem = ({
               <input
                 type="submit"
                 className="btn btn-dark my-1"
-                value="Save Changes"
+                value={saving ? 'Saving...' : 'Save Changes'}
+                disabled={saving}
               />
               <button
                 type="button"

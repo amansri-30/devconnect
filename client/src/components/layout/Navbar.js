@@ -65,7 +65,15 @@ const Navbar = ({
         </Link>
       </li>
       <li>
-        <a onClick={logout} href="#!">
+        <a
+          href="#!"
+          onClick={(e) => {
+            // Keep the placeholder hash out of the URL so logging out doesn't
+            // add a stray history entry or scroll jump.
+            e.preventDefault();
+            logout();
+          }}
+        >
           <i className="fas fa-sign-out-alt" />{' '}
           <span className="hide-sm">Logout</span>
         </a>

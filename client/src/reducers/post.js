@@ -172,27 +172,25 @@ export default function postReducer(state = initialState, action) {
         total: state.total + 1,
         loading: false
       };
-    case UPDATE_POST:
+    case UPDATE_POST: {
+      // Merge the server's updated post over the existing copy instead of
+      // replacing it. The server response has no `isFollowing`, so replacing
+      // would silently remove the inline Follow button from a feed card.
+      const merge = (p) =>
+        p._id === action.payload._id ? { ...p, ...action.payload } : p;
       return {
         ...state,
-        post:
-          state.post && state.post._id === action.payload._id
-            ? action.payload
-            : state.post,
-        posts: state.posts.map((p) =>
-          p._id === action.payload._id ? action.payload : p
-        ),
-        myPosts: state.myPosts.map((p) =>
-          p._id === action.payload._id ? action.payload : p
-        ),
-        savedPosts: state.savedPosts.map((p) =>
-          p._id === action.payload._id ? action.payload : p
-        ),
-        likedPosts: state.likedPosts.map((p) =>
-          p._id === action.payload._id ? action.payload : p
-        ),
+        post: state.post ? merge(state.post) : state.post,
+        posts: state.posts.map(merge),
+        myPosts: state.myPosts.map(merge),
+        savedPosts: state.savedPosts.map(merge),
+        likedPosts: state.likedPosts.map(merge),
+        userPosts: state.userPosts.map(merge),
+        followingFeed: state.followingFeed.map(merge),
+        trendingPosts: state.trendingPosts.map(merge),
         loading: false
       };
+    }
     case POST_ERROR:
       return {
         ...state,
@@ -254,6 +252,7 @@ case DELETE_POST:
         ),
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
+        userPosts: state.userPosts.filter((p) => p._id !== action.payload),
         followingFeed: state.followingFeed.filter(
           (p) => p._id !== action.payload
         ),

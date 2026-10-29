@@ -155,12 +155,14 @@ export const addPost = formData => async dispatch => {
     });
 
     dispatch(setAlert('Post created', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not create post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -202,12 +204,14 @@ export const editPost = (postId, formData) => async dispatch => {
     });
 
     dispatch(setAlert('Post updated', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not update post', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -414,12 +418,14 @@ export const editComment = (postId, commentId, formData) => async dispatch => {
     });
 
     dispatch(setAlert('Comment updated', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not update comment', 'danger'));
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
