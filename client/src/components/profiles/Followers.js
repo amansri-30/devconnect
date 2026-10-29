@@ -19,7 +19,8 @@ const Followers = ({
   const onToggle = async (user) => {
     setToggling(user._id);
     await toggleFollow(user._id);
-    getFollowers();
+    // Keep the row busy until the refreshed follow state is on screen.
+    await getFollowers();
     setToggling(null);
   };
 

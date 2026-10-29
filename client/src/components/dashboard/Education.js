@@ -9,6 +9,7 @@ const toDateInput = (value) =>
 
 const Education = ({ education, deleteEducation, updateEducation }) => {
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     school: '',
     degree: '',
@@ -54,15 +55,24 @@ const Education = ({ education, deleteEducation, updateEducation }) => {
         e.target.type === 'checkbox' ? e.target.checked : e.target.value
     });
 
-  const saveEdit = (e) => {
+  const saveEdit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+
     const payload = {
       ...form,
       to: form.current ? '' : form.to
     };
-    updateEducation(editingId, payload);
-    setEditingId(null);
-    setForm({});
+
+    setSaving(true);
+    const updated = await updateEducation(editingId, payload);
+    setSaving(false);
+
+    // Keep the editor (and its values) open when saving fails.
+    if (updated) {
+      setEditingId(null);
+      setForm({});
+    }
   };
 
   const educations = education.map((edu) => (
@@ -170,7 +180,8 @@ const Education = ({ education, deleteEducation, updateEducation }) => {
                 <input
                   type="submit"
                   className="btn btn-primary my-1"
-                  value="Save"
+                  value={saving ? 'Saving...' : 'Save'}
+                  disabled={saving}
                 />
                 <button
                   type="button"

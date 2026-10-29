@@ -890,6 +890,12 @@ button {
   margin: 0;
 }
 
+.comment-highlight {
+  box-shadow: 0 0 0 3px rgba(23, 162, 184, 0.55);
+  border-radius: 4px;
+  transition: box-shadow 0.4s ease;
+}
+
 .comment-replies {
   margin-top: 0.5rem;
   padding-left: 1rem;

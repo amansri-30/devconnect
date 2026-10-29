@@ -50,6 +50,9 @@ export const getCurrentProfile = () => async (dispatch) => {
       payload: res.data
     });
   } catch (err) {
+    // A missing profile ("There is no profile for this user") or any other
+    // failure here means there is nothing valid to display on the dashboard.
+    dispatch({ type: CLEAR_PROFILE });
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
@@ -88,6 +91,9 @@ export const getProfileById = (userId) => async (dispatch) => {
       payload: res.data
     });
   } catch (err) {
+    // Never leave a previously viewed (or stale) profile on screen when the
+    // requested one can't be loaded.
+    dispatch({ type: CLEAR_PROFILE });
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
@@ -348,6 +354,7 @@ export const updateExperience = (expId, formData) => async (dispatch) => {
     });
 
     dispatch(setAlert('Experience Updated', 'success'));
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -355,6 +362,7 @@ export const updateExperience = (expId, formData) => async (dispatch) => {
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -379,6 +387,7 @@ export const updateEducation = (eduId, formData) => async (dispatch) => {
     });
 
     dispatch(setAlert('Education Updated', 'success'));
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -386,6 +395,7 @@ export const updateEducation = (eduId, formData) => async (dispatch) => {
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -401,6 +411,7 @@ export const deleteExperience = (id) => async (dispatch) => {
 
     dispatch(setAlert('Experience Removed', 'success'));
   } catch (err) {
+    dispatch(setAlert('Could not remove experience', 'danger'));
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
@@ -420,6 +431,7 @@ export const deleteEducation = (id) => async (dispatch) => {
 
     dispatch(setAlert('Education Removed', 'success'));
   } catch (err) {
+    dispatch(setAlert('Could not remove education', 'danger'));
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)

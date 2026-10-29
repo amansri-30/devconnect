@@ -123,10 +123,13 @@ export default function profileReducer(state = initialState, action) {
         loading: false
       };
     case PROFILE_ERROR:
+      // Keep the loaded profile: a failed secondary request (suggestions, the
+      // network lists, an inline experience edit, ...) must not blank out the
+      // dashboard. Actions that genuinely mean "no profile" dispatch
+      // CLEAR_PROFILE explicitly before reporting the error.
       return {
         ...state,
         error: action.payload,
-        profile: null,
         loading: false
       };
     case CLEAR_PROFILE:

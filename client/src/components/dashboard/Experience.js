@@ -9,6 +9,7 @@ const toDateInput = (value) =>
 
 const Experience = ({ experience, deleteExperience, updateExperience }) => {
   const [editingId, setEditingId] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     title: '',
     company: '',
@@ -54,15 +55,24 @@ const Experience = ({ experience, deleteExperience, updateExperience }) => {
         e.target.type === 'checkbox' ? e.target.checked : e.target.value
     });
 
-  const saveEdit = (e) => {
+  const saveEdit = async (e) => {
     e.preventDefault();
+    if (saving) return;
+
     const payload = {
       ...form,
       to: form.current ? '' : form.to
     };
-    updateExperience(editingId, payload);
-    setEditingId(null);
-    setForm({});
+
+    setSaving(true);
+    const updated = await updateExperience(editingId, payload);
+    setSaving(false);
+
+    // Keep the editor (and its values) open when saving fails.
+    if (updated) {
+      setEditingId(null);
+      setForm({});
+    }
   };
 
   const experiences = experience.map((exp) => (
@@ -172,7 +182,8 @@ const Experience = ({ experience, deleteExperience, updateExperience }) => {
                 <input
                   type="submit"
                   className="btn btn-primary my-1"
-                  value="Save"
+                  value={saving ? 'Saving...' : 'Save'}
+                  disabled={saving}
                 />
                 <button
                   type="button"

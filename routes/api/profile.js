@@ -188,11 +188,18 @@ router.get('/user/:user_id', async (req, res) => {
       }
     }
 
-    // Count a view from everyone except the profile's own owner.
+    // Count a view from everyone except the profile's own owner. Use an atomic
+    // $inc instead of read-modify-write so simultaneous views can't overwrite
+    // each other and lose counts.
     const ownerId = profile.user ? profile.user._id.toString() : null;
     if (viewerId !== ownerId) {
-      profile.views = (profile.views || 0) + 1;
-      await profile.save();
+      const updatedProfile = await Profile.findByIdAndUpdate(
+        profile._id,
+        { $inc: { views: 1 } },
+        { new: true }
+      );
+
+      if (updatedProfile) profile.views = updatedProfile.views;
     }
 
     let isFollowing = false;

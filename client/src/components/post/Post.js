@@ -1,7 +1,7 @@
 import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getSinglePost, editPost } from '../../actions/post';
 import PostItem from '../posts/PostItem';
@@ -15,6 +15,7 @@ const Post = ({
   auth
 }) => {
   const { postId } = useParams();
+  const location = useLocation();
   const [editing, setEditing] = useState(false);
   const [text, setText] = useState('');
   const [saving, setSaving] = useState(false);
@@ -22,6 +23,31 @@ const Post = ({
   useEffect(() => {
     getSinglePost(postId);
   }, [getSinglePost, postId]);
+
+  // Deep link support: /post/:id#comment-<commentId> scrolls to that comment
+  // and briefly highlights it (e.g. when sharing a permalink).
+  useEffect(() => {
+    if (!post || !location.hash) return;
+
+    const targetId = location.hash.slice(1);
+    if (!targetId.startsWith('comment-')) return;
+
+    const target = document.getElementById(targetId);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('comment-highlight');
+
+    const timer = setTimeout(
+      () => target.classList.remove('comment-highlight'),
+      2200
+    );
+
+    return () => {
+      clearTimeout(timer);
+      target.classList.remove('comment-highlight');
+    };
+  }, [post, location.hash]);
 
   // Prepare the edit buffer whenever the loaded post changes.
   useEffect(() => {

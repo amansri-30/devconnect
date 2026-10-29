@@ -59,7 +59,10 @@ const CommentItem = ({
   };
 
   return (
-    <div className={`post bg-white p-1 my-1 ${isReply ? 'comment-reply' : ''}`}>
+    <div
+      id={`comment-${_id}`}
+      className={`post bg-white p-1 my-1 ${isReply ? 'comment-reply' : ''}`}
+    >
       <div>
         <Link to={`/profile/${user}`}>
           <img className="round-img" src={avatar} alt={name} />
@@ -122,6 +125,13 @@ const CommentItem = ({
             <i className="fas fa-reply" /> Reply
           </button>
         )}
+        <Link
+          to={`/post/${postId}#comment-${_id}`}
+          className="btn btn-light"
+          title="Open this comment's permalink"
+        >
+          <i className="fas fa-link" />
+        </Link>
         {isOwner && (
           <Fragment>
             {!editing && (
