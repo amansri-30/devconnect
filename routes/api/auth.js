@@ -7,6 +7,15 @@ const { check, validationResult } = require('express-validator');
 const User = require('../../models/User');
 const { JWT_SECRET } = require('../../config/keys');
 
+// Only ever expose the safe, public user fields (never the password hash).
+const publicUser = (user) => ({
+  _id: user.id,
+  name: user.name,
+  email: user.email,
+  avatar: user.avatar,
+  date: user.date
+});
+
 // @route   GET api/auth/test
 // @desc    Tests auth route
 // @access  Public
@@ -77,7 +86,9 @@ router.post(
 
       jwt.sign(payload, JWT_SECRET, { expiresIn: 3600 }, (err, token) => {
         if (err) throw err;
-        return res.json({ token });
+        // Return the user alongside the token so the client doesn't need a
+        // second round-trip that could fail and wrongly log a valid session out.
+        return res.json({ token, user: publicUser(user) });
       });
     } catch (err) {
       console.error(err.message);

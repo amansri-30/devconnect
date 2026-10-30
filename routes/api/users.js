@@ -75,7 +75,18 @@ router.post(
 
       jwt.sign(payload, JWT_SECRET, { expiresIn: 3600 }, (err, token) => {
         if (err) throw err;
-        return res.json({ token });
+        // Include the new user so registration can complete without a second
+        // request (which could fail transiently and drop the new session).
+        return res.json({
+          token,
+          user: {
+            _id: user.id,
+            name: user.name,
+            email: user.email,
+            avatar: user.avatar,
+            date: user.date
+          }
+        });
       });
     } catch (err) {
       console.error(err.message);

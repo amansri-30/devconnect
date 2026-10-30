@@ -591,6 +591,9 @@ router.post(
 
       post.comments.push(newComment);
 
+      // The cast subdocument carries the generated _id used for deep links.
+      const savedComment = post.comments[post.comments.length - 1];
+
       await post.save();
 
       if (parentComment) {
@@ -598,14 +601,16 @@ router.post(
           recipient: parentComment.user,
           from: req.user.id,
           type: 'reply',
-          post: post._id
+          post: post._id,
+          comment: savedComment._id
         });
       } else {
         notify({
           recipient: post.user,
           from: req.user.id,
           type: 'comment',
-          post: post._id
+          post: post._id,
+          comment: savedComment._id
         });
       }
 
@@ -650,7 +655,13 @@ router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
       );
     } else {
       comment.likes = [...likes, { user: req.user.id }];
-      notify({ recipient: comment.user, from: req.user.id, type: 'comment_like', post: post._id });
+      notify({
+        recipient: comment.user,
+        from: req.user.id,
+        type: 'comment_like',
+        post: post._id,
+        comment: comment._id
+      });
     }
 
     await post.save();
@@ -693,21 +704,35 @@ router.delete('/comment/:post_id/:comment_id', auth, async (req, res) => {
       return res.status(403).json({ msg: 'User not authorized' });
     }
 
-    // Also drop any replies that were threaded under this comment, so we
-    // don't leave orphaned comments pointing at a missing parent.
-    const replyIds = post.comments
-      .filter(
-        (c) => c.parent && c.parent.toString() === req.params.comment_id
-      )
-      .map((c) => c.id);
+    // Also drop every reply threaded under this comment (and replies to those
+    // replies), so deleting a thread never leaves orphaned descendants behind.
+    const removedIds = new Set([req.params.comment_id]);
+
+    let foundNew = true;
+    while (foundNew) {
+      foundNew = false;
+      post.comments.forEach((c) => {
+        if (!c.parent) return;
+
+        const parentId = c.parent.toString();
+        const commentId = c.id.toString();
+
+        if (removedIds.has(parentId) && !removedIds.has(commentId)) {
+          removedIds.add(commentId);
+          foundNew = true;
+        }
+      });
+    }
 
     post.comments = post.comments.filter(
-      (c) =>
-        c.id !== req.params.comment_id &&
-        !replyIds.includes(c.id)
+      (c) => !removedIds.has(c.id.toString())
     );
 
     await post.save();
+
+    // Remove notifications that point at any deleted comment so they can't
+    // deep-link to something that no longer exists.
+    await Notification.deleteMany({ comment: { $in: [...removedIds] } });
 
     return res.json(post.comments);
   } catch (err) {

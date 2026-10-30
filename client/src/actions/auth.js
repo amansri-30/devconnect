@@ -70,8 +70,6 @@ export const register = ({ name, email, password }) => async dispatch => {
       type: REGISTER_SUCCESS,
       payload: res.data
     });
-
-    dispatch(loadUser());
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -98,8 +96,6 @@ export const login = (email, password) => async dispatch => {
       type: LOGIN_SUCCESS,
       payload: res.data
     });
-
-    dispatch(loadUser());
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 

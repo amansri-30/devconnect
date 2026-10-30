@@ -23,13 +23,19 @@ const Notifications = ({
     getNotifications();
   }, [getNotifications]);
 
+  const notificationLink = (n) => {
+    if (n.from && (n.type === 'follow' || !n.post))
+      return `/profile/${n.from._id}`;
+    if (!n.post) return '#';
+    // Deep-link to the exact comment for comment/reply/like notifications.
+    return n.comment
+      ? `/post/${n.post}#comment-${n.comment}`
+      : `/post/${n.post}`;
+  };
+
   const onOpen = (n) => {
     if (!n.read) markNotificationsRead(n._id);
-    if (n.from && (n.type === 'follow' || !n.post)) {
-      navigate(`/profile/${n.from._id}`);
-    } else {
-      navigate(`/post/${n.post}`);
-    }
+    navigate(notificationLink(n));
   };
 
   const badge = (type) => {
@@ -65,12 +71,6 @@ const Notifications = ({
       default:
         return <Fragment>{who} sent you a notification</Fragment>;
     }
-  };
-
-  const notificationLink = (n) => {
-    if (n.from && (n.type === 'follow' || !n.post))
-      return `/profile/${n.from._id}`;
-    return n.post ? `/post/${n.post}` : '#';
   };
 
   if (loading) {

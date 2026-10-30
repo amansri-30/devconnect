@@ -22,6 +22,11 @@ const NotificationSchema = new Schema({
     type: Schema.Types.ObjectId,
     ref: 'posts'
   },
+  // Comments are embedded subdocuments, so store their id to deep-link
+  // notifications straight to the relevant comment/reply.
+  comment: {
+    type: Schema.Types.ObjectId
+  },
   read: {
     type: Boolean,
     default: false
