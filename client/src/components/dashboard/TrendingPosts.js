@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { getTrendingPosts } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 
 // Dashboard widget surfacing the most engaging discussions right now, ranked
 // by the same score the feed's "Trending" sort uses (likes count double).
@@ -12,8 +13,11 @@ const TrendingPosts = ({ getTrendingPosts, post: { trendingPosts } }) => {
     getTrendingPosts();
   }, [getTrendingPosts]);
 
-  const preview = (text = '') =>
-    text.length > 120 ? `${text.slice(0, 120)}...` : text;
+  // Stored text is HTML-escaped; decode before truncating for plain-text output.
+  const preview = (text = '') => {
+    const plain = decodeHtml(text);
+    return plain.length > 120 ? `${plain.slice(0, 120)}...` : plain;
+  };
 
   const score = (post) =>
     (Array.isArray(post.likes) ? post.likes.length : 0) * 2 +

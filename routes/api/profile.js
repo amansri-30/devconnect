@@ -2,10 +2,13 @@ const express = require('express');
 const router = express.Router();
 const auth = require('../../middleware/auth');
 const jwt = require('jsonwebtoken');
-const config = require('config');
 const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
-const { GITHUB_CLIENT_ID, GITHUB_CLIENT_SECRET } = require('../../config/keys');
+const {
+  JWT_SECRET,
+  GITHUB_CLIENT_ID,
+  GITHUB_CLIENT_SECRET
+} = require('../../config/keys');
 const moment = require('moment');
 const notify = require('../../util/notify');
 
@@ -182,7 +185,7 @@ router.get('/user/:user_id', async (req, res) => {
 
     if (token) {
       try {
-        viewerId = jwt.verify(token, config.get('jwtSecret')).user.id;
+        viewerId = jwt.verify(token, JWT_SECRET).user.id;
       } catch (err) {
         // Missing/invalid token simply means "not following" / anonymous view.
       }
@@ -818,6 +821,35 @@ router.delete('/', auth, async (req, res) => {
       { $pull: { savedBy: req.user.id } }
     );
 
+    // Remove the account's likes from other people's comments as well. The
+    // account is gone, so leaving those likes behind would permanently inflate
+    // the comment like counts (and nobody could ever remove them).
+    const userId = req.user.id.toString();
+    const likedCommentPosts = await Post.find({
+      'comments.likes.user': req.user.id
+    });
+
+    for (const post of likedCommentPosts) {
+      let changed = false;
+
+      for (const comment of post.comments) {
+        const likes = comment.likes || [];
+
+        if (
+          likes.some((like) => like.user && like.user.toString() === userId)
+        ) {
+          comment.likes = likes.filter(
+            (like) => !like.user || like.user.toString() !== userId
+          );
+          changed = true;
+        }
+      }
+
+      if (changed) {
+        await post.save();
+      }
+    }
+
     // Replies to the deleted user's comments belong to other people, so a
     // simple `$pull` of their comments would leave those replies behind as
     // unreachable orphans (they would still inflate the comment count). Work
@@ -826,7 +858,6 @@ router.delete('/', auth, async (req, res) => {
       .select('comments')
       .lean();
 
-    const userId = req.user.id.toString();
     const commentIdsToRemove = [];
 
     for (const post of commentedPosts) {

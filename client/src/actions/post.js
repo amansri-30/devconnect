@@ -2,6 +2,7 @@ import axios from 'axios';
 import { setAlert } from './alert';
 import {
   GET_POSTS,
+  GET_TAGS,
   POST_ERROR,
   UPDATE_LIKES,
   DELETE_POST,
@@ -38,11 +39,13 @@ const getErrorPayload = (err) => ({
 // sort may be 'recent' (default) or 'likes' (most liked first).
 // scope may be 'all' (default) or 'following' (posts from developers you follow).
 // search filters by post text or author name (server-side, across all posts).
+// tag limits the feed to posts carrying that hashtag.
 export const getPosts = (
   page = 1,
   sort = 'recent',
   scope = 'all',
-  search = ''
+  search = '',
+  tag = ''
 ) => async (dispatch) => {
   try {
     const params = { page, limit: 8 };
@@ -50,6 +53,7 @@ export const getPosts = (
       params.sort = sort;
     if (scope === 'following') params.scope = 'following';
     if (search.trim()) params.search = search.trim();
+    if (tag.trim()) params.tag = tag.trim();
 
     const res = await axios.get('/api/posts', { params });
 
@@ -62,6 +66,23 @@ export const getPosts = (
         perPage: parseInt(res.headers['x-per-page'], 10) || 8,
         sort
       }
+    });
+  } catch (err) {
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get the most used hashtags for the tag filter chips.
+export const getTags = (limit = 12) => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/posts/tags', { params: { limit } });
+
+    dispatch({
+      type: GET_TAGS,
+      payload: res.data
     });
   } catch (err) {
     dispatch({

@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { getUserPosts } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 
 const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
   useEffect(() => {
@@ -12,8 +13,11 @@ const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
     }
   }, [getUserPosts, userId]);
 
-  const preview = (text = '') =>
-    text.length > 140 ? `${text.slice(0, 140)}...` : text;
+  // Stored text is HTML-escaped; decode before truncating for plain-text output.
+  const preview = (text = '') => {
+    const plain = decodeHtml(text);
+    return plain.length > 140 ? `${plain.slice(0, 140)}...` : plain;
+  };
 
   // Without a valid user id we never fetched, so ignore whatever might still be
   // in the shared userPosts slot from a previously viewed profile.

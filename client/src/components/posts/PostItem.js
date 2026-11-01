@@ -33,6 +33,7 @@ const PostItem = ({
     date,
     saved,
     views,
+    tags,
     isFollowing
   },
   showActions
@@ -167,6 +168,20 @@ const PostItem = ({
               dangerouslySetInnerHTML={{ __html: linkify(text) }}
             />
             <MediaPreview text={text} />
+            {Array.isArray(tags) && tags.length > 0 && (
+              <div className="post-tags">
+                {tags.map((tag) => (
+                  <Link
+                    key={tag}
+                    to={`/posts?tag=${encodeURIComponent(tag)}`}
+                    className="tag-chip"
+                    title={`Show posts tagged #${tag}`}
+                  >
+                    #{tag}
+                  </Link>
+                ))}
+              </div>
+            )}
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
               <span className="post-views" title="Number of times this post has been viewed">

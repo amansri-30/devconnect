@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import Spinner from '../layout/Spinner';
 import { getMyPosts, deletePost } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 
 const MyPosts = ({ getMyPosts, deletePost, post: { myPosts, loading } }) => {
   useEffect(() => {
@@ -17,8 +18,11 @@ const MyPosts = ({ getMyPosts, deletePost, post: { myPosts, loading } }) => {
     }
   };
 
-  const preview = (text = '') =>
-    text.length > 90 ? `${text.slice(0, 90)}...` : text;
+  // Stored text is HTML-escaped; decode before truncating for plain-text output.
+  const preview = (text = '') => {
+    const plain = decodeHtml(text);
+    return plain.length > 90 ? `${plain.slice(0, 90)}...` : plain;
+  };
 
   if (loading) return <Spinner />;
 

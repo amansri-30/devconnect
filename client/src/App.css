@@ -952,6 +952,62 @@ button {
   }
 }
 
+.tag-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.5rem 0 0.75rem;
+}
+
+.tag-filter-label {
+  color: var(--dark-color);
+  font-size: 0.9rem;
+  margin-right: 0.25rem;
+}
+
+.tag-chip {
+  display: inline-block;
+  padding: 0.2rem 0.55rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--primary-color);
+  font-size: 0.85rem;
+  line-height: 1.4;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.tag-chip:hover,
+.tag-chip:focus {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.tag-chip-active {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.tag-chip-clear {
+  border-color: var(--danger-color);
+  color: var(--danger-color);
+}
+
+.tag-chip-clear:hover,
+.tag-chip-clear:focus {
+  background: var(--danger-color);
+  color: #fff;
+}
+
+.post-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0.4rem 0;
+}
+
 .unread-badge {
   position: absolute;
   top: -6px;
@@ -1169,6 +1225,10 @@ button {
 
 [data-theme='dark'] .post .post-date,
 [data-theme='dark'] .text-dark {
+  color: #cfd6db;
+}
+
+[data-theme='dark'] .tag-filter-label {
   color: #cfd6db;
 }
 

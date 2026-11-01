@@ -35,6 +35,13 @@ const PostSchema = new Schema({
     type: Number,
     default: 0
   },
+  // Hashtags parsed out of the post text on write (lowercase, de-duplicated)
+  // so the feed can filter by tag without scanning every post body.
+  tags: [
+    {
+      type: String
+    }
+  ],
   comments: [
     {
       user: {

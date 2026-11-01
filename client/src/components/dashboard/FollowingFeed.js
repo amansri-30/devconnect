@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { getFollowingFeed } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 
 // Compact dashboard feed of the latest posts from developers you follow.
 const FollowingFeed = ({ getFollowingFeed, post: { followingFeed } }) => {
@@ -11,8 +12,12 @@ const FollowingFeed = ({ getFollowingFeed, post: { followingFeed } }) => {
     getFollowingFeed();
   }, [getFollowingFeed]);
 
-  const preview = (text = '') =>
-    text.length > 120 ? `${text.slice(0, 120)}...` : text;
+  // Stored text is HTML-escaped; decode it before showing a plain-text preview
+  // so apostrophes and ampersands don't render as &#039; / &amp;.
+  const preview = (text = '') => {
+    const plain = decodeHtml(text);
+    return plain.length > 120 ? `${plain.slice(0, 120)}...` : plain;
+  };
 
   return (
     <div className="completion-card my-2 bg-white p-1">

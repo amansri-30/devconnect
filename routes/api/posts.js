@@ -31,6 +31,21 @@ const shapePost = (doc, userId) => {
   return { ...rest, saved: savedBy.includes(userId) };
 };
 
+// Hashtags are derived from the post text on write so feeds can filter and
+// render chips without parsing every post on every request.
+const MAX_TAGS = 10;
+
+const extractTags = (text = '') => {
+  // Strip URLs first so a URL fragment (".../#section") isn't mistaken for a
+  // hashtag.
+  const withoutUrls = String(text).replace(/https?:\/\/\S+/gi, ' ');
+  const matches = withoutUrls.match(/#([a-zA-Z0-9_]{1,30})/g) || [];
+
+  return [
+    ...new Set(matches.map((match) => match.slice(1).toLowerCase()))
+  ].slice(0, MAX_TAGS);
+};
+
 // @route   POST api/posts
 // @desc    Create a post
 // @access  Private
@@ -61,6 +76,7 @@ router.post(
 
       const newPost = new Post({
         text: sanitizeHtml(req.body.text),
+        tags: extractTags(req.body.text),
         name: user.name,
         avatar: user.avatar,
         user: user.id
@@ -125,6 +141,16 @@ router.get('/', auth, async (req, res) => {
         'i'
       );
       filter = { ...filter, $or: [{ text: rx }, { name: rx }] };
+    }
+
+    // Optional hashtag filter. Tags are stored lowercase on write, so a
+    // case-insensitive `#JavaScript` in the URL still matches.
+    const tag = (req.query.tag || '')
+      .trim()
+      .replace(/^#/, '')
+      .toLowerCase();
+    if (tag) {
+      filter = { ...filter, tags: tag };
     }
 
     // Whether the current user already follows each post's author, so the feed
@@ -212,6 +238,31 @@ router.get('/', auth, async (req, res) => {
     });
 
     return respondWithFollowState(docs);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/posts/tags
+// @desc    Get the most used hashtags (must precede /:id)
+// @access  Private
+router.get('/tags', auth, async (req, res) => {
+  try {
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      30
+    );
+
+    const tags = await Post.aggregate([
+      { $unwind: '$tags' },
+      { $match: { tags: { $nin: [null, ''] } } },
+      { $group: { _id: '$tags', count: { $sum: 1 } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: limit }
+    ]);
+
+    return res.json(tags.map((entry) => ({ tag: entry._id, count: entry.count })));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -377,6 +428,7 @@ router.put(
       }
 
       post.text = sanitizeHtml(req.body.text);
+      post.tags = extractTags(req.body.text);
       await post.save();
 
       return res.json(shapePost(post, req.user.id));

@@ -1,5 +1,6 @@
 import {
   GET_POSTS,
+  GET_TAGS,
   POST_ERROR,
   UPDATE_LIKES,
   DELETE_POST,
@@ -25,6 +26,7 @@ import {
 
 const initialState = {
   posts: [],
+  tags: [],
   post: null,
   savedPosts: [],
   likedPosts: [],
@@ -63,6 +65,11 @@ export default function postReducer(state = initialState, action) {
         loading: false
       };
     }
+    case GET_TAGS:
+      return {
+        ...state,
+        tags: action.payload
+      };
     case GET_SINGLE_POST:
       // A null payload is the "clear before fetch" signal: keep the spinner up
       // until the real post (or an error) arrives.
