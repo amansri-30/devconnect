@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
@@ -14,14 +14,23 @@ const Notifications = ({
   getNotifications,
   markNotificationsRead,
   clearNotifications,
-  notification: { notifications, unreadCount, loading }
+  notification: { notifications, unreadCount, loading, page, total }
 }) => {
   const navigate = useNavigate();
+  const [loadingMore, setLoadingMore] = useState(false);
 
   // Fetch without clearing the unread badge, so unread items stay visible.
   useEffect(() => {
     getNotifications();
   }, [getNotifications]);
+
+  const hasMore = notifications.length < total;
+
+  const loadMore = async () => {
+    setLoadingMore(true);
+    await getNotifications(page + 1);
+    setLoadingMore(false);
+  };
 
   const notificationLink = (n) => {
     if (n.from && (n.type === 'follow' || !n.post))
@@ -142,6 +151,18 @@ const Notifications = ({
           No notifications yet. Follow developers or get likes and comments on
           your posts and they'll appear here.
         </p>
+      )}
+      {hasMore && (
+        <div className="my-1" style={{ textAlign: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={loadMore}
+            disabled={loadingMore}
+          >
+            {loadingMore ? 'Loading...' : 'Load Older Notifications'}
+          </button>
+        </div>
       )}
     </Fragment>
   );

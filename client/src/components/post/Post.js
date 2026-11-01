@@ -4,6 +4,7 @@ import { connect } from 'react-redux';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import { getSinglePost, editPost } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 import PostItem from '../posts/PostItem';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
@@ -52,7 +53,7 @@ const Post = ({
   // Prepare the edit buffer whenever the loaded post changes.
   useEffect(() => {
     if (post) {
-      setText(post.text);
+      setText(decodeHtml(post.text));
     }
   }, [post]);
 
@@ -136,7 +137,7 @@ const Post = ({
             type="button"
             className="btn btn-light my-1"
             onClick={() => {
-              setText(post.text);
+              setText(decodeHtml(post.text));
               setEditing(false);
             }}
           >
@@ -155,6 +156,7 @@ const Post = ({
                   comment={comment}
                   postId={post._id}
                   replies={repliesByParent[comment._id] || []}
+                  repliesByParent={repliesByParent}
                 />
               ))
             ) : (

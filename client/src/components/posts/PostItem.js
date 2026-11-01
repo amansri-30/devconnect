@@ -11,7 +11,7 @@ import {
   editPost
 } from '../../actions/post';
 import { toggleFollow } from '../../actions/profile';
-import linkify from '../../utils/linkify';
+import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
 
 const PostItem = ({
@@ -52,7 +52,7 @@ const PostItem = ({
   const isOwnPost = !auth.loading && auth.user && user === auth.user._id;
 
   const startEdit = () => {
-    setBody(text);
+    setBody(decodeHtml(text));
     setEditing(true);
   };
 

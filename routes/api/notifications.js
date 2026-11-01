@@ -5,16 +5,30 @@ const auth = require('../../middleware/auth');
 const Notification = require('../../models/Notification');
 
 // @route   GET api/notifications
-// @desc    Get the current user's notifications, newest first
+// @desc    Get the current user's notifications, newest first (paginated)
 // @access  Private
 router.get('/', auth, async (req, res) => {
+  const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+  const perPage = Math.min(
+    Math.max(parseInt(req.query.limit, 10) || 20, 1),
+    50
+  );
+
   try {
-    const notifications = await Notification.find({
-      recipient: req.user.id
-    })
-      .sort({ date: -1 })
-      .limit(50)
-      .populate('from', ['name', 'avatar']);
+    const filter = { recipient: req.user.id };
+
+    const [total, notifications] = await Promise.all([
+      Notification.countDocuments(filter),
+      Notification.find(filter)
+        .sort({ date: -1 })
+        .skip((page - 1) * perPage)
+        .limit(perPage)
+        .populate('from', ['name', 'avatar'])
+    ]);
+
+    res.set('X-Total-Count', total);
+    res.set('X-Page', page);
+    res.set('X-Per-Page', perPage);
 
     return res.json(notifications);
   } catch (err) {

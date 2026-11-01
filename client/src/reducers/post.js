@@ -304,14 +304,32 @@ case DELETE_POST:
       };
     }
     case REMOVE_COMMENT: {
-      // Drop the comment and any replies threaded under it (the backend removes
-      // replies too, so the UI stays consistent without a refetch).
-      const removeFrom = (comments) =>
-        comments.filter(
-          (comment) =>
-            action.payload !== comment._id &&
-            String(comment.parent) !== String(action.payload)
+      // Drop the comment and every reply threaded under it (the backend removes
+      // the whole descendant chain too), so the UI stays consistent without a
+      // refetch even for replies to replies.
+      const removeFrom = (comments) => {
+        const removedIds = new Set([String(action.payload)]);
+
+        let foundNew = true;
+        while (foundNew) {
+          foundNew = false;
+          for (const comment of comments) {
+            if (!comment.parent) continue;
+
+            const parentId = String(comment.parent);
+            const commentId = String(comment._id);
+
+            if (removedIds.has(parentId) && !removedIds.has(commentId)) {
+              removedIds.add(commentId);
+              foundNew = true;
+            }
+          }
+        }
+
+        return comments.filter(
+          (comment) => !removedIds.has(String(comment._id))
         );
+      };
       const strip = (p) => ({ ...p, comments: removeFrom(p.comments) });
       const targetId = state.post && state.post._id;
       const stripIfTarget = (p) => (p._id === targetId ? strip(p) : p);

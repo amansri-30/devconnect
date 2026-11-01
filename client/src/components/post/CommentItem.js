@@ -4,7 +4,7 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import { deleteComment, editComment, toggleCommentLike } from '../../actions/post';
-import linkify from '../../utils/linkify';
+import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
 import CommentForm from './CommentForm';
 
@@ -12,6 +12,7 @@ const CommentItem = ({
   postId,
   comment: { _id, text, name, avatar, user, date, likes },
   replies = [],
+  repliesByParent = {},
   isReply,
   auth,
   deleteComment,
@@ -31,7 +32,7 @@ const CommentItem = ({
     commentLikes.some((like) => like.user === auth.user._id);
 
   const startEdit = () => {
-    setBody(text);
+    setBody(decodeHtml(text));
     setEditing(true);
   };
 
@@ -115,16 +116,14 @@ const CommentItem = ({
         >
           <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
         </button>
-        {!isReply && (
-          <button
-            onClick={() => setReplying((prev) => !prev)}
-            type="button"
-            className="btn btn-light"
-            title="Reply to this comment"
-          >
-            <i className="fas fa-reply" /> Reply
-          </button>
-        )}
+        <button
+          onClick={() => setReplying((prev) => !prev)}
+          type="button"
+          className="btn btn-light"
+          title="Reply to this comment"
+        >
+          <i className="fas fa-reply" /> Reply
+        </button>
         <Link
           to={`/post/${postId}#comment-${_id}`}
           className="btn btn-light"
@@ -170,6 +169,8 @@ const CommentItem = ({
                 comment={reply}
                 postId={postId}
                 isReply
+                replies={repliesByParent[reply._id] || []}
+                repliesByParent={repliesByParent}
               />
             ))}
           </div>
@@ -183,6 +184,7 @@ CommentItem.propTypes = {
   postId: PropTypes.string.isRequired,
   comment: PropTypes.object.isRequired,
   replies: PropTypes.array,
+  repliesByParent: PropTypes.object,
   isReply: PropTypes.bool,
   auth: PropTypes.object.isRequired,
   deleteComment: PropTypes.func.isRequired,

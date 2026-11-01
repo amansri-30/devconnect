@@ -3,6 +3,7 @@ import {
   GET_NOTIFICATIONS,
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
+  MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR
 } from './types';
 
@@ -13,14 +14,21 @@ const getErrorPayload = (err) => {
   return {};
 };
 
-// Get the current user's notifications
-export const getNotifications = () => async (dispatch) => {
+// Get the current user's notifications (page 1 replaces the list, later pages
+// append so older notifications can be loaded on demand).
+export const getNotifications = (page = 1, limit = 20) => async (dispatch) => {
   try {
-    const res = await axios.get('/api/notifications');
+    const res = await axios.get('/api/notifications', {
+      params: { page, limit }
+    });
 
     dispatch({
       type: GET_NOTIFICATIONS,
-      payload: res.data
+      payload: {
+        notifications: res.data,
+        page,
+        total: parseInt(res.headers['x-total-count'], 10) || 0
+      }
     });
   } catch (err) {
     dispatch({
@@ -56,8 +64,9 @@ export const markNotificationsRead = (id) => async (dispatch) => {
     if (id) {
       dispatch({ type: MARK_NOTIFICATION_READ, payload: id });
     } else {
-      // Mark-all: refetch so every item's read flag clears, not just the badge.
-      dispatch(getNotifications());
+      // Mark-all: update every loaded item in place. Refetching here would
+      // throw away any older pages the user has already loaded.
+      dispatch({ type: MARK_ALL_NOTIFICATIONS_READ });
     }
   } catch (err) {
     dispatch({

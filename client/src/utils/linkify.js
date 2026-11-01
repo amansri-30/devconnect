@@ -14,6 +14,12 @@ const ENTITIES = {
 const unescapeHtml = (text) =>
   text.replace(/&(?:amp|lt|gt|quot|#0?39);/g, (entity) => ENTITIES[entity]);
 
+// Text is stored HTML-escaped by the API. Editable fields (post/comment
+// textareas) must show the user's original characters, otherwise editing
+// "it's" displays "it&#039;s" and re-saving escapes the entities again.
+export const decodeHtml = (text) =>
+  typeof text === 'string' ? unescapeHtml(text) : text;
+
 const escapeHtml = (text) =>
   text.replace(
     /[&<>"']/g,
