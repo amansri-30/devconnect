@@ -134,13 +134,21 @@ router.get('/', auth, async (req, res) => {
     }
 
     // Optional free-text search across post text and denormalized author name.
+    // Stored post text is HTML-escaped, so the query is matched in both its
+    // raw (author names) and escaped (post text) forms; otherwise searching
+    // "don't" or "R&D" would never match the stored "don&#039;t" / "R&amp;D".
     const search = (req.query.search || '').trim();
     if (search) {
-      const rx = new RegExp(
-        search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'),
-        'i'
-      );
-      filter = { ...filter, $or: [{ text: rx }, { name: rx }] };
+      const escapeRegExp = (value) =>
+        value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const rawRx = new RegExp(escapeRegExp(search), 'i');
+      const escapedSearch = sanitizeHtml(search);
+      const textRx =
+        escapedSearch === search
+          ? rawRx
+          : new RegExp(escapeRegExp(escapedSearch), 'i');
+
+      filter = { ...filter, $or: [{ text: textRx }, { name: rawRx }] };
     }
 
     // Optional hashtag filter. Tags are stored lowercase on write, so a
@@ -303,7 +311,10 @@ router.get('/liked', auth, async (req, res) => {
 // @access  Private
 router.get('/mine', auth, async (req, res) => {
   try {
-    const posts = await Post.find({ user: req.user.id }).sort({ date: -1 });
+    const posts = await Post.find({ user: req.user.id }).sort({
+      pinned: -1,
+      date: -1
+    });
     return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
   } catch (err) {
     console.error(err.message);
@@ -321,7 +332,7 @@ router.get('/user/:user_id', async (req, res) => {
     }
 
     const posts = await Post.find({ user: req.params.user_id })
-      .sort({ date: -1 })
+      .sort({ pinned: -1, date: -1 })
       .limit(5);
 
     // Public endpoint: the `saved` flag is meaningless here, never derive it
@@ -501,6 +512,47 @@ router.delete('/save/:id', auth, async (req, res) => {
     await post.save();
 
     return res.json({ saved: false });
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/posts/pin/:id
+// @desc    Pin or unpin one of the current user's posts
+// @access  Private
+router.put('/pin/:id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    if (post.user.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'User not authorized' });
+    }
+
+    if (post.pinned) {
+      post.pinned = false;
+    } else {
+      // Only one post per account can be pinned: clear any previous pin before
+      // setting the new one so the profile highlights a single post.
+      await Post.updateMany(
+        { user: req.user.id, pinned: true },
+        { $set: { pinned: false } }
+      );
+      post.pinned = true;
+    }
+
+    await post.save();
+
+    return res.json({ pinned: post.pinned });
   } catch (err) {
     console.error(err.message);
 

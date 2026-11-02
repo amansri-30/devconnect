@@ -7,6 +7,7 @@ import {
   ADD_POST,
   GET_SINGLE_POST,
   UPDATE_POST,
+  TOGGLE_PIN,
   SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
@@ -195,6 +196,51 @@ export default function postReducer(state = initialState, action) {
         userPosts: state.userPosts.map(merge),
         followingFeed: state.followingFeed.map(merge),
         trendingPosts: state.trendingPosts.map(merge),
+        loading: false
+      };
+    }
+    case TOGGLE_PIN: {
+      // A user can pin at most one post. Set the target's flag and clear every
+      // other post by the same author across all lists, so the highlight moves
+      // immediately instead of waiting for a refetch.
+      const { postId, userId, pinned } = action.payload;
+      const apply = (list) =>
+        list.map((p) => {
+          if (p._id === postId) return { ...p, pinned };
+          if (pinned && userId && p.user === userId) {
+            return { ...p, pinned: false };
+          }
+          return p;
+        });
+
+      let post = state.post;
+      if (post) {
+        if (post._id === postId) {
+          post = { ...post, pinned };
+        } else if (pinned && userId && post.user === userId) {
+          post = { ...post, pinned: false };
+        }
+      }
+
+      // Keep the owner's own list ordered the way the server returns it:
+      // pinned first, then newest. This makes a freshly pinned row jump to the
+      // top immediately instead of on the next refetch.
+      const myPosts = apply(state.myPosts).sort((a, b) => {
+        const pinDiff = (b.pinned ? 1 : 0) - (a.pinned ? 1 : 0);
+        if (pinDiff !== 0) return pinDiff;
+        return new Date(b.date) - new Date(a.date);
+      });
+
+      return {
+        ...state,
+        post,
+        posts: apply(state.posts),
+        myPosts,
+        savedPosts: apply(state.savedPosts),
+        likedPosts: apply(state.likedPosts),
+        userPosts: apply(state.userPosts),
+        followingFeed: apply(state.followingFeed),
+        trendingPosts: apply(state.trendingPosts),
         loading: false
       };
     }

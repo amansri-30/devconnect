@@ -1,11 +1,14 @@
 import React from 'react';
 import PropTypes from 'prop-types';
 import findFirstMediaUrl from '../../utils/media';
+import { decodeHtml } from '../../utils/linkify';
 
 // Renders a rich preview for the first image/YouTube link in `text`.
 // Returns null when there is nothing to preview.
 const MediaPreview = ({ text }) => {
-  const media = findFirstMediaUrl(text);
+  // Stored text is HTML-escaped, so a URL containing "&" arrives as "&amp;".
+  // Decode first or image URLs with query parameters break.
+  const media = findFirstMediaUrl(decodeHtml(text));
 
   if (!media) return null;
 

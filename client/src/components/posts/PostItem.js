@@ -8,7 +8,8 @@ import {
   removeLike,
   deletePost,
   toggleSavePost,
-  editPost
+  editPost,
+  togglePinPost
 } from '../../actions/post';
 import { toggleFollow } from '../../actions/profile';
 import linkify, { decodeHtml } from '../../utils/linkify';
@@ -20,6 +21,7 @@ const PostItem = ({
   deletePost,
   toggleSavePost,
   editPost,
+  togglePinPost,
   toggleFollow,
   auth,
   post: {
@@ -34,6 +36,7 @@ const PostItem = ({
     saved,
     views,
     tags,
+    pinned,
     isFollowing
   },
   showActions
@@ -42,6 +45,7 @@ const PostItem = ({
   const [editing, setEditing] = useState(false);
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [pinning, setPinning] = useState(false);
 
   // Whether the current user has already liked this post.
   const likedByMe =
@@ -80,6 +84,12 @@ const PostItem = ({
     }
   };
 
+  const handlePin = async () => {
+    setPinning(true);
+    await togglePinPost(_id, user);
+    setPinning(false);
+  };
+
   const copyLink = async () => {
     const url = `${window.location.origin}/post/${_id}`;
     try {
@@ -104,7 +114,7 @@ const PostItem = ({
   };
 
   return (
-    <div className="post bg-white p-1 my-1">
+    <div className={`post bg-white p-1 my-1${pinned ? ' post-pinned' : ''}`}>
       <div>
         <Link to={`/profile/${user}`}>
           <img className="round-img" src={avatar} alt={name} />
@@ -133,6 +143,11 @@ const PostItem = ({
           )}
       </div>
       <div>
+        {pinned && !editing && (
+          <p className="pinned-badge">
+            <i className="fas fa-thumbtack" /> Pinned
+          </p>
+        )}
         {editing ? (
           <form onSubmit={submitEdit}>
             <textarea
@@ -243,6 +258,17 @@ const PostItem = ({
                   </button>
                 )}
                 <button
+                  onClick={handlePin}
+                  type="button"
+                  className={`btn ${pinned ? 'btn-primary' : 'btn-light'}`}
+                  title={pinned ? 'Unpin this post' : 'Pin this post to your profile'}
+                  disabled={pinning}
+                >
+                  <i
+                    className={`${pinned ? 'fas' : 'far'} fa-thumbtack`}
+                  />
+                </button>
+                <button
                   onClick={removePost}
                   type="button"
                   className="btn btn-danger"
@@ -270,6 +296,7 @@ PostItem.propTypes = {
   deletePost: PropTypes.func.isRequired,
   toggleSavePost: PropTypes.func.isRequired,
   editPost: PropTypes.func.isRequired,
+  togglePinPost: PropTypes.func.isRequired,
   toggleFollow: PropTypes.func.isRequired,
   showActions: PropTypes.bool.isRequired
 };
@@ -284,5 +311,6 @@ export default connect(mapStateToProps, {
   deletePost,
   toggleSavePost,
   editPost,
+  togglePinPost,
   toggleFollow
 })(PostItem);

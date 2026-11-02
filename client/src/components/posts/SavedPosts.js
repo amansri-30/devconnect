@@ -5,6 +5,7 @@ import { Link } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import PostItem from '../posts/PostItem';
 import { getSavedPosts, unsavePost } from '../../actions/post';
+import { decodeHtml } from '../../utils/linkify';
 
 const SavedPosts = ({
   getSavedPosts,
@@ -20,7 +21,8 @@ const SavedPosts = ({
   const term = query.trim().toLowerCase();
   const filtered = term
     ? savedPosts.filter((post) => {
-        const text = (post.text || '').toLowerCase();
+        // Stored text is HTML-escaped; decode so searches for ' or & match.
+        const text = decodeHtml(post.text || '').toLowerCase();
         const author = (post.name || '').toLowerCase();
         return text.includes(term) || author.includes(term);
       })

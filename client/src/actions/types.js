@@ -31,6 +31,7 @@ export const GET_POSTS = 'GET_POSTS';
 export const GET_TAGS = 'GET_TAGS';
 export const GET_SINGLE_POST = 'GET_SINGLE_POST';
 export const UPDATE_POST = 'UPDATE_POST';
+export const TOGGLE_PIN = 'TOGGLE_PIN';
 export const SAVE_POST = 'SAVE_POST';
 export const GET_SAVED_POSTS = 'GET_SAVED_POSTS';
 export const DELETE_SAVED_POST = 'DELETE_SAVED_POST';

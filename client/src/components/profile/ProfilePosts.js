@@ -31,7 +31,17 @@ const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
       ) : (
         <Fragment>
           {posts.slice(0, 3).map((post) => (
-            <div key={post._id} className="profile-post-item">
+            <div
+              key={post._id}
+              className={`profile-post-item${
+                post.pinned ? ' profile-post-pinned' : ''
+              }`}
+            >
+              {post.pinned && (
+                <p className="pinned-badge">
+                  <i className="fas fa-thumbtack" /> Pinned
+                </p>
+              )}
               <p>{preview(post.text)}</p>
               <div>
                 <Moment format="MMM D, YYYY" date={post.date} />

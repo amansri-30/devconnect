@@ -9,6 +9,7 @@ import {
   ADD_POST,
   GET_SINGLE_POST,
   UPDATE_POST,
+  TOGGLE_PIN,
 SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
@@ -233,6 +234,25 @@ export const editPost = (postId, formData) => async dispatch => {
       payload: getErrorPayload(err)
     });
     return false;
+  }
+};
+
+// Pin or unpin one of the current user's posts. Only a single post per author
+// may be pinned, so the reducer clears any previous pin for the same user.
+export const togglePinPost = (postId, userId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/pin/${postId}`);
+
+    dispatch({
+      type: TOGGLE_PIN,
+      payload: { postId, userId, pinned: res.data.pinned }
+    });
+  } catch (err) {
+    dispatch(setAlert('Could not update pinned post', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
   }
 };
 

@@ -42,6 +42,12 @@ const PostSchema = new Schema({
       type: String
     }
   ],
+  // Only one post per author may be pinned; pinned posts float to the top of
+  // the author's profile activity and are highlighted on their cards.
+  pinned: {
+    type: Boolean,
+    default: false
+  },
   comments: [
     {
       user: {
