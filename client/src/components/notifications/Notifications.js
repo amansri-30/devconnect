@@ -6,30 +6,80 @@ import Moment from 'react-moment';
 import Spinner from '../layout/Spinner';
 import {
   getNotifications,
+  getNotificationSummary,
   markNotificationsRead,
   clearNotifications
 } from '../../actions/notifications';
 
+const FILTERS = [
+  { key: '', label: 'All', icon: 'fas fa-bell' },
+  { key: 'follow', label: 'Follows', icon: 'fas fa-user-plus' },
+  { key: 'like', label: 'Likes', icon: 'fas fa-thumbs-up' },
+  { key: 'comment', label: 'Comments', icon: 'fas fa-comment' },
+  { key: 'reply', label: 'Replies', icon: 'fas fa-reply' },
+  { key: 'comment_like', label: 'Comment likes', icon: 'fas fa-heart' }
+];
+
 const Notifications = ({
   getNotifications,
+  getNotificationSummary,
   markNotificationsRead,
   clearNotifications,
-  notification: { notifications, unreadCount, loading, page, total }
+  notification: { notifications, unreadCount, summary, loading, page, total }
 }) => {
   const navigate = useNavigate();
   const [loadingMore, setLoadingMore] = useState(false);
+  const [type, setType] = useState('');
+  const [unreadOnly, setUnreadOnly] = useState(false);
+  const [clearing, setClearing] = useState(false);
+
+  const filters = { type, unread: unreadOnly };
+  const hasFilters = Boolean(type) || unreadOnly;
 
   // Fetch without clearing the unread badge, so unread items stay visible.
+  // Changing a filter re-queries page 1 with that filter.
   useEffect(() => {
-    getNotifications();
-  }, [getNotifications]);
+    getNotifications(1, 20, { type, unread: unreadOnly });
+  }, [getNotifications, type, unreadOnly]);
+
+  // Counts for the filter chips are independent of the current page/filter.
+  useEffect(() => {
+    getNotificationSummary();
+  }, [getNotificationSummary]);
 
   const hasMore = notifications.length < total;
 
   const loadMore = async () => {
     setLoadingMore(true);
-    await getNotifications(page + 1);
+    await getNotifications(page + 1, 20, filters);
     setLoadingMore(false);
+  };
+
+  const onMarkAll = async () => {
+    await markNotificationsRead();
+    // Remove the now-read items from an unread-only view.
+    if (unreadOnly) {
+      await getNotifications(1, 20, filters);
+    }
+  };
+
+  const onClear = async () => {
+    if (
+      !window.confirm(
+        'Clear all notifications? This cannot be undone.'
+      )
+    ) {
+      return;
+    }
+
+    setClearing(true);
+    await clearNotifications(filters);
+    setClearing(false);
+  };
+
+  const resetFilters = () => {
+    setType('');
+    setUnreadOnly(false);
   };
 
   const notificationLink = (n) => {
@@ -47,8 +97,8 @@ const Notifications = ({
     navigate(notificationLink(n));
   };
 
-  const badge = (type) => {
-    switch (type) {
+  const badge = (notificationType) => {
+    switch (notificationType) {
       case 'follow':
         return { icon: 'fas fa-user-plus', className: 'badge-primary' };
       case 'like':
@@ -86,30 +136,79 @@ const Notifications = ({
     return <Spinner />;
   }
 
+  const totalCount = (summary && summary.total) || 0;
+  const unreadTotal = (summary && summary.unread) || unreadCount || 0;
+
   return (
     <Fragment>
       <h1 className="large text-primary">
         <i className="fas fa-bell" /> Notifications
       </h1>
       <p className="lead">Stay up to date with activity on your posts and profile</p>
-      {unreadCount > 0 && (
+
+      <div className="notification-filters my-1">
+        {FILTERS.map((filter) => {
+          const count = filter.key
+            ? (summary && summary.types && summary.types[filter.key]) || 0
+            : totalCount;
+          const unread = filter.key
+            ? (summary && summary.unreadTypes && summary.unreadTypes[filter.key]) ||
+              0
+            : unreadTotal;
+          const active = type === filter.key;
+
+          return (
+            <button
+              key={filter.key || 'all'}
+              type="button"
+              className={`btn ${active ? 'btn-primary' : 'btn-light'}`}
+              onClick={() => setType(filter.key)}
+              aria-pressed={active}
+              title={
+                unread > 0
+                  ? `${unread} unread of ${count}`
+                  : `${count} notification${count === 1 ? '' : 's'}`
+              }
+            >
+              <i className={filter.icon} /> {filter.label}
+              {count > 0 && (
+                <span className="badge badge-light">
+                  {unread > 0 ? `${unread}/${count}` : count}
+                </span>
+              )}
+            </button>
+          );
+        })}
+        <label className="notification-unread-toggle">
+          <input
+            type="checkbox"
+            checked={unreadOnly}
+            onChange={(e) => setUnreadOnly(e.target.checked)}
+          />{' '}
+          Unread only
+        </label>
+      </div>
+
+      {unreadTotal > 0 && (
         <button
           type="button"
           className="btn btn-primary my-1"
-          onClick={() => markNotificationsRead()}
+          onClick={onMarkAll}
         >
           <i className="fas fa-check-double" /> Mark all as read
         </button>
       )}
-      {notifications.length > 0 && (
+      {totalCount > 0 && (
         <button
           type="button"
           className="btn btn-dark my-1"
-          onClick={clearNotifications}
+          onClick={onClear}
+          disabled={clearing}
         >
-          <i className="fas fa-trash" /> Clear all
+          <i className="fas fa-trash" /> {clearing ? 'Clearing...' : 'Clear all'}
         </button>
       )}
+
       {notifications.length > 0 ? (
         notifications.map((n) => {
           const meta = badge(n.type);
@@ -148,10 +247,26 @@ const Notifications = ({
         })
       ) : (
         <p className="my-1">
-          No notifications yet. Follow developers or get likes and comments on
-          your posts and they'll appear here.
+          {hasFilters ? (
+            <Fragment>
+              No {unreadOnly ? 'unread ' : ''}notifications match this filter.{' '}
+              <button
+                type="button"
+                className="notification-reset"
+                onClick={resetFilters}
+              >
+                Reset filters
+              </button>
+            </Fragment>
+          ) : (
+            <Fragment>
+              No notifications yet. Follow developers or get likes and comments
+              on your posts and they'll appear here.
+            </Fragment>
+          )}
         </p>
       )}
+
       {hasMore && (
         <div className="my-1" style={{ textAlign: 'center' }}>
           <button
@@ -170,6 +285,7 @@ const Notifications = ({
 
 Notifications.propTypes = {
   getNotifications: PropTypes.func.isRequired,
+  getNotificationSummary: PropTypes.func.isRequired,
   markNotificationsRead: PropTypes.func.isRequired,
   clearNotifications: PropTypes.func.isRequired,
   notification: PropTypes.object.isRequired
@@ -181,6 +297,7 @@ const mapStateToProps = (state) => ({
 
 export default connect(mapStateToProps, {
   getNotifications,
+  getNotificationSummary,
   markNotificationsRead,
   clearNotifications
 })(Notifications);

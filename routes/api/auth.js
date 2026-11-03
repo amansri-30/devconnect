@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
 const User = require('../../models/User');
 const { JWT_SECRET } = require('../../config/keys');
+const { normalizeEmail, emailMatch } = require('../../util/email');
 
 // Only ever expose the safe, public user fields (never the password hash).
 const publicUser = (user) => ({
@@ -50,7 +51,7 @@ router.get('/', auth, async (req, res) => {
 router.post(
   '/',
   [
-    check('email', 'Sign in email is required').isEmail(),
+    check('email', 'Sign in email is required').trim().isEmail(),
     check('password', 'Password is required').exists()
   ],
   async (req, res) => {
@@ -59,10 +60,17 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { email, password } = req.body;
+    const email = normalizeEmail(req.body.email);
+    const { password } = req.body;
 
     try {
+      // Case/whitespace-insensitive lookup: "User@Example.com " should sign in
+      // to the same account as "user@example.com".
       let user = await User.findOne({ email });
+
+      if (!user) {
+        user = await User.findOne({ email: emailMatch(email) });
+      }
 
       if (!user) {
         return res
@@ -84,7 +92,7 @@ router.post(
         }
       };
 
-      jwt.sign(payload, JWT_SECRET, { expiresIn: 3600 }, (err, token) => {
+      jwt.sign(payload, JWT_SECRET, { expiresIn: '7d' }, (err, token) => {
         if (err) throw err;
         // Return the user alongside the token so the client doesn't need a
         // second round-trip that could fail and wrongly log a valid session out.

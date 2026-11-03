@@ -2,21 +2,34 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { toggleFollow, getSuggestions } from '../../actions/profile';
+import {
+  toggleFollow,
+  getSuggestions,
+  getFollowing
+} from '../../actions/profile';
 
 // Suggests developers to follow; following one refreshes the list so it
 // disappears (the backend excludes people you already follow).
-const WhoToFollow = ({ suggestions, toggleFollow, getSuggestions }) => {
+const WhoToFollow = ({
+  suggestions,
+  toggleFollow,
+  getSuggestions,
+  getFollowing
+}) => {
   const [busyId, setBusyId] = useState(null);
 
   if (!suggestions || suggestions.length === 0) return null;
 
   const onFollow = async (id) => {
     setBusyId(id);
-    await toggleFollow(id);
-    // Keep the Follow button busy until the refreshed list excludes this dev.
-    await getSuggestions();
-    setBusyId(null);
+    try {
+      await toggleFollow(id);
+      // Keep the Follow button busy until the refreshed list excludes this dev,
+      // and refresh "following" so the dashboard checklist updates live.
+      await Promise.all([getSuggestions(), getFollowing()]);
+    } finally {
+      setBusyId(null);
+    }
   };
 
   return (
@@ -68,13 +81,16 @@ const WhoToFollow = ({ suggestions, toggleFollow, getSuggestions }) => {
 WhoToFollow.propTypes = {
   suggestions: PropTypes.array.isRequired,
   toggleFollow: PropTypes.func.isRequired,
-  getSuggestions: PropTypes.func.isRequired
+  getSuggestions: PropTypes.func.isRequired,
+  getFollowing: PropTypes.func.isRequired
 };
 
 const mapStateToProps = (state) => ({
   suggestions: state.profile.suggestions
 });
 
-export default connect(mapStateToProps, { toggleFollow, getSuggestions })(
-  WhoToFollow
-);
+export default connect(mapStateToProps, {
+  toggleFollow,
+  getSuggestions,
+  getFollowing
+})(WhoToFollow);

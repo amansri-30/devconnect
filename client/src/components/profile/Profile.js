@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link, useParams } from 'react-router-dom';
@@ -25,6 +25,19 @@ const Profile = ({
   auth
 }) => {
   const { id } = useParams();
+  const [followBusy, setFollowBusy] = useState(false);
+
+  // Ignore repeat clicks while the follow request is in flight; otherwise a
+  // quick double-click toggles follow on and then straight back off.
+  const onFollow = async () => {
+    if (followBusy) return;
+    setFollowBusy(true);
+    try {
+      await toggleFollow(profile.user._id || profile.user);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
 
   const isOwnProfile =
     !auth.loading &&
@@ -70,11 +83,24 @@ const Profile = ({
             !isOwnProfile && (
               <button
                 type="button"
-                onClick={() => toggleFollow(profile.user._id || profile.user)}
+                onClick={onFollow}
+                disabled={followBusy}
                 className={`btn ${isFollowing ? 'btn-light' : 'btn-primary'}`}
               >
-                <i className={`fas ${isFollowing ? 'fa-user-minus' : 'fa-user-plus'}`} />{' '}
-                {isFollowing ? 'Unfollow' : 'Follow'}
+                <i
+                  className={`fas ${
+                    followBusy
+                      ? 'fa-circle-notch fa-spin'
+                      : isFollowing
+                        ? 'fa-user-minus'
+                        : 'fa-user-plus'
+                  }`}
+                />{' '}
+                {followBusy
+                  ? 'Updating...'
+                  : isFollowing
+                    ? 'Unfollow'
+                    : 'Follow'}
               </button>
             )}
           {profile.user && (

@@ -27,6 +27,23 @@ const normalizeUrl = (value) => {
   return /^https?:\/\//i.test(trimmed) ? trimmed : `https://${trimmed}`;
 };
 
+// HTML checkboxes submit strings, and older clients may send "false". Normalize
+// so only an actually checked "current" box suppresses the end date.
+const isCurrentRole = (value) =>
+  value === true ||
+  value === 'true' ||
+  value === 'on' ||
+  value === 1 ||
+  value === '1';
+
+// Return a valid moment or null. Missing end dates are expected, while an
+// unparseable date should be a 400 rather than a Mongoose cast failure (500).
+const parseDate = (value) => {
+  if (!value) return null;
+  const parsed = new moment.utc(value);
+  return parsed.isValid() ? parsed : null;
+};
+
 // @route   GET api/profile/test
 // @desc    Tests profile route
 // @access  Public
@@ -434,12 +451,27 @@ router.post(
     if (req.body.githubusername !== undefined)
       profileFields.githubusername = req.body.githubusername;
 
-    // skills - split csv into array
+    // skills - split csv into array, dropping blanks and case-insensitive
+    // duplicates. A value like ",," must not slip past validation only to fail
+    // schema validation with an unhelpful 500.
     if (req.body.skills !== undefined) {
+      const seenSkills = new Set();
       profileFields.skills = (req.body.skills || '')
         .split(',')
         .map((skill) => skill.trim())
-        .filter(Boolean);
+        .filter((skill) => {
+          if (!skill) return false;
+          const key = skill.toLowerCase();
+          if (seenSkills.has(key)) return false;
+          seenSkills.add(key);
+          return true;
+        });
+
+      if (profileFields.skills.length === 0) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'Skills is required' }] });
+      }
     }
 
     // social links
@@ -453,6 +485,12 @@ router.post(
         }
       }
     );
+
+    // Guard against the old "0" placeholder value being submitted as a real
+    // professional status.
+    if (!profileFields.status || profileFields.status === '0') {
+      return res.status(400).json({ errors: [{ msg: 'Status is required' }] });
+    }
 
     try {
       let profile = await Profile.findOne({ user: req.user.id });
@@ -498,13 +536,23 @@ router.put(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { title, company, location, current, description } = req.body;
+    const { title, company, location, description } = req.body;
+    const current = isCurrentRole(req.body.current);
 
-    const from = new moment.utc(req.body.from);
+    const from = parseDate(req.body.from);
+    if (!from) {
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'From date is invalid' }] });
+    }
 
-    let to = null;
-    if (req.body.to !== '') {
-      to = new moment.utc(req.body.to);
+    // A missing end date must stay null instead of defaulting to "now" (the
+    // old code only compared against "", so an omitted field became today).
+    const to = current ? null : parseDate(req.body.to);
+    if (!current && req.body.to && !to) {
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'To date is invalid' }] });
     }
 
     const newExp = {
@@ -558,13 +606,21 @@ router.put(
       return res.status(400).json({ errors: errors.array() });
     }
 
-    const { school, degree, fieldofstudy, current, description } = req.body;
+    const { school, degree, fieldofstudy, description } = req.body;
+    const current = isCurrentRole(req.body.current);
 
-    const from = new moment.utc(req.body.from);
+    const from = parseDate(req.body.from);
+    if (!from) {
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'From date is invalid' }] });
+    }
 
-    let to = null;
-    if (req.body.to !== '') {
-      to = new moment.utc(req.body.to);
+    const to = current ? null : parseDate(req.body.to);
+    if (!current && req.body.to && !to) {
+      return res
+        .status(400)
+        .json({ errors: [{ msg: 'To date is invalid' }] });
     }
 
     const newEdu = {
@@ -634,21 +690,31 @@ router.put(
         return res.status(400).json({ msg: 'Experience entry not found' });
       }
 
-      const { title, company, location, current, description } = req.body;
+      const { title, company, location, description } = req.body;
+      const current = isCurrentRole(req.body.current);
 
-      const to =
-        req.body.to && req.body.to !== '' && !current
-          ? new moment.utc(req.body.to)
-          : null;
+      const from = parseDate(req.body.from);
+      if (!from) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'From date is invalid' }] });
+      }
+
+      const to = current ? null : parseDate(req.body.to);
+      if (!current && req.body.to && !to) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'To date is invalid' }] });
+      }
 
       profile.experience[targetIndex] = {
         ...profile.experience[targetIndex].toObject(),
         title,
         company,
         location,
-        from: new moment.utc(req.body.from),
+        from,
         to,
-        current: !!current,
+        current,
         description
       };
 
@@ -699,21 +765,31 @@ router.put(
         return res.status(400).json({ msg: 'Education entry not found' });
       }
 
-      const { school, degree, fieldofstudy, current, description } = req.body;
+      const { school, degree, fieldofstudy, description } = req.body;
+      const current = isCurrentRole(req.body.current);
 
-      const to =
-        req.body.to && req.body.to !== '' && !current
-          ? new moment.utc(req.body.to)
-          : null;
+      const from = parseDate(req.body.from);
+      if (!from) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'From date is invalid' }] });
+      }
+
+      const to = current ? null : parseDate(req.body.to);
+      if (!current && req.body.to && !to) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'To date is invalid' }] });
+      }
 
       profile.education[targetIndex] = {
         ...profile.education[targetIndex].toObject(),
         school,
         degree,
         fieldofstudy,
-        from: new moment.utc(req.body.from),
+        from,
         to,
-        current: !!current,
+        current,
         description
       };
 

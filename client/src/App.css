@@ -801,6 +801,45 @@ button {
   background: var(--primary-color);
 }
 
+.notification-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.notification-filters .btn {
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+.notification-filters .btn .badge {
+  margin-left: 0.35rem;
+}
+
+.notification-unread-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.notification-unread-toggle input {
+  margin: 0;
+}
+
+.notification-reset {
+  background: none;
+  border: none;
+  padding: 0;
+  font: inherit;
+  color: var(--primary-color);
+  text-decoration: underline;
+  cursor: pointer;
+}
+
 .leaderboard {
   list-style: none;
   padding: 0;
