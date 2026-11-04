@@ -46,6 +46,9 @@ const PostItem = ({
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
   const [pinning, setPinning] = useState(false);
+  const [followBusy, setFollowBusy] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [saveBusy, setSaveBusy] = useState(false);
 
   // Whether the current user has already liked this post.
   const likedByMe =
@@ -54,7 +57,8 @@ const PostItem = ({
     likes.some((like) => like.user === auth.user._id);
 
   // Whether the viewer is the post's own author (never offer to follow yourself).
-  const isOwnPost = !auth.loading && auth.user && user === auth.user._id;
+  const isOwnPost =
+    !auth.loading && Boolean(auth.user) && user === auth.user._id;
 
   const startEdit = () => {
     setBody(decodeHtml(text));
@@ -85,9 +89,46 @@ const PostItem = ({
   };
 
   const handlePin = async () => {
+    if (pinning) return;
     setPinning(true);
-    await togglePinPost(_id, user);
-    setPinning(false);
+    try {
+      await togglePinPost(_id, user);
+    } finally {
+      setPinning(false);
+    }
+  };
+
+  // Guard every inline social action against double clicks: a rapid second
+  // click would otherwise toggle the same value twice or fire a duplicate
+  // request before the first response lands.
+  const handleFollow = async () => {
+    if (followBusy) return;
+    setFollowBusy(true);
+    try {
+      await toggleFollow(user);
+    } finally {
+      setFollowBusy(false);
+    }
+  };
+
+  const handleLike = async () => {
+    if (likeBusy) return;
+    setLikeBusy(true);
+    try {
+      await (likedByMe ? removeLike(_id) : addLike(_id));
+    } finally {
+      setLikeBusy(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (saveBusy) return;
+    setSaveBusy(true);
+    try {
+      await toggleSavePost(_id);
+    } finally {
+      setSaveBusy(false);
+    }
   };
 
   const copyLink = async () => {
@@ -130,12 +171,17 @@ const PostItem = ({
               className={`btn ${
                 isFollowing ? 'btn-light' : 'btn-primary'
               } follow-toggle`}
-              onClick={() => toggleFollow(user)}
+              onClick={handleFollow}
+              disabled={followBusy}
               title={isFollowing ? 'Unfollow this developer' : 'Follow this developer'}
             >
               <i
                 className={`fas ${
-                  isFollowing ? 'fa-user-minus' : 'fa-user-plus'
+                  followBusy
+                    ? 'fa-circle-notch fa-spin'
+                    : isFollowing
+                    ? 'fa-user-minus'
+                    : 'fa-user-plus'
                 }`}
               />{' '}
               {isFollowing ? 'Following' : 'Follow'}
@@ -209,10 +255,11 @@ const PostItem = ({
         {showActions && (
           <Fragment>
             <button
-              onClick={(e) => (likedByMe ? removeLike(_id) : addLike(_id))}
+              onClick={handleLike}
               type="button"
               className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
               title={likedByMe ? 'Unlike this post' : 'Like this post'}
+              disabled={likeBusy}
             >
               <i className="fas fa-thumbs-up" /> <span>{likes.length}</span>
             </button>
@@ -232,10 +279,11 @@ const PostItem = ({
               {copied ? <span>Copied!</span> : <span>Share</span>}
             </button>
             <button
-              onClick={() => toggleSavePost(_id)}
+              onClick={handleSave}
               type="button"
               className={`btn btn-light ${saved ? 'btn-primary' : ''}`}
               title={saved ? 'Remove from saved posts' : 'Save this post'}
+              disabled={saveBusy}
             >
               <i
                 className={`${saved ? 'fas' : 'far'} fa-bookmark`}
@@ -245,7 +293,7 @@ const PostItem = ({
                 {saved ? 'Saved' : 'Save'}
               </span>
             </button>
-            {!auth.loading && user === auth.user._id && (
+            {!auth.loading && auth.user && user === auth.user._id && (
               <Fragment>
                 {!editing && (
                   <button

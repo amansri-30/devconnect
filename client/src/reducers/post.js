@@ -13,7 +13,11 @@ import {
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
+  REQUEST_USER_POSTS,
   CLEAR_USER_POSTS,
+  GET_USER_POST_ARCHIVE,
+  REQUEST_USER_POST_ARCHIVE,
+  CLEAR_USER_POST_ARCHIVE,
   GET_FOLLOWING_FEED,
   GET_TRENDING_POSTS,
   FOLLOW_UPDATE,
@@ -33,6 +37,19 @@ const initialState = {
   likedPosts: [],
   myPosts: [],
   userPosts: [],
+  userPostsFor: null,
+  userPostsTotal: 0,
+  userPostsLoading: false,
+  archive: {
+    userId: null,
+    posts: [],
+    page: 0,
+    total: 0,
+    perPage: 8,
+    sort: 'recent',
+    requestId: 0,
+    loading: false
+  },
   followingFeed: [],
   trendingPosts: [],
   loading: true,
@@ -103,16 +120,93 @@ export default function postReducer(state = initialState, action) {
         myPosts: action.payload,
         loading: false
       };
-    case GET_USER_POSTS:
+    case REQUEST_USER_POSTS:
       return {
         ...state,
-        userPosts: action.payload,
+        userPostsFor: action.payload.userId,
+        userPosts: [],
+        userPostsTotal: 0,
+        userPostsLoading: true
+      };
+    case GET_USER_POSTS: {
+      // Ignore a response for a profile the viewer already navigated away from.
+      const { userId, posts, total } = action.payload;
+      if (state.userPostsFor !== userId) return state;
+
+      return {
+        ...state,
+        userPosts: posts,
+        userPostsTotal: total || posts.length,
+        userPostsLoading: false,
         loading: false
       };
+    }
     case CLEAR_USER_POSTS:
       return {
         ...state,
-        userPosts: []
+        userPosts: [],
+        userPostsFor: null,
+        userPostsTotal: 0,
+        userPostsLoading: false
+      };
+    case REQUEST_USER_POST_ARCHIVE: {
+      const { userId, page, requestId } = action.payload;
+      // Starting a new user or a new sort replaces the list; fetching a later
+      // page keeps what is already on screen.
+      const reset = state.archive.userId !== userId || page === 1;
+
+      return {
+        ...state,
+        archive: {
+          ...state.archive,
+          userId,
+          requestId,
+          posts: reset ? [] : state.archive.posts,
+          page: reset ? 0 : state.archive.page,
+          total: reset ? 0 : state.archive.total,
+          loading: true
+        }
+      };
+    }
+    case GET_USER_POST_ARCHIVE: {
+      const { userId, posts, page, total, perPage, sort, requestId } =
+        action.payload;
+
+      // Ignore stale responses (the viewer switched profiles or changed sort
+      // while this request was still in flight).
+      if (
+        state.archive.userId !== userId ||
+        state.archive.requestId !== requestId
+      ) {
+        return state;
+      }
+
+      const allPosts =
+        page === 1
+          ? posts
+          : Array.from(
+              new Map(
+                [...state.archive.posts, ...posts].map((p) => [p._id, p])
+              ).values()
+            );
+
+      return {
+        ...state,
+        archive: {
+          ...state.archive,
+          posts: allPosts,
+          page,
+          total,
+          perPage,
+          sort: sort || state.archive.sort,
+          loading: false
+        }
+      };
+    }
+    case CLEAR_USER_POST_ARCHIVE:
+      return {
+        ...state,
+        archive: initialState.archive
       };
     case GET_FOLLOWING_FEED:
       return {
@@ -164,6 +258,14 @@ export default function postReducer(state = initialState, action) {
             ? { ...p, saved: action.payload.saved }
             : p
         ),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map((p) =>
+            p._id === action.payload.postId
+              ? { ...p, saved: action.payload.saved }
+              : p
+          )
+        },
         loading: false
       };
     case DELETE_SAVED_POST:
@@ -194,6 +296,10 @@ export default function postReducer(state = initialState, action) {
         savedPosts: state.savedPosts.map(merge),
         likedPosts: state.likedPosts.map(merge),
         userPosts: state.userPosts.map(merge),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map(merge)
+        },
         followingFeed: state.followingFeed.map(merge),
         trendingPosts: state.trendingPosts.map(merge),
         loading: false
@@ -239,6 +345,10 @@ export default function postReducer(state = initialState, action) {
         savedPosts: apply(state.savedPosts),
         likedPosts: apply(state.likedPosts),
         userPosts: apply(state.userPosts),
+        archive: {
+          ...state.archive,
+          posts: apply(state.archive.posts)
+        },
         followingFeed: apply(state.followingFeed),
         trendingPosts: apply(state.trendingPosts),
         loading: false
@@ -248,7 +358,12 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         error: action.payload,
-        loading: false
+        loading: false,
+        userPostsLoading: false,
+        archive: {
+          ...state.archive,
+          loading: false
+        }
       };
     case UPDATE_LIKES:
       return {
@@ -282,6 +397,14 @@ export default function postReducer(state = initialState, action) {
             ? { ...post, likes: action.payload.likes }
             : post
         ),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map((post) =>
+            post._id === action.payload.postId
+              ? { ...post, likes: action.payload.likes }
+              : post
+          )
+        },
         followingFeed: state.followingFeed.map((post) =>
           post._id === action.payload.postId
             ? { ...post, likes: action.payload.likes }
@@ -306,6 +429,11 @@ case DELETE_POST:
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
         userPosts: state.userPosts.filter((p) => p._id !== action.payload),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.filter((p) => p._id !== action.payload),
+          total: Math.max(state.archive.total - 1, 0)
+        },
         followingFeed: state.followingFeed.filter(
           (p) => p._id !== action.payload
         ),
@@ -332,6 +460,10 @@ case DELETE_POST:
         savedPosts: state.savedPosts.map(setComments),
         likedPosts: state.likedPosts.map(setComments),
         userPosts: state.userPosts.map(setComments),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map(setComments)
+        },
         followingFeed: state.followingFeed.map(setComments),
         trendingPosts: state.trendingPosts.map(setComments),
         loading: false
@@ -351,6 +483,10 @@ case DELETE_POST:
         savedPosts: state.savedPosts.map(setComments),
         likedPosts: state.likedPosts.map(setComments),
         userPosts: state.userPosts.map(setComments),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map(setComments)
+        },
         followingFeed: state.followingFeed.map(setComments),
         trendingPosts: state.trendingPosts.map(setComments),
         loading: false
@@ -394,6 +530,10 @@ case DELETE_POST:
         savedPosts: state.savedPosts.map(stripIfTarget),
         likedPosts: state.likedPosts.map(stripIfTarget),
         userPosts: state.userPosts.map(stripIfTarget),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map(stripIfTarget)
+        },
         followingFeed: state.followingFeed.map(stripIfTarget),
         trendingPosts: state.trendingPosts.map(stripIfTarget),
         loading: false

@@ -1,5 +1,6 @@
 const express = require('express');
 const router = express.Router();
+const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
 const auth = require('../../middleware/auth');
 const { sanitizeHtml } = require('../../util/sanitize');
@@ -323,7 +324,7 @@ router.get('/mine', auth, async (req, res) => {
 });
 
 // @route   GET api/posts/user/:user_id
-// @desc    Get a user's latest posts (public profile activity)
+// @desc    Get a user's posts (public profile preview / paginated archive)
 // @access  Public
 router.get('/user/:user_id', async (req, res) => {
   try {
@@ -331,9 +332,60 @@ router.get('/user/:user_id', async (req, res) => {
       return res.status(404).json({ msg: 'No posts found' });
     }
 
-    const posts = await Post.find({ user: req.params.user_id })
-      .sort({ pinned: -1, date: -1 })
-      .limit(5);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 5, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+    const filter = { user: req.params.user_id };
+
+    const requested = req.query.sort;
+    const sort =
+      requested === 'likes' || requested === 'views' ? requested : 'recent';
+
+    let posts;
+
+    if (sort === 'likes') {
+      // Likes live in an array, so sort by its projected size rather than
+      // loading every post into memory. Aggregations do not cast string ids,
+      // so convert the user id to an ObjectId explicitly.
+      posts = await Post.aggregate([
+        {
+          $match: {
+            user: new mongoose.Types.ObjectId(req.params.user_id)
+          }
+        },
+        {
+          $addFields: {
+            likesCount: { $size: { $ifNull: ['$likes', []] } }
+          }
+        },
+        { $sort: { pinned: -1, likesCount: -1, date: -1 } },
+        { $skip: skip },
+        { $limit: limit },
+        // Don't leak the helper field used only for sorting.
+        { $project: { likesCount: 0 } }
+      ]);
+    } else if (sort === 'views') {
+      posts = await Post.find(filter)
+        .sort({ pinned: -1, views: -1, date: -1 })
+        .skip(skip)
+        .limit(limit);
+    } else {
+      posts = await Post.find(filter)
+        .sort({ pinned: -1, date: -1 })
+        .skip(skip)
+        .limit(limit);
+    }
+
+    const total = await Post.countDocuments(filter);
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
 
     // Public endpoint: the `saved` flag is meaningless here, never derive it
     // from the viewed user's id.

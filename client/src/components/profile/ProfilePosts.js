@@ -3,10 +3,15 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
+import Spinner from '../layout/Spinner';
 import { getUserPosts } from '../../actions/post';
 import { decodeHtml } from '../../utils/linkify';
 
-const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
+const ProfilePosts = ({
+  userId,
+  getUserPosts,
+  post: { userPosts, userPostsFor, userPostsLoading, userPostsTotal }
+}) => {
   useEffect(() => {
     if (userId) {
       getUserPosts(userId);
@@ -19,14 +24,31 @@ const ProfilePosts = ({ userId, getUserPosts, post: { userPosts } }) => {
     return plain.length > 140 ? `${plain.slice(0, 140)}...` : plain;
   };
 
-  // Without a valid user id we never fetched, so ignore whatever might still be
-  // in the shared userPosts slot from a previously viewed profile.
-  const posts = userId ? userPosts : [];
+  // Without a valid user id we never fetched, and if the shared slot still
+  // belongs to a previously viewed profile it must not be shown here.
+  const isCurrent = Boolean(userId) && userPostsFor === userId;
+  const pending = Boolean(userId) && (!isCurrent || userPostsLoading);
+  const posts = isCurrent ? userPosts : [];
+  const total = isCurrent ? userPostsTotal : 0;
 
   return (
     <div className="profile-posts bg-white p-2">
-      <h2 className="text-primary">Recent Activity</h2>
-      {posts.length === 0 ? (
+      <div className="section-heading">
+        <h2 className="text-primary">Recent Activity</h2>
+        {isCurrent && total > 0 && (
+          <Link
+            to={`/profile/${userId}/posts`}
+            className="btn btn-light view-all-link"
+            title="Open the full post archive"
+          >
+            View all {total} post{total === 1 ? '' : 's'}{' '}
+            <i className="fas fa-arrow-right" />
+          </Link>
+        )}
+      </div>
+      {pending ? (
+        <Spinner />
+      ) : posts.length === 0 ? (
         <h4>No recent posts</h4>
       ) : (
         <Fragment>

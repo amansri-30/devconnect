@@ -619,6 +619,44 @@ button {
   grid-area: posts;
 }
 
+.section-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.section-heading h2 {
+  margin-bottom: 0;
+}
+
+.view-all-link {
+  padding: 0.35rem 0.7rem;
+  font-size: 0.8rem;
+}
+
+.archive-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.archive-count {
+  font-weight: 600;
+}
+
+.archive-sort select {
+  margin-left: 0.4rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+}
+
 .profile-post-item {
   margin-bottom: 1rem;
   padding-bottom: 1rem;
@@ -1212,6 +1250,7 @@ button {
     grid-template-areas:
       'top'
       'about'
+      'posts'
       'exp'
       'edu'
       'github';
@@ -1304,6 +1343,12 @@ button {
 [data-theme='dark'] .profile-edu > div,
 [data-theme='dark'] .profile-post-item {
   border-bottom-color: #3a424a;
+}
+
+[data-theme='dark'] .archive-sort select {
+  background: #1f2428;
+  color: #e6e6e6;
+  border-color: #3a424a;
 }
 
 [data-theme='dark'] h1,

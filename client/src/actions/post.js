@@ -10,12 +10,15 @@ import {
   GET_SINGLE_POST,
   UPDATE_POST,
   TOGGLE_PIN,
-SAVE_POST,
+  SAVE_POST,
   GET_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
-  CLEAR_USER_POSTS,
+  REQUEST_USER_POSTS,
+  GET_USER_POST_ARCHIVE,
+  REQUEST_USER_POST_ARCHIVE,
+  CLEAR_USER_POST_ARCHIVE,
   GET_FOLLOWING_FEED,
   GET_TRENDING_POSTS,
   UPDATE_COMMENT_LIKES,
@@ -25,6 +28,10 @@ SAVE_POST,
   UPDATE_COMMENT,
   REMOVE_COMMENT
 } from './types';
+
+// Monotonic token so a stale archive response (e.g. after switching profiles
+// or sort order mid-flight) can be discarded by the reducer.
+let archiveRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -273,17 +280,27 @@ export const getMyPosts = () => async (dispatch) => {
   }
 };
 
-// Get a user's latest posts (for their public profile)
+// Get a user's latest posts (for their public profile preview). The request
+// carries the user id so a slow response for a previously viewed profile can
+// never overwrite the profile the viewer has since navigated to.
 export const getUserPosts = (userId) => async (dispatch) => {
-  // Clear the previous user's posts so a profile switch never shows stale data.
-  dispatch({ type: CLEAR_USER_POSTS });
+  dispatch({ type: REQUEST_USER_POSTS, payload: { userId } });
 
   try {
-    const res = await axios.get(`/api/posts/user/${userId}`);
+    const res = await axios.get(`/api/posts/user/${userId}`, {
+      params: { page: 1, limit: 3 }
+    });
 
     dispatch({
       type: GET_USER_POSTS,
-      payload: res.data
+      payload: {
+        userId,
+        posts: res.data,
+        page: 1,
+        total:
+          parseInt(res.headers['x-total-count'], 10) || res.data.length,
+        perPage: parseInt(res.headers['x-per-page'], 10) || 3
+      }
     });
   } catch (err) {
     dispatch({
@@ -292,6 +309,48 @@ export const getUserPosts = (userId) => async (dispatch) => {
     });
   }
 };
+
+// Get one page of a user's full post archive.
+export const getUserPostArchive =
+  (userId, page = 1, sort = 'recent') => async (dispatch) => {
+    const requestId = ++archiveRequestId;
+
+    dispatch({
+      type: REQUEST_USER_POST_ARCHIVE,
+      payload: { userId, page, requestId }
+    });
+
+    try {
+      const params = { page, limit: 8 };
+      if (sort === 'likes' || sort === 'views') params.sort = sort;
+
+      const res = await axios.get(`/api/posts/user/${userId}`, { params });
+
+      dispatch({
+        type: GET_USER_POST_ARCHIVE,
+        payload: {
+          userId,
+          posts: res.data,
+          page,
+          sort,
+          requestId,
+          total:
+            parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 8
+        }
+      });
+    } catch (err) {
+      dispatch({
+        type: POST_ERROR,
+        payload: getErrorPayload(err)
+      });
+    }
+  };
+
+// Drop the archive when leaving the page so the next profile starts clean.
+export const clearUserPostArchive = () => ({
+  type: CLEAR_USER_POST_ARCHIVE
+});
 
 // Get the latest posts from developers the current user follows
 export const getFollowingFeed = () => async (dispatch) => {

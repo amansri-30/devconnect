@@ -26,6 +26,7 @@ import AddExperience from './components/profile-forms/AddExperience';
 import AddEducation from './components/profile-forms/AddEducation';
 import Profiles from './components/profiles/Profiles';
 import Profile from './components/profile/Profile';
+import ProfileArchive from './components/profile/ProfileArchive';
 import Posts from './components/posts/Posts';
 import Post from './components/post/Post';
 import SavedPosts from './components/posts/SavedPosts';
@@ -67,6 +68,14 @@ const App = () => {
               <Route path="/register" element={<Register />} />
               <Route path="/login" element={<Login />} />
               <Route path="/profiles" element={<Profiles />} />
+              <Route
+                path="/profile/:id/posts"
+                element={
+                  <PrivateRoute>
+                    <ProfileArchive />
+                  </PrivateRoute>
+                }
+              />
               <Route path="/profile/:id" element={<Profile />} />
               <Route
                 path="/dashboard"
