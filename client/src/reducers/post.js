@@ -10,6 +10,7 @@ import {
   TOGGLE_PIN,
   SAVE_POST,
   GET_SAVED_POSTS,
+  REQUEST_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
@@ -23,6 +24,7 @@ import {
   FOLLOW_UPDATE,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
+  REQUEST_LIKED_POSTS,
   DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
@@ -34,7 +36,17 @@ const initialState = {
   tags: [],
   post: null,
   savedPosts: [],
+  savedPage: 0,
+  savedTotal: 0,
+  savedPerPage: 12,
+  savedLoading: true,
+  savedRequestId: 0,
   likedPosts: [],
+  likedPage: 0,
+  likedTotal: 0,
+  likedPerPage: 12,
+  likedLoading: true,
+  likedRequestId: 0,
   myPosts: [],
   userPosts: [],
   userPostsFor: null,
@@ -96,24 +108,80 @@ export default function postReducer(state = initialState, action) {
         post: action.payload,
         loading: action.payload === null
       };
-    case GET_SAVED_POSTS:
+    case REQUEST_SAVED_POSTS:
+      // Keep the current rows on screen while a new search page loads; only the
+      // newest request is allowed to apply its result.
       return {
         ...state,
-        savedPosts: action.payload,
-        loading: false
+        savedRequestId: action.payload.requestId,
+        savedLoading: true
       };
-    case GET_LIKED_POSTS:
+    case GET_SAVED_POSTS: {
+      const { posts, page, total, perPage, requestId } = action.payload;
+
+      // Ignore a stale debounced search / page response.
+      if (requestId !== state.savedRequestId) return state;
+
+      const allPosts =
+        page === 1
+          ? posts
+          : Array.from(
+              new Map(
+                [...state.savedPosts, ...posts].map((p) => [p._id, p])
+              ).values()
+            );
+
       return {
         ...state,
-        likedPosts: action.payload,
+        savedPosts: allPosts,
+        savedPage: page,
+        savedTotal: total,
+        savedPerPage: perPage,
+        savedLoading: false,
         loading: false
       };
-    case DELETE_LIKED_POST:
+    }
+    case REQUEST_LIKED_POSTS:
+      return {
+        ...state,
+        likedRequestId: action.payload.requestId,
+        likedLoading: true
+      };
+    case GET_LIKED_POSTS: {
+      const { posts, page, total, perPage, requestId } = action.payload;
+
+      if (requestId !== state.likedRequestId) return state;
+
+      const allPosts =
+        page === 1
+          ? posts
+          : Array.from(
+              new Map(
+                [...state.likedPosts, ...posts].map((p) => [p._id, p])
+              ).values()
+            );
+
+      return {
+        ...state,
+        likedPosts: allPosts,
+        likedPage: page,
+        likedTotal: total,
+        likedPerPage: perPage,
+        likedLoading: false,
+        loading: false
+      };
+    }
+    case DELETE_LIKED_POST: {
+      const exists = state.likedPosts.some((p) => p._id === action.payload);
       return {
         ...state,
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
+        likedTotal: exists
+          ? Math.max(state.likedTotal - 1, 0)
+          : state.likedTotal,
         loading: false
       };
+    }
     case GET_MY_POSTS:
       return {
         ...state,
@@ -232,9 +300,13 @@ export default function postReducer(state = initialState, action) {
         followingFeed: apply(state.followingFeed)
       };
     }
-    case SAVE_POST:
+    case SAVE_POST: {
       // Un-saving removes the post from the saved list, no matter where the
       // toggle happened (bookmark icon or the Saved page's own button).
+      const savedExists = state.savedPosts.some(
+        (p) => p._id === action.payload.postId
+      );
+
       return {
         ...state,
         posts: state.posts.map((p) =>
@@ -253,6 +325,10 @@ export default function postReducer(state = initialState, action) {
                 : p
             )
           : state.savedPosts.filter((p) => p._id !== action.payload.postId),
+        savedTotal:
+          !action.payload.saved && savedExists
+            ? Math.max(state.savedTotal - 1, 0)
+            : state.savedTotal,
         likedPosts: state.likedPosts.map((p) =>
           p._id === action.payload.postId
             ? { ...p, saved: action.payload.saved }
@@ -268,12 +344,18 @@ export default function postReducer(state = initialState, action) {
         },
         loading: false
       };
-    case DELETE_SAVED_POST:
+    }
+    case DELETE_SAVED_POST: {
+      const exists = state.savedPosts.some((p) => p._id === action.payload);
       return {
         ...state,
         savedPosts: state.savedPosts.filter((p) => p._id !== action.payload),
+        savedTotal: exists
+          ? Math.max(state.savedTotal - 1, 0)
+          : state.savedTotal,
         loading: false
       };
+    }
     case ADD_POST:
       return {
         ...state,
@@ -359,6 +441,8 @@ export default function postReducer(state = initialState, action) {
         ...state,
         error: action.payload,
         loading: false,
+        savedLoading: false,
+        likedLoading: false,
         userPostsLoading: false,
         archive: {
           ...state.archive,
@@ -417,7 +501,14 @@ export default function postReducer(state = initialState, action) {
         ),
         loading: false
       };
-case DELETE_POST:
+    case DELETE_POST: {
+      const wasSaved = state.savedPosts.some(
+        (p) => p._id === action.payload
+      );
+      const wasLiked = state.likedPosts.some(
+        (p) => p._id === action.payload
+      );
+
       return {
         ...state,
         posts: state.posts.filter((post) => post._id !== action.payload),
@@ -426,7 +517,13 @@ case DELETE_POST:
         savedPosts: state.savedPosts.filter(
           (p) => p._id !== action.payload
         ),
+        savedTotal: wasSaved
+          ? Math.max(state.savedTotal - 1, 0)
+          : state.savedTotal,
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
+        likedTotal: wasLiked
+          ? Math.max(state.likedTotal - 1, 0)
+          : state.likedTotal,
         myPosts: state.myPosts.filter((p) => p._id !== action.payload),
         userPosts: state.userPosts.filter((p) => p._id !== action.payload),
         archive: {
@@ -443,6 +540,7 @@ case DELETE_POST:
         total: Math.max(state.total - 1, 0),
         loading: false
       };
+    }
     case ADD_COMMENT:
     case UPDATE_COMMENT: {
       // The new comment list replaces the one on the post being viewed; mirror

@@ -47,6 +47,27 @@ const extractTags = (text = '') => {
   ].slice(0, MAX_TAGS);
 };
 
+const escapeRegExp = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Free-text post filter shared by the public feed and the personal saved/liked
+// lists. Stored post text is HTML-escaped, so the query is matched in both its
+// raw (author names) and escaped (post text) forms; otherwise searching
+// "don't" or "R&D" would never match the stored "don&#039;t" / "R&amp;D".
+const buildSearchFilter = (search) => {
+  const term = (search || '').trim();
+  if (!term) return null;
+
+  const rawRx = new RegExp(escapeRegExp(term), 'i');
+  const escapedSearch = sanitizeHtml(term);
+  const textRx =
+    escapedSearch === term
+      ? rawRx
+      : new RegExp(escapeRegExp(escapedSearch), 'i');
+
+  return { $or: [{ text: textRx }, { name: rawRx }] };
+};
+
 // @route   POST api/posts
 // @desc    Create a post
 // @access  Private
@@ -135,21 +156,9 @@ router.get('/', auth, async (req, res) => {
     }
 
     // Optional free-text search across post text and denormalized author name.
-    // Stored post text is HTML-escaped, so the query is matched in both its
-    // raw (author names) and escaped (post text) forms; otherwise searching
-    // "don't" or "R&D" would never match the stored "don&#039;t" / "R&amp;D".
-    const search = (req.query.search || '').trim();
-    if (search) {
-      const escapeRegExp = (value) =>
-        value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-      const rawRx = new RegExp(escapeRegExp(search), 'i');
-      const escapedSearch = sanitizeHtml(search);
-      const textRx =
-        escapedSearch === search
-          ? rawRx
-          : new RegExp(escapeRegExp(escapedSearch), 'i');
-
-      filter = { ...filter, $or: [{ text: textRx }, { name: rawRx }] };
+    const searchFilter = buildSearchFilter(req.query.search);
+    if (searchFilter) {
+      filter = { ...filter, ...searchFilter };
     }
 
     // Optional hashtag filter. Tags are stored lowercase on write, so a
@@ -283,7 +292,29 @@ router.get('/tags', auth, async (req, res) => {
 // @access  Private
 router.get('/saved', auth, async (req, res) => {
   try {
-    const posts = await Post.find({ savedBy: req.user.id }).sort({ date: -1 });
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+
+    const searchFilter = buildSearchFilter(req.query.search);
+    const filter = searchFilter
+      ? { savedBy: req.user.id, ...searchFilter }
+      : { savedBy: req.user.id };
+
+    const [posts, total] = await Promise.all([
+      Post.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
+      Post.countDocuments(filter)
+    ]);
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
+
     return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
   } catch (err) {
     console.error(err.message);
@@ -296,9 +327,28 @@ router.get('/saved', auth, async (req, res) => {
 // @access  Private
 router.get('/liked', auth, async (req, res) => {
   try {
-    const posts = await Post.find(
-      { likes: { $elemMatch: { user: req.user.id } } }
-    ).sort({ date: -1 });
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+
+    const searchFilter = buildSearchFilter(req.query.search);
+    const filter = searchFilter
+      ? { likes: { $elemMatch: { user: req.user.id } }, ...searchFilter }
+      : { likes: { $elemMatch: { user: req.user.id } } };
+
+    const [posts, total] = await Promise.all([
+      Post.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
+      Post.countDocuments(filter)
+    ]);
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
 
     return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
   } catch (err) {

@@ -1,5 +1,6 @@
 import {
   GET_NOTIFICATIONS,
+  REQUEST_NOTIFICATIONS,
   GET_NOTIFICATION_SUMMARY,
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
@@ -22,13 +23,34 @@ const initialState = {
   loading: true,
   error: {},
   page: 1,
-  total: 0
+  total: 0,
+  requestId: 0
 };
 
 export default function notificationReducer(state = initialState, action) {
   switch (action.type) {
+    case REQUEST_NOTIFICATIONS: {
+      // Keep a populated list (and the filter chips) on screen while the next
+      // request is in flight; only show the full spinner when nothing is
+      // loaded yet. The response applies only if it belongs to this request.
+      const { page, requestId } = action.payload;
+      return {
+        ...state,
+        requestId,
+        loading:
+          page === 1 && state.notifications.length === 0
+            ? true
+            : state.loading
+      };
+    }
     case GET_NOTIFICATIONS: {
-      const { notifications, page, total, filters } = action.payload;
+      const { notifications, page, total, filters, requestId } =
+        action.payload;
+
+      // A newer request (filter switch, refresh) superseded this response.
+      if (typeof requestId === 'number' && requestId !== state.requestId) {
+        return state;
+      }
 
       // Ignore a page that belongs to a filter the user has already left;
       // otherwise a slow "load more" could append the wrong list.

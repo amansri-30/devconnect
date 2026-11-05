@@ -23,6 +23,8 @@ const CommentItem = ({
   const [replying, setReplying] = useState(false);
   const [body, setBody] = useState('');
   const [saving, setSaving] = useState(false);
+  const [likeBusy, setLikeBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
 
   const isOwner =
     !auth.loading && auth.user && user === auth.user._id;
@@ -53,9 +55,28 @@ const CommentItem = ({
     if (updated) setEditing(false);
   };
 
-  const removeComment = () => {
-    if (window.confirm('Are you sure you want to delete this comment?')) {
-      deleteComment(postId, _id);
+  const removeComment = async () => {
+    if (deleteBusy) return;
+    if (!window.confirm('Are you sure you want to delete this comment?')) {
+      return;
+    }
+
+    setDeleteBusy(true);
+    const removed = await deleteComment(postId, _id);
+    // On success the comment (and this component) is removed from the list; on
+    // failure re-enable the button so the user can retry.
+    if (!removed) setDeleteBusy(false);
+  };
+
+  // Guard the toggle so a double-click can't send two requests and flip the
+  // like back off again.
+  const onToggleLike = async () => {
+    if (likeBusy) return;
+    setLikeBusy(true);
+    try {
+      await toggleCommentLike(postId, _id);
+    } finally {
+      setLikeBusy(false);
     }
   };
 
@@ -109,10 +130,11 @@ const CommentItem = ({
           </Fragment>
         )}
         <button
-          onClick={() => toggleCommentLike(postId, _id)}
+          onClick={onToggleLike}
           type="button"
           className={`btn btn-light ${likedByMe ? 'btn-primary' : ''}`}
           title={likedByMe ? 'Unlike comment' : 'Like comment'}
+          disabled={likeBusy}
         >
           <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
         </button>
@@ -146,6 +168,7 @@ const CommentItem = ({
               onClick={removeComment}
               type="button"
               className="btn btn-danger"
+              disabled={deleteBusy}
             >
               <i className="fas fa-times" />
             </button>

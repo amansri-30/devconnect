@@ -1,12 +1,17 @@
 import axios from 'axios';
 import {
   GET_NOTIFICATIONS,
+  REQUEST_NOTIFICATIONS,
   GET_NOTIFICATION_SUMMARY,
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR
 } from './types';
+
+// Monotonic token so a slow page-1 response (e.g. after rapidly switching a
+// filter) can never overwrite the list the user is currently looking at.
+let notificationsRequestId = 0;
 
 const getErrorPayload = (err) => {
   const data = err.response && err.response.data;
@@ -21,6 +26,17 @@ const getErrorPayload = (err) => {
 export const getNotifications =
   (page = 1, limit = 20, filters = {}) =>
   async (dispatch) => {
+    const requestId = ++notificationsRequestId;
+
+    dispatch({
+      type: REQUEST_NOTIFICATIONS,
+      payload: {
+        page,
+        requestId,
+        filters: { type: filters.type || '', unread: !!filters.unread }
+      }
+    });
+
     try {
       const params = { page, limit };
       if (filters.type) params.type = filters.type;
@@ -33,6 +49,7 @@ export const getNotifications =
         payload: {
           notifications: res.data,
           page,
+          requestId,
           total: parseInt(res.headers['x-total-count'], 10) || 0,
           filters: { type: filters.type || '', unread: !!filters.unread }
         }

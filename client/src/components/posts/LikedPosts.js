@@ -5,28 +5,36 @@ import { Link } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import PostItem from '../posts/PostItem';
 import { getLikedPosts } from '../../actions/post';
-import { decodeHtml } from '../../utils/linkify';
 
-const LikedPosts = ({ getLikedPosts, post: { likedPosts, loading } }) => {
+const LikedPosts = ({
+  getLikedPosts,
+  post: { likedPosts, likedLoading, likedPage, likedTotal }
+}) => {
   const [query, setQuery] = useState('');
+  const [moreLoading, setMoreLoading] = useState(false);
 
+  // Server-side, debounced search so every liked post is searchable, not just
+  // the first page. Out-of-order responses are discarded via a request token.
   useEffect(() => {
-    getLikedPosts();
-  }, [getLikedPosts]);
+    const delay = query.trim() ? 350 : 0;
+    const timer = setTimeout(() => {
+      getLikedPosts(1, query);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [getLikedPosts, query]);
 
-  const term = query.trim().toLowerCase();
-  const filtered = term
-    ? likedPosts.filter((post) => {
-        // Stored text is HTML-escaped; decode so searches for ' or & match.
-        const text = decodeHtml(post.text || '').toLowerCase();
-        const author = (post.name || '').toLowerCase();
-        return text.includes(term) || author.includes(term);
-      })
-    : likedPosts;
+  const loadMore = async () => {
+    setMoreLoading(true);
+    await getLikedPosts(likedPage + 1, query);
+    setMoreLoading(false);
+  };
 
-  return loading ? (
-    <Spinner />
-  ) : (
+  const term = query.trim();
+  const hasMore = likedPosts.length < likedTotal;
+
+  if (likedLoading && likedPosts.length === 0) return <Spinner />;
+
+  return (
     <Fragment>
       <h1 className="large text-primary">Liked Posts</h1>
       <p className="lead">
@@ -35,20 +43,31 @@ const LikedPosts = ({ getLikedPosts, post: { likedPosts, loading } }) => {
       <Link to="/posts" className="btn btn-dark my-1">
         Back to Posts
       </Link>
-      <input
-        type="text"
-        className="my-1"
-        placeholder={`Search ${likedPosts.length} liked post${likedPosts.length === 1 ? '' : 's'} by text or author...`}
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-      />
+      <div className="search-bar my-1">
+        <input
+          type="text"
+          placeholder={
+            term
+              ? 'Search your liked posts by text or author...'
+              : `Search ${likedTotal} liked post${likedTotal === 1 ? '' : 's'} by text or author...`
+          }
+          value={query}
+          onChange={(e) => setQuery(e.target.value)}
+          aria-label="Search liked posts"
+        />
+      </div>
+      {likedLoading && likedPosts.length > 0 && (
+        <p className="my-1 text-muted" role="status">
+          <i className="fas fa-circle-notch fa-spin" /> Searching...
+        </p>
+      )}
       <div className="posts">
         {likedPosts.length > 0 ? (
-          filtered.length > 0 ? (
-            filtered.map((post) => <PostItem key={post._id} post={post} />)
-          ) : (
-            <p className="my-1">No liked posts match "{query.trim()}".</p>
-          )
+          likedPosts.map((post) => (
+            <PostItem key={post._id} post={post} />
+          ))
+        ) : term ? (
+          <p className="my-1">No liked posts match "{term}".</p>
         ) : (
           <p className="my-1">
             You haven't liked any posts yet. Hit the thumbs-up on a post and it
@@ -56,6 +75,17 @@ const LikedPosts = ({ getLikedPosts, post: { likedPosts, loading } }) => {
           </p>
         )}
       </div>
+      {hasMore && (
+        <div className="my-1" style={{ textAlign: 'center' }}>
+          <button
+            className="btn btn-light"
+            onClick={loadMore}
+            disabled={moreLoading || likedLoading}
+          >
+            {moreLoading ? 'Loading...' : 'Load More Liked Posts'}
+          </button>
+        </div>
+      )}
     </Fragment>
   );
 };

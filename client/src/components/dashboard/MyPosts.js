@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
@@ -13,14 +13,35 @@ const MyPosts = ({
   togglePinPost,
   post: { myPosts, loading }
 }) => {
+  const [pinBusyId, setPinBusyId] = useState(null);
+  const [deleteBusyId, setDeleteBusyId] = useState(null);
+
   useEffect(() => {
     getMyPosts();
   }, [getMyPosts]);
 
-  const confirmDelete = (id) => {
-    if (window.confirm('Are you sure you want to delete this post?')) {
-      deletePost(id);
+  // Ignore repeat pin clicks while the request is in flight; otherwise a quick
+  // double-click pins and then immediately unpins the post.
+  const onPin = async (id, userId) => {
+    if (pinBusyId) return;
+    setPinBusyId(id);
+    try {
+      await togglePinPost(id, userId);
+    } finally {
+      setPinBusyId(null);
     }
+  };
+
+  const confirmDelete = async (id) => {
+    if (deleteBusyId) return;
+    if (!window.confirm('Are you sure you want to delete this post?')) {
+      return;
+    }
+
+    setDeleteBusyId(id);
+    const removed = await deletePost(id);
+    // On success the row is gone; only re-enable the button when it failed.
+    if (!removed) setDeleteBusyId(null);
   };
 
   // Stored text is HTML-escaped; decode before truncating for plain-text output.
@@ -69,9 +90,10 @@ const MyPosts = ({
                     <i className="fas fa-eye" />
                   </Link>
                   <button
-                    onClick={() => togglePinPost(post._id, post.user)}
+                    onClick={() => onPin(post._id, post.user)}
                     className={`btn ${post.pinned ? 'btn-primary' : 'btn-light'}`}
                     title={post.pinned ? 'Unpin post' : 'Pin post to your profile'}
+                    disabled={pinBusyId === post._id}
                   >
                     <i
                       className={`${post.pinned ? 'fas' : 'far'} fa-thumbtack`}
@@ -81,6 +103,7 @@ const MyPosts = ({
                     onClick={() => confirmDelete(post._id)}
                     className="btn btn-danger"
                     title="Delete post"
+                    disabled={deleteBusyId === post._id}
                   >
                     <i className="fas fa-times" />
                   </button>

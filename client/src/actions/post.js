@@ -12,6 +12,7 @@ import {
   TOGGLE_PIN,
   SAVE_POST,
   GET_SAVED_POSTS,
+  REQUEST_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   GET_USER_POSTS,
@@ -23,6 +24,7 @@ import {
   GET_TRENDING_POSTS,
   UPDATE_COMMENT_LIKES,
   GET_LIKED_POSTS,
+  REQUEST_LIKED_POSTS,
   DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
@@ -32,6 +34,11 @@ import {
 // Monotonic token so a stale archive response (e.g. after switching profiles
 // or sort order mid-flight) can be discarded by the reducer.
 let archiveRequestId = 0;
+
+// Separate tokens for the personal Saved/Liked lists: a debounced search can
+// fire several requests, and only the newest one may touch the list.
+let savedRequestId = 0;
+let likedRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -159,11 +166,13 @@ export const deletePost = postId => async dispatch => {
     });
 
     dispatch(setAlert('Post has been removed', 'success'));
+    return true;
   } catch (err) {
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -390,39 +399,82 @@ export const getTrendingPosts = () => async (dispatch) => {
   }
 };
 
-// Get the current user's saved posts
-export const getSavedPosts = () => async (dispatch) => {
-  try {
-    const res = await axios.get('/api/posts/saved');
+// Get one page of the current user's saved posts. Search runs server-side so
+// it covers every saved post, not just the ones already loaded.
+export const getSavedPosts =
+  (page = 1, search = '') =>
+  async (dispatch) => {
+    const requestId = ++savedRequestId;
+    const term = search.trim();
 
     dispatch({
-      type: GET_SAVED_POSTS,
-      payload: res.data
+      type: REQUEST_SAVED_POSTS,
+      payload: { page, term, requestId }
     });
-  } catch (err) {
-    dispatch({
-      type: POST_ERROR,
-      payload: getErrorPayload(err)
-    });
-  }
-};
 
-// Get the posts the current user has liked
-export const getLikedPosts = () => async (dispatch) => {
-  try {
-    const res = await axios.get('/api/posts/liked');
+    try {
+      const params = { page, limit: 12 };
+      if (term) params.search = term;
+
+      const res = await axios.get('/api/posts/saved', { params });
+
+      dispatch({
+        type: GET_SAVED_POSTS,
+        payload: {
+          posts: res.data,
+          page,
+          term,
+          requestId,
+          total:
+            parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 12
+        }
+      });
+    } catch (err) {
+      dispatch({
+        type: POST_ERROR,
+        payload: getErrorPayload(err)
+      });
+    }
+  };
+
+// Get one page of the posts the current user has liked.
+export const getLikedPosts =
+  (page = 1, search = '') =>
+  async (dispatch) => {
+    const requestId = ++likedRequestId;
+    const term = search.trim();
 
     dispatch({
-      type: GET_LIKED_POSTS,
-      payload: res.data
+      type: REQUEST_LIKED_POSTS,
+      payload: { page, term, requestId }
     });
-  } catch (err) {
-    dispatch({
-      type: POST_ERROR,
-      payload: getErrorPayload(err)
-    });
-  }
-};
+
+    try {
+      const params = { page, limit: 12 };
+      if (term) params.search = term;
+
+      const res = await axios.get('/api/posts/liked', { params });
+
+      dispatch({
+        type: GET_LIKED_POSTS,
+        payload: {
+          posts: res.data,
+          page,
+          term,
+          requestId,
+          total:
+            parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 12
+        }
+      });
+    } catch (err) {
+      dispatch({
+        type: POST_ERROR,
+        payload: getErrorPayload(err)
+      });
+    }
+  };
 
 // Save or unsave a post for the current user
 export const toggleSavePost = (postId) => async (dispatch) => {
@@ -560,10 +612,12 @@ export const deleteComment = (postId, commentId) => async dispatch => {
     });
 
     dispatch(setAlert('Comment removed', 'success'));
+    return true;
   } catch (err) {
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
