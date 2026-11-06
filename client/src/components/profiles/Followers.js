@@ -17,11 +17,18 @@ const Followers = ({
   }, [getFollowers]);
 
   const onToggle = async (user) => {
+    // One follow request at a time across the whole list; otherwise clicking
+    // two rows quickly can race and leave the wrong follow state on screen.
+    if (toggling) return;
+
     setToggling(user._id);
-    await toggleFollow(user._id);
-    // Keep the row busy until the refreshed follow state is on screen.
-    await getFollowers();
-    setToggling(null);
+    try {
+      await toggleFollow(user._id);
+      // Keep the row busy until the refreshed follow state is on screen.
+      await getFollowers();
+    } finally {
+      setToggling(null);
+    }
   };
 
   return loading ? (

@@ -13,10 +13,17 @@ const Following = ({ getFollowing, toggleFollow, profile: { following, loading }
   }, [getFollowing]);
 
   const onUnfollow = async (user) => {
+    // Ignore clicks on other rows while one unfollow is already in flight.
+    if (removing) return;
+
     setRemoving(user._id);
-    await toggleFollow(user._id);
-    getFollowing();
-    setRemoving(null);
+    try {
+      await toggleFollow(user._id);
+      // Wait for the refreshed list before re-enabling the buttons.
+      await getFollowing();
+    } finally {
+      setRemoving(null);
+    }
   };
 
   return loading ? (

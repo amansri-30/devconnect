@@ -44,6 +44,41 @@ const parseDate = (value) => {
   return parsed.isValid() ? parsed : null;
 };
 
+const escapeRegExp = (value) =>
+  value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+
+// Free-text match for the developer directory. Run after the user lookup so
+// names can be searched alongside status/company/skills/location/bio.
+const buildProfileSearchMatch = (search) => {
+  const term = (search || '').trim();
+  if (!term) return null;
+
+  const rx = new RegExp(escapeRegExp(term), 'i');
+  return {
+    $or: [
+      { 'user.name': rx },
+      { status: rx },
+      { company: rx },
+      { location: rx },
+      { skills: rx },
+      { bio: rx }
+    ]
+  };
+};
+
+// Resolve the optional viewer from a token so the public directory can mark
+// which developers the current user already follows.
+const getViewerId = (req) => {
+  const token = req.header('x-auth-token');
+  if (!token) return null;
+
+  try {
+    return jwt.verify(token, JWT_SECRET).user.id;
+  } catch (err) {
+    return null;
+  }
+};
+
 // @route   GET api/profile/test
 // @desc    Tests profile route
 // @access  Public
@@ -166,16 +201,114 @@ router.get('/me', auth, async (req, res) => {
   }
 });
 
-// @route   GET api/profile
-// @desc    Get all profiles
+// @route   GET api/profile/popular-skills
+// @desc    Get the most common skills across all developer profiles
 // @access  Public
+router.get('/popular-skills', async (req, res) => {
+  try {
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      30
+    );
+
+    const skills = await Profile.aggregate([
+      { $unwind: '$skills' },
+      { $match: { skills: { $nin: [null, ''] } } },
+      {
+        $group: {
+          _id: { $toLower: { $trim: { input: '$skills' } } },
+          label: { $first: { $trim: { input: '$skills' } } },
+          count: { $sum: 1 }
+        }
+      },
+      { $match: { _id: { $ne: '' } } },
+      { $sort: { count: -1, _id: 1 } },
+      { $limit: limit },
+      { $project: { _id: 0, label: 1, count: 1 } }
+    ]);
+
+    return res.json(skills);
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/profile
+// @desc    Get developers (paginated, searchable, sorted)
+// @access  Public (includes viewer-specific follow flags when signed in)
 router.get('/', async (req, res) => {
   try {
-    const allProfiles = await Profile.find().populate('user', [
-      'name',
-      'avatar'
-    ]);
-    return res.json(allProfiles);
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+
+    const requested = req.query.sort;
+    const sort =
+      requested === 'followers' || requested === 'name' ? requested : 'recent';
+    const sortSpec =
+      sort === 'followers'
+        ? { followersCount: -1, date: -1 }
+        : sort === 'name'
+        ? { 'user.name': 1, _id: 1 }
+        : { date: -1 };
+
+    const rawViewerId = getViewerId(req);
+    const viewerId =
+      rawViewerId && mongoose.Types.ObjectId.isValid(rawViewerId)
+        ? new mongoose.Types.ObjectId(rawViewerId)
+        : null;
+    const searchMatch = buildProfileSearchMatch(req.query.search);
+
+    const pipeline = [
+      {
+        $lookup: {
+          from: 'users',
+          localField: 'user',
+          foreignField: '_id',
+          as: 'user'
+        }
+      },
+      { $unwind: { path: '$user', preserveNullAndEmptyArrays: true } }
+    ];
+
+    if (searchMatch) pipeline.push({ $match: searchMatch });
+
+    pipeline.push(
+      {
+        $addFields: {
+          followersCount: { $size: { $ifNull: ['$followers', []] } },
+          followingCount: { $size: { $ifNull: ['$following', []] } },
+          isFollowing: viewerId
+            ? { $in: [viewerId, { $ifNull: ['$followers', []] }] }
+            : false,
+          isSelf: viewerId ? { $eq: ['$user._id', viewerId] } : false
+        }
+      },
+      // Never leak credentials through the public directory.
+      { $project: { 'user.password': 0, 'user.email': 0, 'user.__v': 0 } },
+      {
+        $facet: {
+          items: [{ $sort: sortSpec }, { $skip: skip }, { $limit: limit }],
+          total: [{ $count: 'count' }]
+        }
+      }
+    );
+
+    const [result] = await Profile.aggregate(pipeline);
+    const total =
+      result && result.total && result.total[0] ? result.total[0].count : 0;
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
+
+    return res.json(result ? result.items : []);
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');

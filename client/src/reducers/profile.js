@@ -5,6 +5,8 @@ import {
   CLEAR_PROFILE,
   UPDATE_PROFILE,
   GET_PROFILES,
+  REQUEST_PROFILES,
+  GET_POPULAR_SKILLS,
   GET_REPOS,
   REPOS_ERROR,
   FOLLOW_UPDATE,
@@ -18,6 +20,12 @@ import {
 const initialState = {
   profile: null,
   profiles: [],
+  profilesPage: 0,
+  profilesTotal: 0,
+  profilesPerPage: 12,
+  profilesLoading: true,
+  profilesRequestId: 0,
+  popularSkills: [],
   repos: [],
 following: [],
         followers: [],
@@ -66,28 +74,79 @@ export default function profileReducer(state = initialState, action) {
         profile: action.payload,
         loading: false
       };
-    case GET_PROFILES:
+    case REQUEST_PROFILES:
+      // Keep the current directory visible while a new search page loads; only
+      // the newest request may apply its response.
       return {
         ...state,
-        profiles: action.payload,
+        profilesRequestId: action.payload.requestId,
+        profilesLoading: true
+      };
+    case GET_PROFILES: {
+      const { profiles, page, total, perPage, requestId } = action.payload;
+
+      if (requestId !== state.profilesRequestId) return state;
+
+      const allProfiles =
+        page === 1
+          ? profiles
+          : Array.from(
+              new Map(
+                [...state.profiles, ...profiles].map((p) => [p._id, p])
+              ).values()
+            );
+
+      return {
+        ...state,
+        profiles: allProfiles,
+        profilesPage: page,
+        profilesTotal: total,
+        profilesPerPage: perPage,
+        profilesLoading: false,
         loading: false
       };
-    case FOLLOW_UPDATE: {
-      // Follows can also come from an inline feed button targeting any author.
-      // Only apply to the profile being viewed so its button/count stay correct.
-      const viewedUser =
-        state.profile &&
-        state.profile.user &&
-        (state.profile.user._id || state.profile.user).toString();
-      if (action.payload.userId && viewedUser !== action.payload.userId) {
-        return state;
-      }
+    }
+    case GET_POPULAR_SKILLS:
       return {
         ...state,
-        isFollowing: action.payload.isFollowing,
+        popularSkills: action.payload
+      };
+    case FOLLOW_UPDATE: {
+      const { userId, isFollowing, followersCount } = action.payload;
+      const idOf = (profile) => {
+        const user = profile && profile.user;
+        if (!user) return null;
+        return (user._id || user).toString();
+      };
+
+      // The directory can render follow buttons too, so update its rows even
+      // when the profile currently open is someone else.
+      const profiles = state.profiles.map((p) =>
+        idOf(p) === userId
+          ? {
+              ...p,
+              isFollowing,
+              followersCount:
+                followersCount !== undefined
+                  ? followersCount
+                  : p.followersCount
+            }
+          : p
+      );
+
+      // Only the profile being viewed should have its own button/count
+      // updated; follows from a feed card target other authors.
+      if (idOf(state.profile) !== userId) {
+        return { ...state, profiles, loading: false };
+      }
+
+      return {
+        ...state,
+        profiles,
+        isFollowing,
         followersCount:
-          action.payload.followersCount !== undefined
-            ? action.payload.followersCount
+          followersCount !== undefined
+            ? followersCount
             : state.followersCount,
         loading: false
       };
@@ -130,7 +189,8 @@ export default function profileReducer(state = initialState, action) {
       return {
         ...state,
         error: action.payload,
-        loading: false
+        loading: false,
+        profilesLoading: false
       };
     case CLEAR_PROFILE:
       return {

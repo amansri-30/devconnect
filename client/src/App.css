@@ -454,6 +454,40 @@ button {
   outline: none;
 }
 
+.directory-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.directory-toolbar .search-bar {
+  flex: 1 1 18rem;
+}
+
+.directory-sort {
+  white-space: nowrap;
+}
+
+.directory-sort select {
+  margin-left: 0.4rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+}
+
+.directory-count {
+  font-weight: 600;
+  color: #666;
+}
+
+.text-muted {
+  color: #666;
+}
+
 .profile {
   display: grid;
   grid-template-columns: 2fr 4fr 2fr;
@@ -1331,7 +1365,10 @@ button {
 }
 
 [data-theme='dark'] .post .post-date,
-[data-theme='dark'] .text-dark {
+[data-theme='dark'] .text-dark,
+[data-theme='dark'] .text-muted,
+[data-theme='dark'] .directory-count,
+[data-theme='dark'] .popular-skills-label {
   color: #cfd6db;
 }
 
@@ -1345,7 +1382,8 @@ button {
   border-bottom-color: #3a424a;
 }
 
-[data-theme='dark'] .archive-sort select {
+[data-theme='dark'] .archive-sort select,
+[data-theme='dark'] .directory-sort select {
   background: #1f2428;
   color: #e6e6e6;
   border-color: #3a424a;

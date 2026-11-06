@@ -4,6 +4,8 @@ import {
 GET_PROFILE,
   PROFILE_LOADING,
   GET_PROFILES,
+  REQUEST_PROFILES,
+  GET_POPULAR_SKILLS,
   PROFILE_ERROR,
   CLEAR_PROFILE,
   UPDATE_PROFILE,
@@ -17,6 +19,12 @@ GET_PROFILE,
   GET_SUGGESTIONS,
   GET_NETWORK_USERS
 } from './types';
+
+// Monotonic tokens so a slow response for a profile/network tab/directory
+// search that the user has already left can never overwrite the current view.
+let profileRequestId = 0;
+let networkRequestId = 0;
+let profilesRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -60,37 +68,84 @@ export const getCurrentProfile = () => async (dispatch) => {
   }
 };
 
-// Get all profiles
-export const getProfiles = () => async (dispatch) => {
-  dispatch({ type: CLEAR_PROFILE });
-
-  try {
-    const res = await axios.get('/api/profile');
+// Get one page of the developer directory. Search and sorting run server-side
+// so they cover every profile rather than only the pages already loaded.
+export const getProfiles =
+  (page = 1, search = '', sort = 'recent') =>
+  async (dispatch) => {
+    const requestId = ++profilesRequestId;
+    const term = search.trim();
 
     dispatch({
-      type: GET_PROFILES,
+      type: REQUEST_PROFILES,
+      payload: { page, term, requestId }
+    });
+
+    try {
+      const params = { page, limit: 12 };
+      if (term) params.search = term;
+      if (sort === 'followers' || sort === 'name') params.sort = sort;
+
+      const res = await axios.get('/api/profile', { params });
+
+      dispatch({
+        type: GET_PROFILES,
+        payload: {
+          profiles: res.data,
+          page,
+          term,
+          requestId,
+          total:
+            parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 12
+        }
+      });
+    } catch (err) {
+      // A stale failure must not stop the spinner of the newer request.
+      if (requestId !== profilesRequestId) return;
+
+      dispatch({
+        type: PROFILE_ERROR,
+        payload: getErrorPayload(err)
+      });
+    }
+  };
+
+// Get the most common skills across all profiles (used for directory chips).
+export const getPopularSkills = () => async (dispatch) => {
+  try {
+    const res = await axios.get('/api/profile/popular-skills');
+
+    dispatch({
+      type: GET_POPULAR_SKILLS,
       payload: res.data
     });
-  } catch (err) {
-    dispatch({
-      type: PROFILE_ERROR,
-      payload: getErrorPayload(err)
-    });
+  } catch {
+    // Skill chips are decorative; a failure here must not blank the directory
+    // or its loading state.
   }
 };
 
 // Get profile by ID
 export const getProfileById = (userId) => async (dispatch) => {
+  const requestId = ++profileRequestId;
+
   dispatch({ type: PROFILE_LOADING });
 
   try {
     const res = await axios.get(`/api/profile/user/${userId}`);
+
+    // The viewer navigated to another profile while this one was loading.
+    if (requestId !== profileRequestId) return;
 
     dispatch({
       type: GET_PROFILE,
       payload: res.data
     });
   } catch (err) {
+    // A stale failure must not clear the profile the user is now viewing.
+    if (requestId !== profileRequestId) return;
+
     // Never leave a previously viewed (or stale) profile on screen when the
     // requested one can't be loaded.
     dispatch({ type: CLEAR_PROFILE });
@@ -121,39 +176,37 @@ export const toggleFollow = (userId) => async (dispatch) => {
   }
 };
 
-// Get any user's followers (public)
-export const getNetworkFollowers = (userId) => async (dispatch) => {
+// Shared loader for the public followers/following lists. A token ensures a
+// slow response for the previous tab never replaces the active list.
+const fetchNetworkList = (url) => async (dispatch) => {
+  const requestId = ++networkRequestId;
+
   try {
-    const res = await axios.get(`/api/profile/followers/${userId}`);
+    const res = await axios.get(url);
+
+    if (requestId !== networkRequestId) return;
 
     dispatch({
       type: GET_NETWORK_USERS,
       payload: res.data
     });
   } catch (err) {
+    if (requestId !== networkRequestId) return;
+
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
   }
 };
+
+// Get any user's followers (public)
+export const getNetworkFollowers = (userId) =>
+  fetchNetworkList(`/api/profile/followers/${userId}`);
 
 // Get the users any user follows (public)
-export const getNetworkFollowing = (userId) => async (dispatch) => {
-  try {
-    const res = await axios.get(`/api/profile/following/${userId}`);
-
-    dispatch({
-      type: GET_NETWORK_USERS,
-      payload: res.data
-    });
-  } catch (err) {
-    dispatch({
-      type: PROFILE_ERROR,
-      payload: getErrorPayload(err)
-    });
-  }
-};
+export const getNetworkFollowing = (userId) =>
+  fetchNetworkList(`/api/profile/following/${userId}`);
 
 // Get suggested developers the current user isn't following yet
 export const getSuggestions = () => async (dispatch) => {

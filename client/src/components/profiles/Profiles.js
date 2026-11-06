@@ -4,12 +4,24 @@ import { connect } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import ProfileItem from './ProfileItem';
-import { getProfiles } from '../../actions/profile';
+import { getProfiles, getPopularSkills } from '../../actions/profile';
 
-const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
+const Profiles = ({
+  getProfiles,
+  getPopularSkills,
+  profile: {
+    profiles,
+    profilesLoading,
+    profilesPage,
+    profilesTotal,
+    popularSkills
+  }
+}) => {
   // Support a shareable ?skill= search (linked from profile skill chips).
   const [searchParams, setSearchParams] = useSearchParams();
   const [query, setQuery] = useState(() => searchParams.get('skill') || '');
+  const [sort, setSort] = useState('recent');
+  const [moreLoading, setMoreLoading] = useState(false);
 
   // Keep the filter in sync with the URL: /profiles and /profiles?skill=X are
   // the same route, so React Router won't remount us when the param changes
@@ -18,9 +30,30 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
     setQuery(searchParams.get('skill') || '');
   }, [searchParams]);
 
+  // Server-side search: debounce typing, then re-query page 1 whenever the
+  // search term or sort order changes. A request token discards stale results.
   useEffect(() => {
-    getProfiles();
-  }, [getProfiles]);
+    const delay = query.trim() ? 350 : 0;
+    const timer = setTimeout(() => {
+      getProfiles(1, query, sort);
+    }, delay);
+    return () => clearTimeout(timer);
+  }, [getProfiles, query, sort]);
+
+  // Popular skills are computed across every profile, not just this page.
+  useEffect(() => {
+    getPopularSkills();
+  }, [getPopularSkills]);
+
+  const loadMore = async () => {
+    if (moreLoading) return;
+    setMoreLoading(true);
+    try {
+      await getProfiles(profilesPage + 1, query, sort);
+    } finally {
+      setMoreLoading(false);
+    }
+  };
 
   const applySkill = (skill) => {
     setQuery(skill);
@@ -30,101 +63,108 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
 
   const onQueryChange = (e) => applySkill(e.target.value);
 
-  // Build a "popular skills" summary from the developers we already fetched.
-  // Skills are grouped case-insensitively (React/reacT count together) and
-  // the most common ones become one-click search filters.
-  const skillUsage = new Map();
-  profiles.forEach((profile) => {
-    const seen = new Set();
-    (profile.skills || []).forEach((rawSkill) => {
-      const label = `${rawSkill || ''}`.trim();
-      const key = label.toLowerCase();
-      if (!key || seen.has(key)) return;
-      seen.add(key);
-
-      const existing = skillUsage.get(key);
-      if (existing) existing.count += 1;
-      else skillUsage.set(key, { label, count: 1 });
-    });
-  });
-
-  const popularSkills = Array.from(skillUsage.values())
-    .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label))
-    .slice(0, 12);
-
   const activeSkill = query.trim().toLowerCase();
+  const term = query.trim();
+  const hasMore = profiles.length < profilesTotal;
 
-  // Client-side filter across name, status/company and skills.
-  const filtered = profiles.filter((profile) => {
-    const q = query.trim().toLowerCase();
-    if (!q) return true;
-
-    const user = profile.user || {};
-    const name = `${user.name || ''}`.toLowerCase();
-    const statusCompany = `${profile.status || ''} ${
-      profile.company || ''
-    }`.toLowerCase();
-    const skills = (profile.skills || []).join(' ').toLowerCase();
-
-    return (
-      name.includes(q) ||
-      statusCompany.includes(q) ||
-      skills.includes(q)
-    );
-  });
+  if (profilesLoading && profiles.length === 0) return <Spinner />;
 
   return (
     <Fragment>
-      {loading ? (
-        <Spinner />
-      ) : (
-        <Fragment>
-          <h1 className="large text-primary">Developers</h1>
-          <p className="lead">
-            <i className="fab fa-connectdevelop" /> Browse and connect with
-            developers
-          </p>
-          <div className="search-bar my-1">
-            <input
-              type="text"
-              placeholder="Search developers by name, skill or company..."
-              value={query}
-              onChange={onQueryChange}
-            />
+      <h1 className="large text-primary">Developers</h1>
+      <p className="lead">
+        <i className="fab fa-connectdevelop" /> Browse and connect with
+        developers
+      </p>
+      <div className="directory-toolbar my-1">
+        <div className="search-bar">
+          <input
+            type="text"
+            placeholder={
+              term
+                ? 'Search developers by name, skill or company...'
+                : `Search ${profilesTotal} developer${profilesTotal === 1 ? '' : 's'} by name, skill or company...`
+            }
+            value={query}
+            onChange={onQueryChange}
+            aria-label="Search developers"
+          />
+        </div>
+        <label className="directory-sort">
+          Sort by{' '}
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value)}
+            aria-label="Sort developers"
+          >
+            <option value="recent">Newest members</option>
+            <option value="followers">Most followers</option>
+            <option value="name">Name A-Z</option>
+          </select>
+        </label>
+      </div>
+      {popularSkills.length > 0 && (
+        <div className="popular-skills my-1">
+          <span className="popular-skills-label">
+            <i className="fas fa-fire" /> Popular skills
+          </span>
+          <div className="popular-skills-list">
+            {popularSkills.map(({ label, count }) => (
+              <button
+                key={label}
+                type="button"
+                className={`popular-skill-chip ${
+                  activeSkill === label.toLowerCase() ? 'active' : ''
+                }`}
+                onClick={() =>
+                  applySkill(
+                    activeSkill === label.toLowerCase() ? '' : label
+                  )
+                }
+                title={`Show developers who know ${label}`}
+              >
+                {label}
+                <span className="popular-skill-count">{count}</span>
+              </button>
+            ))}
           </div>
-          {popularSkills.length > 0 && (
-            <div className="popular-skills my-1">
-              <span className="popular-skills-label">
-                <i className="fas fa-fire" /> Popular skills
-              </span>
-              <div className="popular-skills-list">
-                {popularSkills.map(({ label, count }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    className={`popular-skill-chip ${
-                      activeSkill === label.toLowerCase() ? 'active' : ''
-                    }`}
-                    onClick={() => applySkill(label)}
-                    title={`Show developers who know ${label}`}
-                  >
-                    {label}
-                    <span className="popular-skill-count">{count}</span>
-                  </button>
-                ))}
-              </div>
-            </div>
-          )}
-          <div className="profiles">
-            {filtered.length > 0 ? (
-              filtered.map((profile) => (
-                <ProfileItem key={profile._id} profile={profile} />
-              ))
-            ) : (
-              <h4>No profiles found...</h4>
-            )}
-          </div>
-        </Fragment>
+        </div>
+      )}
+      {profilesLoading && profiles.length > 0 && (
+        <p className="my-1 text-muted" role="status">
+          <i className="fas fa-circle-notch fa-spin" /> Updating developers...
+        </p>
+      )}
+      <div className="profiles">
+        {profiles.length > 0 ? (
+          profiles.map((profile) => (
+            <ProfileItem key={profile._id} profile={profile} />
+          ))
+        ) : (
+          <h4>
+            {term
+              ? `No developers match "${term}".`
+              : 'No profiles found...'}
+          </h4>
+        )}
+      </div>
+      {profilesTotal > 0 && (
+        <p className="directory-count my-1">
+          Showing {profiles.length} of {profilesTotal} developer
+          {profilesTotal === 1 ? '' : 's'}
+        </p>
+      )}
+      {hasMore && (
+        <div className="my-1" style={{ textAlign: 'center' }}>
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={loadMore}
+            disabled={moreLoading || profilesLoading}
+          >
+            {moreLoading ? 'Loading...' : 'Load More Developers'}
+          </button>
+        </div>
       )}
     </Fragment>
   );
@@ -132,6 +172,7 @@ const Profiles = ({ getProfiles, profile: { profiles, loading } }) => {
 
 Profiles.propTypes = {
   getProfiles: PropTypes.func.isRequired,
+  getPopularSkills: PropTypes.func.isRequired,
   profile: PropTypes.object.isRequired
 };
 
@@ -139,4 +180,7 @@ const mapStateToProps = (state) => ({
   profile: state.profile
 });
 
-export default connect(mapStateToProps, { getProfiles })(Profiles);
+export default connect(mapStateToProps, {
+  getProfiles,
+  getPopularSkills
+})(Profiles);

@@ -46,13 +46,21 @@ const Profile = ({
     profile.user &&
     auth.user._id === (profile.user._id || profile.user.toString());
 
+  // While a different profile is loading, keep showing the spinner instead of
+  // flashing the previously viewed profile for a frame.
+  const profileUserId =
+    profile && profile.user
+      ? String(profile.user._id || profile.user)
+      : null;
+  const staleProfile = Boolean(profile) && profileUserId !== id;
+
   useEffect(() => {
     getProfileById(id);
   }, [getProfileById, id]);
 
   return (
     <Fragment>
-      {loading ? (
+      {loading || staleProfile ? (
         <Spinner />
       ) : profile === null ? (
         <Fragment>

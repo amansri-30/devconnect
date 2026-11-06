@@ -21,6 +21,10 @@ const WhoToFollow = ({
   if (!suggestions || suggestions.length === 0) return null;
 
   const onFollow = async (id) => {
+    // One suggestion at a time; a second click while the first request and
+    // refresh are in flight could apply the wrong follow state.
+    if (busyId) return;
+
     setBusyId(id);
     try {
       await toggleFollow(id);
