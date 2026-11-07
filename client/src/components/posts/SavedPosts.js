@@ -28,9 +28,13 @@ const SavedPosts = ({
   }, [getSavedPosts, query]);
 
   const loadMore = async () => {
+    if (moreLoading || savedLoading) return;
     setMoreLoading(true);
-    await getSavedPosts(savedPage + 1, query);
-    setMoreLoading(false);
+    try {
+      await getSavedPosts(savedPage + 1, query);
+    } finally {
+      setMoreLoading(false);
+    }
   };
 
   const onUnsave = async (id) => {

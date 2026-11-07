@@ -689,7 +689,7 @@ router.put('/like/:id', auth, async (req, res) => {
 
     await post.save();
 
-    notify({ recipient: post.user, from: req.user.id, type: 'like', post: post._id });
+    await notify({ recipient: post.user, from: req.user.id, type: 'like', post: post._id });
 
     return res.json(post.likes);
   } catch (err) {
@@ -728,6 +728,14 @@ router.put('/unlike/:id', auth, async (req, res) => {
     post.likes.splice(removeIndex, 1);
 
     await post.save();
+
+    // The like no longer exists, so remove its notification too. Otherwise
+    // unliking then liking again would leave duplicate notifications behind.
+    await Notification.deleteMany({
+      from: req.user.id,
+      type: 'like',
+      post: post._id
+    });
 
     return res.json(post.likes);
   } catch (err) {
@@ -803,7 +811,7 @@ router.post(
       await post.save();
 
       if (parentComment) {
-        notify({
+        await notify({
           recipient: parentComment.user,
           from: req.user.id,
           type: 'reply',
@@ -811,7 +819,7 @@ router.post(
           comment: savedComment._id
         });
       } else {
-        notify({
+        await notify({
           recipient: post.user,
           from: req.user.id,
           type: 'comment',
@@ -861,7 +869,19 @@ router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
       );
     } else {
       comment.likes = [...likes, { user: req.user.id }];
-      notify({
+    }
+
+    await post.save();
+
+    if (alreadyLiked) {
+      // Remove the notification for the like that was just taken back.
+      await Notification.deleteMany({
+        from: req.user.id,
+        type: 'comment_like',
+        comment: comment._id
+      });
+    } else {
+      await notify({
         recipient: comment.user,
         from: req.user.id,
         type: 'comment_like',
@@ -869,8 +889,6 @@ router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
         comment: comment._id
       });
     }
-
-    await post.save();
 
     return res.json(post.comments);
   } catch (err) {

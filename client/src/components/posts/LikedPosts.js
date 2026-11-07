@@ -24,9 +24,13 @@ const LikedPosts = ({
   }, [getLikedPosts, query]);
 
   const loadMore = async () => {
+    if (moreLoading || likedLoading) return;
     setMoreLoading(true);
-    await getLikedPosts(likedPage + 1, query);
-    setMoreLoading(false);
+    try {
+      await getLikedPosts(likedPage + 1, query);
+    } finally {
+      setMoreLoading(false);
+    }
   };
 
   const term = query.trim();

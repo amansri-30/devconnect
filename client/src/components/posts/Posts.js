@@ -10,17 +10,25 @@ import PostForm from './PostForm';
 const Posts = ({
   getPosts,
   getTags,
-  post: { posts, tags, loading, page, total }
+  post: { posts, tags, postsLoading, page, total }
 }) => {
-  // Hashtag filters are mirrored in the URL (?tag=react) so a filtered feed
-  // can be shared or bookmarked, and tag chips on posts can deep-link to it.
+  // Hashtag filters and searches are mirrored in the URL (?tag=react,
+  // ?search=react) so a filtered feed can be shared or bookmarked, and links
+  // from the global search page can open the feed pre-filtered.
   const [searchParams, setSearchParams] = useSearchParams();
   const tag = (searchParams.get('tag') || '').toLowerCase();
+  const urlSearch = searchParams.get('search') || '';
 
   const [moreLoading, setMoreLoading] = useState(false);
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState(urlSearch);
   const [sort, setSort] = useState('recent');
   const [scope, setScope] = useState('all');
+
+  // Keep the input in sync when the URL changes (same route, so React Router
+  // won't remount the page).
+  useEffect(() => {
+    setQuery(urlSearch);
+  }, [urlSearch]);
 
   // Server-side search: debounce typing, then re-query page 1 whenever the
   // search term, sort, scope, or active tag changes.
@@ -38,9 +46,13 @@ const Posts = ({
   }, [getTags]);
 
   const loadMore = async () => {
+    if (moreLoading || postsLoading) return;
     setMoreLoading(true);
-    await getPosts(page + 1, sort, scope, query, tag);
-    setMoreLoading(false);
+    try {
+      await getPosts(page + 1, sort, scope, query, tag);
+    } finally {
+      setMoreLoading(false);
+    }
   };
 
   const onSortChange = (e) => {
@@ -51,8 +63,23 @@ const Posts = ({
     setScope(value);
   };
 
+  // Write the active filters back to the URL (replace, so typing doesn't stack
+  // history entries) while preserving the other filter.
+  const applyFilters = (nextSearch, nextTag) => {
+    const params = {};
+    if (nextTag) params.tag = nextTag;
+    if (nextSearch.trim()) params.search = nextSearch;
+    setSearchParams(params, { replace: true });
+  };
+
+  const onQueryChange = (e) => {
+    const value = e.target.value;
+    setQuery(value);
+    applyFilters(value, tag);
+  };
+
   const applyTag = (nextTag) => {
-    setSearchParams(nextTag ? { tag: nextTag } : {}, { replace: true });
+    applyFilters(query, nextTag);
   };
 
   // Number of currently loaded posts (used for the "Load More" hint).
@@ -61,9 +88,9 @@ const Posts = ({
   const q = query.trim();
   const hasMore = loadedCount < total;
 
-  return loading ? (
-    <Spinner />
-  ) : (
+  if (postsLoading && loadedCount === 0) return <Spinner />;
+
+  return (
     <Fragment>
       <h1 className="large text-primary">Posts</h1>
       <p className="lead">
@@ -76,7 +103,8 @@ const Posts = ({
             type="text"
             placeholder="Search posts by text or author..."
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={onQueryChange}
+            aria-label="Search posts"
           />
         </div>
         <div className="scope-toggle" role="group" aria-label="Feed scope">
@@ -136,6 +164,11 @@ const Posts = ({
           )}
         </div>
       )}
+      {postsLoading && loadedCount > 0 && (
+        <p className="my-1 text-muted" role="status">
+          <i className="fas fa-circle-notch fa-spin" /> Updating posts...
+        </p>
+      )}
       <div className="posts">
         {posts.length > 0 ? (
           posts.map((post) => <PostItem key={post._id} post={post} />)
@@ -156,7 +189,7 @@ const Posts = ({
           <button
             className="btn btn-light"
             onClick={loadMore}
-            disabled={moreLoading}
+            disabled={moreLoading || postsLoading}
           >
             {moreLoading ? 'Loading...' : 'Load More Posts'}
           </button>

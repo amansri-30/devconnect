@@ -670,6 +670,48 @@ button {
   font-size: 0.8rem;
 }
 
+/* Global search page */
+.search-form {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.search-form .search-bar {
+  flex: 1 1 20rem;
+}
+
+.search-form .btn {
+  white-space: nowrap;
+}
+
+.search-section {
+  border-top: 1px solid #ddd;
+  padding-top: 1rem;
+}
+
+.search-count {
+  display: inline-block;
+  min-width: 1.6rem;
+  padding: 0.1rem 0.5rem;
+  border-radius: 1rem;
+  background: var(--primary-color);
+  color: #fff;
+  font-size: 0.8rem;
+  text-align: center;
+  vertical-align: middle;
+}
+
+.search-hint ul {
+  margin: 0.5rem 0 0.5rem 1.25rem;
+  list-style: disc;
+}
+
+[data-theme='dark'] .search-section {
+  border-top-color: #3a424a;
+}
+
 .archive-toolbar {
   display: flex;
   align-items: center;

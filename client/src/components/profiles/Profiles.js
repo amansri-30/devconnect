@@ -17,18 +17,21 @@ const Profiles = ({
     popularSkills
   }
 }) => {
-  // Support a shareable ?skill= search (linked from profile skill chips).
+  // Support a shareable ?search= filter (used by the global search page) and
+  // the legacy ?skill= links from profile skill chips.
   const [searchParams, setSearchParams] = useSearchParams();
-  const [query, setQuery] = useState(() => searchParams.get('skill') || '');
+  const urlQuery =
+    searchParams.get('search') || searchParams.get('skill') || '';
+  const [query, setQuery] = useState(urlQuery);
   const [sort, setSort] = useState('recent');
   const [moreLoading, setMoreLoading] = useState(false);
 
-  // Keep the filter in sync with the URL: /profiles and /profiles?skill=X are
+  // Keep the filter in sync with the URL: /profiles and /profiles?search=X are
   // the same route, so React Router won't remount us when the param changes
-  // (e.g. leaving a skill-filtered view via the navbar must clear the filter).
+  // (e.g. leaving a filtered view via the navbar must clear the filter).
   useEffect(() => {
-    setQuery(searchParams.get('skill') || '');
-  }, [searchParams]);
+    setQuery(urlQuery);
+  }, [urlQuery]);
 
   // Server-side search: debounce typing, then re-query page 1 whenever the
   // search term or sort order changes. A request token discards stale results.
@@ -46,7 +49,7 @@ const Profiles = ({
   }, [getPopularSkills]);
 
   const loadMore = async () => {
-    if (moreLoading) return;
+    if (moreLoading || profilesLoading) return;
     setMoreLoading(true);
     try {
       await getProfiles(profilesPage + 1, query, sort);
@@ -57,8 +60,10 @@ const Profiles = ({
 
   const applySkill = (skill) => {
     setQuery(skill);
-    // Keep the URL in sync (replace so it doesn't stack history entries).
-    setSearchParams(skill ? { skill } : {}, { replace: true });
+    // Keep the URL in sync (replace so it doesn't stack history entries). The
+    // generic ?search= param keeps the filter shareable; legacy ?skill= links
+    // are still read above.
+    setSearchParams(skill ? { search: skill } : {}, { replace: true });
   };
 
   const onQueryChange = (e) => applySkill(e.target.value);

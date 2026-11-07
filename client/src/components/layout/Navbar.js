@@ -25,6 +25,11 @@ const Navbar = ({
   const authLinks = (
     <ul>
       <li>
+        <Link to="/search" title="Search developers and posts">
+          <i className="fas fa-search" /> <span className="hide-sm">Search</span>
+        </Link>
+      </li>
+      <li>
         <Link to="/profiles">Developers</Link>
       </li>
       <li>

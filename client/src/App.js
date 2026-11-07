@@ -35,6 +35,7 @@ import Following from './components/profiles/Following';
 import Followers from './components/profiles/Followers';
 import Network from './components/profiles/Network';
 import Notifications from './components/notifications/Notifications';
+import Search from './components/search/Search';
 import NotFound from './components/layout/NotFound';
 
 if (localStorage.token) {
@@ -162,6 +163,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Network />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/search"
+                element={
+                  <PrivateRoute>
+                    <Search />
                   </PrivateRoute>
                 }
               />

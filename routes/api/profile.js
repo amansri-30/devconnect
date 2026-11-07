@@ -416,7 +416,6 @@ router.put('/follow/:user_id', auth, async (req, res) => {
       target.followers.splice(followerIndex, 1);
     } else {
       target.followers.push(req.user.id);
-      notify({ recipient: target.user, from: req.user.id, type: 'follow' });
     }
 
     // Maintain my own "following" list for the Following page, basing the
@@ -433,6 +432,18 @@ router.put('/follow/:user_id', auth, async (req, res) => {
 
     await me.save();
     await target.save();
+
+    if (wasFollowing) {
+      // Drop the stale follow notification so it can't deep-link to a follow
+      // that no longer exists (and so re-following can notify again).
+      await Notification.deleteMany({
+        recipient: target.user,
+        from: req.user.id,
+        type: 'follow'
+      });
+    } else {
+      await notify({ recipient: target.user, from: req.user.id, type: 'follow' });
+    }
 
     return res.json({
       following: !wasFollowing,

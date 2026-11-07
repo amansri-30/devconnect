@@ -2,12 +2,14 @@ import axios from 'axios';
 import { setAlert } from './alert';
 import {
   GET_POSTS,
+  REQUEST_POSTS,
   GET_TAGS,
   POST_ERROR,
   UPDATE_LIKES,
   DELETE_POST,
   ADD_POST,
   GET_SINGLE_POST,
+  REQUEST_SINGLE_POST,
   UPDATE_POST,
   TOGGLE_PIN,
   SAVE_POST,
@@ -34,6 +36,12 @@ import {
 // Monotonic token so a stale archive response (e.g. after switching profiles
 // or sort order mid-flight) can be discarded by the reducer.
 let archiveRequestId = 0;
+
+// Separate tokens for the main feed and the single-post page: a debounced
+// search/sort switch or a fast post-to-post navigation must only accept the
+// response for the request that is actually on screen.
+let postsRequestId = 0;
+let singlePostRequestId = 0;
 
 // Separate tokens for the personal Saved/Liked lists: a debounced search can
 // fire several requests, and only the newest one may touch the list.
@@ -62,6 +70,13 @@ export const getPosts = (
   search = '',
   tag = ''
 ) => async (dispatch) => {
+  const requestId = ++postsRequestId;
+
+  dispatch({
+    type: REQUEST_POSTS,
+    payload: { page, requestId }
+  });
+
   try {
     const params = { page, limit: 8 };
     if (sort === 'likes' || sort === 'trending' || sort === 'views')
@@ -77,12 +92,16 @@ export const getPosts = (
       payload: {
         posts: res.data,
         page,
+        requestId,
         total: parseInt(res.headers['x-total-count'], 10) || 0,
         perPage: parseInt(res.headers['x-per-page'], 10) || 8,
         sort
       }
     });
   } catch (err) {
+    // Ignore a failure for a filter the viewer has already left.
+    if (requestId !== postsRequestId) return;
+
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
@@ -206,18 +225,29 @@ export const addPost = formData => async dispatch => {
 
 // Get single post
 export const getSinglePost = postId => async dispatch => {
+  const requestId = ++singlePostRequestId;
+
   // Clear any previously loaded post so navigating between posts (or to a
-  // deleted one) never shows the previous post's content.
-  dispatch({ type: GET_SINGLE_POST, payload: null });
+  // deleted one) never shows the previous post's content. The request token
+  // makes sure an older response can't put it back.
+  dispatch({
+    type: REQUEST_SINGLE_POST,
+    payload: { requestId }
+  });
 
   try {
     const res = await axios.get(`/api/posts/${postId}`);
+
+    if (requestId !== singlePostRequestId) return;
 
     dispatch({
       type: GET_SINGLE_POST,
       payload: res.data
     });
   } catch (err) {
+    // A stale failure must not blank the post the viewer is now reading.
+    if (requestId !== singlePostRequestId) return;
+
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
@@ -431,6 +461,9 @@ export const getSavedPosts =
         }
       });
     } catch (err) {
+      // A stale failure must not stop the spinner of a newer search.
+      if (requestId !== savedRequestId) return;
+
       dispatch({
         type: POST_ERROR,
         payload: getErrorPayload(err)
@@ -469,6 +502,9 @@ export const getLikedPosts =
         }
       });
     } catch (err) {
+      // A stale failure must not stop the spinner of a newer search.
+      if (requestId !== likedRequestId) return;
+
       dispatch({
         type: POST_ERROR,
         payload: getErrorPayload(err)

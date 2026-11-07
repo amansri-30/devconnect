@@ -1,11 +1,13 @@
 import {
   GET_POSTS,
+  REQUEST_POSTS,
   GET_TAGS,
   POST_ERROR,
   UPDATE_LIKES,
   DELETE_POST,
   ADD_POST,
   GET_SINGLE_POST,
+  REQUEST_SINGLE_POST,
   UPDATE_POST,
   TOGGLE_PIN,
   SAVE_POST,
@@ -65,6 +67,9 @@ const initialState = {
   followingFeed: [],
   trendingPosts: [],
   loading: true,
+  postsLoading: true,
+  requestId: 0,
+  singleRequestId: 0,
   error: {},
   page: 1,
   total: 0,
@@ -74,8 +79,20 @@ const initialState = {
 
 export default function postReducer(state = initialState, action) {
   switch (action.type) {
+    case REQUEST_POSTS:
+      // Keep the current feed on screen while a new filter/page loads; only the
+      // newest request is allowed to apply its response.
+      return {
+        ...state,
+        requestId: action.payload.requestId,
+        postsLoading: true
+      };
     case GET_POSTS: {
-      const { posts, page, total, perPage, sort } = action.payload;
+      const { posts, page, total, perPage, sort, requestId } = action.payload;
+
+      // Ignore a response for a search/sort/page the viewer has already left.
+      if (requestId !== state.requestId) return state;
+
       // page 1 replaces the list; later pages append without duplicates.
       const allPosts =
         page === 1
@@ -92,6 +109,7 @@ export default function postReducer(state = initialState, action) {
         total,
         perPage,
         sort: sort || state.sort,
+        postsLoading: false,
         loading: false
       };
     }
@@ -99,6 +117,13 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         tags: action.payload
+      };
+    case REQUEST_SINGLE_POST:
+      return {
+        ...state,
+        singleRequestId: action.payload.requestId,
+        post: null,
+        loading: true
       };
     case GET_SINGLE_POST:
       // A null payload is the "clear before fetch" signal: keep the spinner up
@@ -441,6 +466,7 @@ export default function postReducer(state = initialState, action) {
         ...state,
         error: action.payload,
         loading: false,
+        postsLoading: false,
         savedLoading: false,
         likedLoading: false,
         userPostsLoading: false,
