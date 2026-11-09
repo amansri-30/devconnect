@@ -31,23 +31,32 @@ const FollowingFeed = ({ getFollowingFeed, post: { followingFeed } }) => {
       </div>
       {followingFeed.length > 0 ? (
         <Fragment>
-          {followingFeed.map((post) => (
-            <div key={post._id} className="following-feed-item">
-              <Link to={`/profile/${post.user}`} className="who-name">
-                {post.name}
-              </Link>
-              <p className="my-1">{preview(post.text)}</p>
-              <div className="following-feed-meta">
-                <Moment format="MMM D" date={post.date} />
-                {' · '}
-                <i className="fas fa-thumbs-up" /> {post.likes.length}
-                {' · '}
-                <i className="fas fa-comment" /> {post.comments.length}
-                {' · '}
-                <Link to={`/post/${post._id}`}>View discussion</Link>
+          {followingFeed.map((post) => {
+            const likeCount = Array.isArray(post.likes)
+              ? post.likes.length
+              : 0;
+            const commentCount = Array.isArray(post.comments)
+              ? post.comments.length
+              : 0;
+
+            return (
+              <div key={post._id} className="following-feed-item">
+                <Link to={`/profile/${post.user}`} className="who-name">
+                  {post.name}
+                </Link>
+                <p className="my-1">{preview(post.text)}</p>
+                <div className="following-feed-meta">
+                  <Moment format="MMM D" date={post.date} />
+                  {' · '}
+                  <i className="fas fa-thumbs-up" /> {likeCount}
+                  {' · '}
+                  <i className="fas fa-comment" /> {commentCount}
+                  {' · '}
+                  <Link to={`/post/${post._id}`}>View discussion</Link>
+                </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
         </Fragment>
       ) : (
         <p className="my-1">

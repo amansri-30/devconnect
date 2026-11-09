@@ -27,11 +27,15 @@ const CommentItem = ({
   const [deleteBusy, setDeleteBusy] = useState(false);
 
   const isOwner =
-    !auth.loading && auth.user && user === auth.user._id;
+    !auth.loading && auth.user && String(user) === String(auth.user._id);
 
   const commentLikes = Array.isArray(likes) ? likes : [];
-  const likedByMe = !auth.loading && auth.user &&
-    commentLikes.some((like) => like.user === auth.user._id);
+  const likedByMe =
+    !auth.loading &&
+    auth.user &&
+    commentLikes.some(
+      (like) => String(like.user) === String(auth.user._id)
+    );
 
   const startEdit = () => {
     setBody(decodeHtml(text));

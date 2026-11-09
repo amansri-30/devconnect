@@ -17,6 +17,7 @@ const initialState = {
   developers: [],
   totalPosts: 0,
   totalDevelopers: 0,
+  errors: { posts: null, developers: null },
   loading: false,
   requestId: 0,
   error: {}
@@ -36,6 +37,7 @@ export default function searchReducer(state = initialState, action) {
         ...state,
         query: action.payload.query,
         requestId: action.payload.requestId,
+        errors: { posts: null, developers: null },
         loading: true,
         error: {}
       };
@@ -46,7 +48,8 @@ export default function searchReducer(state = initialState, action) {
         posts,
         developers,
         totalPosts,
-        totalDevelopers
+        totalDevelopers,
+        errors
       } = action.payload;
 
       // A newer query superseded this response.
@@ -59,6 +62,7 @@ export default function searchReducer(state = initialState, action) {
         developers,
         totalPosts,
         totalDevelopers,
+        errors: errors || { posts: null, developers: null },
         loading: false
       };
     }

@@ -13,6 +13,7 @@ const Search = ({ search, clearSearch, results }) => {
     developers,
     totalPosts,
     totalDevelopers,
+    errors = {},
     loading,
     error
   } = results;
@@ -119,12 +120,26 @@ const Search = ({ search, clearSearch, results }) => {
         </p>
       )}
 
-      {query && !loading && !hasResults && (
-        <p className="my-1">
-          No developers or posts match "<strong>{query}</strong>". Try a
-          different name, skill, or keyword.
+      {query && !loading && (errors.posts || errors.developers) && (
+        <p className="my-1 text-muted" role="status">
+          <i className="fas fa-exclamation-circle" /> Some results couldn't
+          load
+          {errors.posts ? ` — posts: ${errors.posts}` : ''}
+          {errors.developers ? ` — developers: ${errors.developers}` : ''}
         </p>
       )}
+
+      {query &&
+        !loading &&
+        !hasResults &&
+        !error.msg &&
+        !errors.posts &&
+        !errors.developers && (
+          <p className="my-1">
+            No developers or posts match "<strong>{query}</strong>". Try a
+            different name, skill, or keyword.
+          </p>
+        )}
 
       {developers.length > 0 && (
         <section className="search-section my-2">

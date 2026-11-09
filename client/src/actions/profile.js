@@ -169,10 +169,13 @@ export const toggleFollow = (userId) => async (dispatch) => {
         followersCount: res.data.followers
       }
     });
+
+    return true;
   } catch (err) {
     const data = err.response && err.response.data;
     const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update follow status';
     dispatch(setAlert(msg, 'danger'));
+    return false;
   }
 };
 

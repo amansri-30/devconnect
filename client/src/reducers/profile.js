@@ -113,6 +113,7 @@ export default function profileReducer(state = initialState, action) {
       };
     case FOLLOW_UPDATE: {
       const { userId, isFollowing, followersCount } = action.payload;
+      const targetId = String(userId);
       const idOf = (profile) => {
         const user = profile && profile.user;
         if (!user) return null;
@@ -122,7 +123,7 @@ export default function profileReducer(state = initialState, action) {
       // The directory can render follow buttons too, so update its rows even
       // when the profile currently open is someone else.
       const profiles = state.profiles.map((p) =>
-        idOf(p) === userId
+        idOf(p) === targetId
           ? {
               ...p,
               isFollowing,
@@ -136,7 +137,7 @@ export default function profileReducer(state = initialState, action) {
 
       // Only the profile being viewed should have its own button/count
       // updated; follows from a feed card target other authors.
-      if (idOf(state.profile) !== userId) {
+      if (idOf(state.profile) !== targetId) {
         return { ...state, profiles, loading: false };
       }
 

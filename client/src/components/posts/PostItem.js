@@ -14,6 +14,7 @@ import {
 import { toggleFollow } from '../../actions/profile';
 import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
+import PostLikes from './PostLikes';
 
 const PostItem = ({
   addLike,
@@ -49,16 +50,21 @@ const PostItem = ({
   const [followBusy, setFollowBusy] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
+  const [showLikes, setShowLikes] = useState(false);
 
   // Whether the current user has already liked this post.
+  const likeList = Array.isArray(likes) ? likes : [];
+  const commentCount = Array.isArray(comments) ? comments.length : 0;
   const likedByMe =
     !auth.loading &&
     auth.user &&
-    likes.some((like) => like.user === auth.user._id);
+    likeList.some((like) => String(like.user) === String(auth.user._id));
 
   // Whether the viewer is the post's own author (never offer to follow yourself).
   const isOwnPost =
-    !auth.loading && Boolean(auth.user) && user === auth.user._id;
+    !auth.loading &&
+    Boolean(auth.user) &&
+    String(user) === String(auth.user._id);
 
   const startEdit = () => {
     setBody(decodeHtml(text));
@@ -261,12 +267,23 @@ const PostItem = ({
               title={likedByMe ? 'Unlike this post' : 'Like this post'}
               disabled={likeBusy}
             >
-              <i className="fas fa-thumbs-up" /> <span>{likes.length}</span>
+              <i className="fas fa-thumbs-up" />{' '}
+              {likedByMe ? 'Liked' : 'Like'}
+            </button>
+            <button
+              onClick={() => setShowLikes(true)}
+              type="button"
+              className="btn btn-light like-count-btn"
+              title="See who liked this post"
+              aria-haspopup="dialog"
+              disabled={likeList.length === 0}
+            >
+              <i className="fas fa-users" /> <span>{likeList.length}</span>
             </button>
             <Link to={`/post/${_id}`} className="btn btn-primary">
               Discussion{' '}
-              {comments.length > 0 && (
-                <span className="comment-count">{comments.length}</span>
+              {commentCount > 0 && (
+                <span className="comment-count">{commentCount}</span>
               )}
             </Link>
             <button
@@ -328,6 +345,13 @@ const PostItem = ({
           </Fragment>
         )}
       </div>
+      {showLikes && (
+        <PostLikes
+          postId={_id}
+          count={likeList.length}
+          onClose={() => setShowLikes(false)}
+        />
+      )}
     </div>
   );
 };

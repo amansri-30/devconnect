@@ -50,9 +50,14 @@ const Notifications = ({
   const hasMore = notifications.length < total;
 
   const loadMore = async () => {
+    if (loadingMore) return;
+
     setLoadingMore(true);
-    await getNotifications(page + 1, 20, filters);
-    setLoadingMore(false);
+    try {
+      await getNotifications(page + 1, 20, filters);
+    } finally {
+      setLoadingMore(false);
+    }
   };
 
   const onMarkAll = async () => {

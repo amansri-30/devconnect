@@ -255,6 +255,28 @@ export const getSinglePost = postId => async dispatch => {
   }
 };
 
+// Get one page of the users who liked a post (newest first). The result is
+// returned rather than stored in the global slice because it only feeds a
+// small modal; returning null lets the modal show a retryable error.
+export const getPostLikes =
+  (postId, page = 1, limit = 20) => async () => {
+    try {
+      const res = await axios.get(`/api/posts/${postId}/likes`, {
+        params: { page, limit }
+      });
+
+      return {
+        users: res.data,
+        page,
+        total:
+          parseInt(res.headers['x-total-count'], 10) || res.data.length,
+        perPage: parseInt(res.headers['x-per-page'], 10) || limit
+      };
+    } catch (err) {
+      return null;
+    }
+  };
+
 // Edit a post's text (owner only)
 export const editPost = (postId, formData) => async dispatch => {
   const config = {

@@ -78,7 +78,21 @@ const Dashboard = ({
   if (!profile || !(profile.social && profile.social.linkedin))
     missingHints.push('LinkedIn');
 
-  return loading && profile === null ? (
+  // The dashboard can be reached straight from someone else's profile page.
+  // Until /api/profile/me replaces that profile, showing it here would display
+  // another developer's experience/education under the current user's welcome
+  // message, so keep the spinner up instead.
+  const profileUserId =
+    profile && profile.user
+      ? String(profile.user._id || profile.user)
+      : null;
+  const isStaleProfile =
+    Boolean(profile) &&
+    Boolean(user) &&
+    Boolean(profileUserId) &&
+    profileUserId !== String(user._id);
+
+  return (loading && profile === null) || isStaleProfile ? (
     <Spinner />
   ) : (
     <Fragment>

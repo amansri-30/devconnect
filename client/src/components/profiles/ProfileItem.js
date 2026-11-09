@@ -35,7 +35,7 @@ const ProfileItem = ({
       ? followers.length
       : 0;
   const isSelf =
-    !auth.loading && auth.user && auth.user._id === _id;
+    !auth.loading && auth.user && String(auth.user._id) === String(_id);
 
   // Ignore repeat clicks while the follow request is in flight, otherwise a
   // double-click toggles follow on and then straight back off.

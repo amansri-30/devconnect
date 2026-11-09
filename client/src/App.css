@@ -1513,3 +1513,132 @@ button {
     border: 1px solid #ddd;
   }
 }
+
+/* "Who liked this post" dialog */
+.like-count-btn {
+  min-width: 3.2rem;
+}
+
+.likes-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.55);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  z-index: 1000;
+}
+
+.likes-modal {
+  background: #fff;
+  color: #333;
+  width: 100%;
+  max-width: 26rem;
+  max-height: 80vh;
+  display: flex;
+  flex-direction: column;
+  border-radius: 0.5rem;
+  box-shadow: 0 1rem 3rem rgba(0, 0, 0, 0.35);
+  overflow: hidden;
+}
+
+.likes-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid #ddd;
+}
+
+.likes-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+}
+
+.likes-close {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  font-size: 1.1rem;
+  cursor: pointer;
+  padding: 0.25rem;
+}
+
+.likes-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  overflow-y: auto;
+}
+
+.likes-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  padding: 0.6rem 1rem;
+  border-bottom: 1px solid #eee;
+}
+
+.likes-person {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  min-width: 0;
+  color: inherit;
+}
+
+.likes-avatar {
+  width: 2.2rem;
+  height: 2.2rem;
+}
+
+.likes-name {
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.likes-row .btn {
+  padding: 0.3rem 0.6rem;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.likes-status,
+.likes-count {
+  margin: 0;
+  padding: 0.9rem 1rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+.likes-error {
+  color: #c0392b;
+}
+
+.likes-more {
+  margin: 0.75rem 1rem 1rem;
+}
+
+[data-theme='dark'] .likes-modal {
+  background: #232a31;
+  color: #f1f1f1;
+}
+
+[data-theme='dark'] .likes-header,
+[data-theme='dark'] .likes-row {
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .likes-status,
+[data-theme='dark'] .likes-count {
+  color: #b9c2cb;
+}
+
+[data-theme='dark'] .likes-error {
+  color: #ff8a80;
+}

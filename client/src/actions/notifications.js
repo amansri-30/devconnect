@@ -55,6 +55,10 @@ export const getNotifications =
         }
       });
     } catch (err) {
+      // A stale failure must not stop the spinner / replace the list of a
+      // filter the viewer has already switched to.
+      if (requestId !== notificationsRequestId) return;
+
       dispatch({
         type: NOTIFICATIONS_ERROR,
         payload: getErrorPayload(err)
