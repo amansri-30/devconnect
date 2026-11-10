@@ -79,12 +79,22 @@ const PostSchema = new Schema({
       date: {
         type: Date,
         default: Date.now
+      },
+      // Set the first time the comment's text is edited, so readers can tell
+      // the discussion has been revised.
+      editedAt: {
+        type: Date,
+        default: null
       }
     }
   ],
   date: {
     type: Date,
     default: Date.now
+  },
+  editedAt: {
+    type: Date,
+    default: null
   }
 });
 

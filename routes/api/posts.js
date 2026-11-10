@@ -629,6 +629,7 @@ router.put(
 
       post.text = sanitizeHtml(req.body.text);
       post.tags = extractTags(req.body.text);
+      post.editedAt = new Date();
       await post.save();
 
       return res.json(shapePost(post, req.user.id));
@@ -1101,6 +1102,7 @@ router.put(
       }
 
       comment.text = sanitizeHtml(req.body.text);
+      comment.editedAt = new Date();
       await post.save();
 
       return res.json(post.comments);

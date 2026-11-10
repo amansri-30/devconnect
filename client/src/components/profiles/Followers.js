@@ -11,6 +11,7 @@ const Followers = ({
   profile: { followers, loading }
 }) => {
   const [toggling, setToggling] = useState(null);
+  const people = (followers || []).filter(Boolean);
 
   useEffect(() => {
     getFollowers();
@@ -43,8 +44,8 @@ const Followers = ({
         Browse Developers
       </Link>
       <div className="profiles">
-        {followers.length > 0 ? (
-          followers.map((user) => (
+        {people.length > 0 ? (
+          people.map((user) => (
             <div key={user._id} className="profile bg-light">
               <img className="round-img" src={user.avatar} alt={user.name} />
               <div>

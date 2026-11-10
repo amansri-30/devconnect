@@ -10,10 +10,11 @@ import CommentForm from './CommentForm';
 
 const CommentItem = ({
   postId,
-  comment: { _id, text, name, avatar, user, date, likes },
+  comment: { _id, text, name, avatar, user, date, likes, editedAt },
   replies = [],
   repliesByParent = {},
   isReply,
+  forceExpand,
   auth,
   deleteComment,
   editComment,
@@ -25,6 +26,7 @@ const CommentItem = ({
   const [saving, setSaving] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [showAllReplies, setShowAllReplies] = useState(false);
 
   const isOwner =
     !auth.loading && auth.user && String(user) === String(auth.user._id);
@@ -36,6 +38,12 @@ const CommentItem = ({
     commentLikes.some(
       (like) => String(like.user) === String(auth.user._id)
     );
+
+  // Long reply threads start collapsed so one heated comment can't push every
+  // other discussion off the page. A permalink fragment forces them open.
+  const visibleReplies =
+    forceExpand || showAllReplies ? replies : replies.slice(0, 2);
+  const hiddenReplies = replies.length - visibleReplies.length;
 
   const startEdit = () => {
     setBody(decodeHtml(text));
@@ -130,6 +138,14 @@ const CommentItem = ({
             <MediaPreview text={text} />
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
+              {editedAt && (
+                <span
+                  className="post-edited"
+                  title={new Date(editedAt).toLocaleString()}
+                >
+                  {' · '}Edited <Moment fromNow>{editedAt}</Moment>
+                </span>
+              )}
             </p>
           </Fragment>
         )}
@@ -190,16 +206,36 @@ const CommentItem = ({
         )}
         {replies.length > 0 && (
           <div className="comment-replies">
-            {replies.map((reply) => (
+            {visibleReplies.map((reply) => (
               <CommentItem
                 key={reply._id}
                 comment={reply}
                 postId={postId}
                 isReply
-                replies={repliesByParent[reply._id] || []}
+                replies={repliesByParent[String(reply._id)] || []}
                 repliesByParent={repliesByParent}
+                forceExpand={forceExpand}
               />
             ))}
+            {hiddenReplies > 0 && (
+              <button
+                type="button"
+                className="btn btn-light my-1 reply-toggle"
+                onClick={() => setShowAllReplies(true)}
+              >
+                <i className="fas fa-chevron-down" /> Show {hiddenReplies} more{' '}
+                {hiddenReplies === 1 ? 'reply' : 'replies'}
+              </button>
+            )}
+            {showAllReplies && !forceExpand && replies.length > 2 && (
+              <button
+                type="button"
+                className="btn btn-light my-1 reply-toggle"
+                onClick={() => setShowAllReplies(false)}
+              >
+                <i className="fas fa-chevron-up" /> Show fewer replies
+              </button>
+            )}
           </div>
         )}
       </div>
@@ -213,6 +249,7 @@ CommentItem.propTypes = {
   replies: PropTypes.array,
   repliesByParent: PropTypes.object,
   isReply: PropTypes.bool,
+  forceExpand: PropTypes.bool,
   auth: PropTypes.object.isRequired,
   deleteComment: PropTypes.func.isRequired,
   editComment: PropTypes.func.isRequired,

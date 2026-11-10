@@ -36,7 +36,9 @@ const ProfileArchive = ({
   }, [getUserPostArchive, clearUserPostArchive, id, sort]);
 
   const loadMore = async () => {
-    if (moreLoading) return;
+    // Don't page while a sort/profile switch (page 1) is still in flight: the
+    // archive's page number resets for the new view before that response lands.
+    if (moreLoading || archive.loading) return;
     setMoreLoading(true);
     try {
       await getUserPostArchive(id, archive.page + 1, sort);

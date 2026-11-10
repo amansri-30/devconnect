@@ -3,37 +3,58 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link, useLocation, useParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
-import { getSinglePost, editPost } from '../../actions/post';
-import { decodeHtml } from '../../utils/linkify';
+import { getSinglePost } from '../../actions/post';
 import PostItem from '../posts/PostItem';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
 
-const Post = ({
-  getSinglePost,
-  editPost,
-  post: { post, loading },
-  auth
-}) => {
+const COMMENT_SORTS = [
+  { value: 'oldest', label: 'Oldest first' },
+  { value: 'newest', label: 'Newest first' },
+  { value: 'likes', label: 'Most liked' }
+];
+
+const likeCount = (comment) =>
+  Array.isArray(comment.likes) ? comment.likes.length : 0;
+
+const byDate = (a, b) => new Date(a.date) - new Date(b.date);
+
+// Sort a comment list without mutating the original array. Replies always stay
+// in chronological order so a threaded conversation reads top to bottom; only
+// the top-level comments use the viewer's chosen order.
+const sortComments = (list, sort) => {
+  const copy = [...list];
+
+  if (sort === 'newest') return copy.sort((a, b) => byDate(b, a));
+  if (sort === 'likes') {
+    return copy.sort(
+      (a, b) => likeCount(b) - likeCount(a) || byDate(a, b)
+    );
+  }
+
+  return copy.sort(byDate);
+};
+
+const Post = ({ getSinglePost, post: { post, loading } }) => {
   const { postId } = useParams();
   const location = useLocation();
-  const [editing, setEditing] = useState(false);
-  const [text, setText] = useState('');
-  const [saving, setSaving] = useState(false);
+  const [commentSort, setCommentSort] = useState('oldest');
 
   useEffect(() => {
     getSinglePost(postId);
   }, [getSinglePost, postId]);
 
   // Deep link support: /post/:id#comment-<commentId> scrolls to that comment
-  // and briefly highlights it (e.g. when sharing a permalink).
+  // and briefly highlights it (e.g. when sharing a permalink). Any fragment
+  // also expands collapsed reply threads so a linked reply is actually visible.
+  const anchorId = location.hash.startsWith('#comment-')
+    ? location.hash.slice(1)
+    : null;
+
   useEffect(() => {
-    if (!post || !location.hash) return;
+    if (!post || !anchorId) return;
 
-    const targetId = location.hash.slice(1);
-    if (!targetId.startsWith('comment-')) return;
-
-    const target = document.getElementById(targetId);
+    const target = document.getElementById(anchorId);
     if (!target) return;
 
     target.scrollIntoView({ behavior: 'smooth', block: 'center' });
@@ -48,48 +69,38 @@ const Post = ({
       clearTimeout(timer);
       target.classList.remove('comment-highlight');
     };
-  }, [post, location.hash]);
+  }, [post, anchorId, commentSort]);
 
-  // Prepare the edit buffer whenever the loaded post changes.
-  useEffect(() => {
-    if (post) {
-      setText(decodeHtml(post.text));
-    }
-  }, [post]);
+  // Guard against a post payload without a comments array (e.g. an older
+  // document) instead of crashing the whole discussion page.
+  const allComments =
+    post && Array.isArray(post.comments) ? post.comments : [];
+  const commentIds = new Set(allComments.map((c) => String(c._id)));
 
-  const isOwner =
-    !auth.loading &&
-    auth.user &&
-    post &&
-    post.user &&
-    auth.user._id === post.user.toString();
-
-  const submitEdit = async (e) => {
-    e.preventDefault();
-    if (!text.trim() || saving) return;
-
-    setSaving(true);
-    const updated = await editPost(post._id, { text });
-    setSaving(false);
-
-    // Keep the editor open when saving fails so the text isn't lost.
-    if (updated) setEditing(false);
-  };
-
-  // Group threaded replies under their parent comment. Replies whose parent
-  // no longer exists fall back to the top level so nothing is hidden.
-  const allComments = (post && post.comments) || [];
-  const commentIds = new Set(allComments.map((c) => c._id));
+  // Group threaded replies under their parent comment. Replies whose parent no
+  // longer exists fall back to the top level so nothing is hidden.
   const repliesByParent = {};
   allComments.forEach((c) => {
-    if (c.parent) {
-      repliesByParent[c.parent] = repliesByParent[c.parent] || [];
-      repliesByParent[c.parent].push(c);
-    }
+    if (!c.parent || !commentIds.has(String(c.parent))) return;
+
+    const parentId = String(c.parent);
+    repliesByParent[parentId] = repliesByParent[parentId] || [];
+    repliesByParent[parentId].push(c);
   });
-  const topLevelComments = allComments.filter(
-    (c) => !c.parent || !commentIds.has(c.parent)
+
+  Object.keys(repliesByParent).forEach((parentId) => {
+    repliesByParent[parentId] = sortComments(
+      repliesByParent[parentId],
+      'oldest'
+    );
+  });
+
+  const topLevelComments = sortComments(
+    allComments.filter((c) => !c.parent || !commentIds.has(String(c.parent))),
+    commentSort
   );
+
+  const commentCount = allComments.length;
 
   return loading ? (
     <Spinner />
@@ -107,80 +118,59 @@ const Post = ({
       <Link to="/posts" className="btn btn-dark">
         Back to Posts
       </Link>
-      {isOwner && !editing && (
-        <button
-          type="button"
-          className="btn btn-light"
-          onClick={() => setEditing(true)}
-        >
-          <i className="fas fa-edit" /> Edit Post
-        </button>
-      )}
-      {editing ? (
-        <form className="form my-1" onSubmit={submitEdit}>
-          <textarea
-            name="text"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            cols="30"
-            rows="5"
-            maxLength="1000"
-            required
-          />
-          <input
-            type="submit"
-            className="btn btn-dark my-1"
-            value={saving ? 'Saving...' : 'Save Changes'}
-            disabled={saving}
-          />
-          <button
-            type="button"
-            className="btn btn-light my-1"
-            onClick={() => {
-              setText(decodeHtml(post.text));
-              setEditing(false);
-            }}
-          >
-            Cancel
-          </button>
-        </form>
-      ) : (
-        <Fragment>
-          <PostItem post={post} showActions={false} />
-          <CommentForm postId={post._id} />
-          <div className="comments">
-            {post.comments.length > 0 ? (
-              topLevelComments.map((comment) => (
-                <CommentItem
-                  key={comment._id}
-                  comment={comment}
-                  postId={post._id}
-                  replies={repliesByParent[comment._id] || []}
-                  repliesByParent={repliesByParent}
-                />
-              ))
-            ) : (
-              <p className="my-1">
-                No comments yet. Be the first to comment!
-              </p>
-            )}
-          </div>
-        </Fragment>
-      )}
+      {/* The detail view uses the same card as the feed, so liking, saving,
+          sharing, pinning and editing all stay available while reading. */}
+      <PostItem post={post} detail />
+      <CommentForm postId={post._id} />
+      <div className="comments-header">
+        <h2 className="comments-title">
+          <i className="fas fa-comments" /> {commentCount}{' '}
+          {commentCount === 1 ? 'Comment' : 'Comments'}
+        </h2>
+        {commentCount > 1 && (
+          <label className="comment-sort">
+            Sort by{' '}
+            <select
+              value={commentSort}
+              onChange={(e) => setCommentSort(e.target.value)}
+              aria-label="Sort comments"
+            >
+              {COMMENT_SORTS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+          </label>
+        )}
+      </div>
+      <div className="comments">
+        {commentCount > 0 ? (
+          topLevelComments.map((comment) => (
+            <CommentItem
+              key={comment._id}
+              comment={comment}
+              postId={post._id}
+              replies={repliesByParent[String(comment._id)] || []}
+              repliesByParent={repliesByParent}
+              forceExpand={Boolean(anchorId)}
+            />
+          ))
+        ) : (
+          <p className="my-1">No comments yet. Be the first to comment!</p>
+        )}
+      </div>
     </Fragment>
   );
 };
 
 Post.propTypes = {
   getSinglePost: PropTypes.func.isRequired,
-  editPost: PropTypes.func.isRequired,
-  post: PropTypes.object.isRequired,
-  auth: PropTypes.object.isRequired
+  post: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-  post: state.post,
-  auth: state.auth
+  post: state.post
 });
 
-export default connect(mapStateToProps, { getSinglePost, editPost })(Post);
+export default connect(mapStateToProps, { getSinglePost })(Post);

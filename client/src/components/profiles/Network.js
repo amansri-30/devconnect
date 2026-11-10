@@ -44,6 +44,9 @@ const Network = ({
   };
 
   const label = tab === 'following' ? 'Following' : 'Followers';
+  // A follow list can briefly contain null holes for deleted accounts; keep the
+  // list renderable rather than crashing on `user._id`.
+  const users = (networkUsers || []).filter(Boolean);
 
   return loading || switching ? (
     <Spinner />
@@ -70,8 +73,8 @@ const Network = ({
         </button>
       </div>
       <div className="profiles">
-        {networkUsers.length > 0 ? (
-          networkUsers.map((user) => (
+        {users.length > 0 ? (
+          users.map((user) => (
             <div key={user._id} className="profile bg-light">
               <img className="round-img" src={user.avatar} alt={user.name} />
               <div>

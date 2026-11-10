@@ -475,7 +475,10 @@ router.get('/followers/:user_id', async (req, res) => {
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
-    return res.json(profile.followers || []);
+    // A follow list can reference an account that has since been deleted;
+    // populate() leaves a null hole for it, which would crash the client's
+    // `.map(user => user._id)`. Drop those holes here.
+    return res.json((profile.followers || []).filter(Boolean));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -499,7 +502,7 @@ router.get('/following/:user_id', async (req, res) => {
       return res.status(404).json({ msg: 'Profile not found' });
     }
 
-    return res.json(profile.following || []);
+    return res.json((profile.following || []).filter(Boolean));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -524,12 +527,14 @@ router.get('/followers', auth, async (req, res) => {
     );
 
     return res.json(
-      (me.followers || []).map((f) => ({
-        _id: f._id,
-        name: f.name,
-        avatar: f.avatar,
-        isFollowing: followingSet.has(f._id.toString())
-      }))
+      (me.followers || [])
+        .filter(Boolean)
+        .map((f) => ({
+          _id: f._id,
+          name: f.name,
+          avatar: f.avatar,
+          isFollowing: followingSet.has(f._id.toString())
+        }))
     );
   } catch (err) {
     console.error(err.message);
@@ -551,7 +556,7 @@ router.get('/following', auth, async (req, res) => {
       return res.json([]);
     }
 
-    return res.json(me.following || []);
+    return res.json((me.following || []).filter(Boolean));
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');

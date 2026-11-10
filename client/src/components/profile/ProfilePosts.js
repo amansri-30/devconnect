@@ -68,7 +68,8 @@ const ProfilePosts = ({
               <div>
                 <Moment format="MMM D, YYYY" date={post.date} />
                 {' | '}
-                <i className="fas fa-thumbs-up" /> {post.likes.length}
+                <i className="fas fa-thumbs-up" />{' '}
+                {Array.isArray(post.likes) ? post.likes.length : 0}
               </div>
               <Link to={`/post/${post._id}`} className="btn btn-light my-1">
                 View Discussion

@@ -38,9 +38,11 @@ const PostItem = ({
     views,
     tags,
     pinned,
-    isFollowing
+    isFollowing,
+    editedAt
   },
-  showActions
+  showActions,
+  detail
 }) => {
   const [copied, setCopied] = useState(false);
   const [editing, setEditing] = useState(false);
@@ -50,6 +52,7 @@ const PostItem = ({
   const [followBusy, setFollowBusy] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
+  const [deleteBusy, setDeleteBusy] = useState(false);
   const [showLikes, setShowLikes] = useState(false);
 
   // Whether the current user has already liked this post.
@@ -88,9 +91,18 @@ const PostItem = ({
     if (updated) setEditing(false);
   };
 
-  const removePost = (e) => {
+  const removePost = async () => {
+    // Ignore double clicks and don't send a second DELETE while the first is
+    // still in flight; a slow network could otherwise surface an error after
+    // the post has already been removed.
+    if (deleteBusy) return;
+
     if (window.confirm('Are you sure you want to delete this post?')) {
-      deletePost(_id);
+      setDeleteBusy(true);
+      const removed = await deletePost(_id);
+
+      // On success the card is unmounted; on failure re-enable the button.
+      if (!removed) setDeleteBusy(false);
     }
   };
 
@@ -251,6 +263,14 @@ const PostItem = ({
             )}
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
+              {editedAt && (
+                <span
+                  className="post-edited"
+                  title={new Date(editedAt).toLocaleString()}
+                >
+                  {' · '}Edited <Moment fromNow>{editedAt}</Moment>
+                </span>
+              )}
               <span className="post-views" title="Number of times this post has been viewed">
                 <i className="fas fa-eye" /> {views || 0} view
                 {(views || 0) === 1 ? '' : 's'}
@@ -280,12 +300,14 @@ const PostItem = ({
             >
               <i className="fas fa-users" /> <span>{likeList.length}</span>
             </button>
-            <Link to={`/post/${_id}`} className="btn btn-primary">
-              Discussion{' '}
-              {commentCount > 0 && (
-                <span className="comment-count">{commentCount}</span>
-              )}
-            </Link>
+            {!detail && (
+              <Link to={`/post/${_id}`} className="btn btn-primary">
+                Discussion{' '}
+                {commentCount > 0 && (
+                  <span className="comment-count">{commentCount}</span>
+                )}
+              </Link>
+            )}
             <button
               onClick={copyLink}
               type="button"
@@ -310,7 +332,9 @@ const PostItem = ({
                 {saved ? 'Saved' : 'Save'}
               </span>
             </button>
-            {!auth.loading && auth.user && user === auth.user._id && (
+            {!auth.loading &&
+              auth.user &&
+              String(user) === String(auth.user._id) && (
               <Fragment>
                 {!editing && (
                   <button
@@ -337,8 +361,14 @@ const PostItem = ({
                   onClick={removePost}
                   type="button"
                   className="btn btn-danger"
+                  title="Delete this post"
+                  disabled={deleteBusy}
                 >
-                  <i className="fas fa-times" />
+                  <i
+                    className={`fas ${
+                      deleteBusy ? 'fa-circle-notch fa-spin' : 'fa-times'
+                    }`}
+                  />
                 </button>
               </Fragment>
             )}
@@ -357,7 +387,8 @@ const PostItem = ({
 };
 
 PostItem.defaultProps = {
-  showActions: true
+  showActions: true,
+  detail: false
 };
 
 PostItem.propTypes = {
@@ -370,7 +401,8 @@ PostItem.propTypes = {
   editPost: PropTypes.func.isRequired,
   togglePinPost: PropTypes.func.isRequired,
   toggleFollow: PropTypes.func.isRequired,
-  showActions: PropTypes.bool.isRequired
+  showActions: PropTypes.bool.isRequired,
+  detail: PropTypes.bool
 };
 
 const mapStateToProps = (state) => ({

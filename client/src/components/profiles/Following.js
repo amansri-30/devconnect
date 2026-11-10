@@ -7,6 +7,7 @@ import { getFollowing, toggleFollow } from '../../actions/profile';
 
 const Following = ({ getFollowing, toggleFollow, profile: { following, loading } }) => {
   const [removing, setRemoving] = useState(null);
+  const people = (following || []).filter(Boolean);
 
   useEffect(() => {
     getFollowing();
@@ -38,8 +39,8 @@ const Following = ({ getFollowing, toggleFollow, profile: { following, loading }
         Browse Developers
       </Link>
       <div className="profiles">
-        {following.length > 0 ? (
-          following.map((user) => (
+        {people.length > 0 ? (
+          people.map((user) => (
             <div key={user._id} className="profile bg-light">
               <img className="round-img" src={user.avatar} alt={user.name} />
               <div>

@@ -1064,6 +1064,53 @@ button {
   height: 32px;
 }
 
+.comments-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-top: 1rem;
+}
+
+.comments-title {
+  margin: 0;
+  font-size: 1.15rem;
+  color: var(--dark-color);
+}
+
+.comment-sort select {
+  margin-left: 0.4rem;
+  padding: 0.25rem 0.4rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  background: #fff;
+  color: inherit;
+}
+
+.reply-toggle {
+  font-size: 0.85rem;
+  padding: 0.3rem 0.6rem;
+}
+
+[data-theme='dark'] .comments-title {
+  color: #f1f1f1;
+}
+
+[data-theme='dark'] .comment-sort select {
+  background: #232a31;
+  border-color: #3a424a;
+  color: #f1f1f1;
+}
+
+[data-theme='dark'] .comment-replies {
+  border-left-color: #3a424a;
+}
+
+[data-theme='dark'] .comment-reply {
+  background: #232a31;
+}
+
 .following-feed-item {
   padding: 0.5rem 0;
   border-bottom: 1px solid #eee;
@@ -1192,6 +1239,14 @@ button {
 
 .post .post-views {
   margin-left: 0.75rem;
+}
+
+.post .post-edited {
+  font-style: italic;
+}
+
+[data-theme='dark'] .post .post-edited {
+  color: #9aa4ae;
 }
 
 .post .follow-toggle {

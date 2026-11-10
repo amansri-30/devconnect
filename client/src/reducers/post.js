@@ -315,10 +315,14 @@ export default function postReducer(state = initialState, action) {
       };
     case FOLLOW_UPDATE: {
       // Reflect an inline feed follow/unfollow on every card by that author that
-      // carries follow state (the GET /api/posts lists).
+      // carries follow state (the GET /api/posts lists). Ids are normalised to
+      // strings because a card may hold either a raw id or an ObjectId.
       const { userId, isFollowing } = action.payload;
+      const targetId = String(userId);
       const apply = (list) =>
-        list.map((p) => (p.user === userId ? { ...p, isFollowing } : p));
+        list.map((p) =>
+          String(p.user) === targetId ? { ...p, isFollowing } : p
+        );
       return {
         ...state,
         posts: apply(state.posts),
