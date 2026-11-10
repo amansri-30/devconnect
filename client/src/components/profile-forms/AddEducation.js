@@ -18,12 +18,28 @@ const AddEducation = ({ addEducation }) => {
   });
 
   const [toDateDisabled, toggleDisabled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const { school, degree, fieldofstudy, from, to, current, description } =
     formData;
 
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    // If currently attending, never persist a "to" date.
+    const payload = current ? { ...formData, to: '' } : formData;
+
+    setSubmitting(true);
+    const added = await addEducation(payload, navigate);
+
+    // On success the action navigates to the dashboard; only re-enable the
+    // form when the request failed so nothing typed is lost.
+    if (!added) setSubmitting(false);
+  };
 
   return (
     <Fragment>
@@ -32,15 +48,7 @@ const AddEducation = ({ addEducation }) => {
         <i className="fas fa-code-branch" /> Add any school you have attended.
       </p>
       <small>* = required field</small>
-      <form
-        className="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // If currently attending, never persist a "to" date.
-          const payload = current ? { ...formData, to: '' } : formData;
-          addEducation(payload, navigate);
-        }}
-      >
+      <form className="form" onSubmit={onSubmit}>
         <div className="form-group">
           <input
             type="text"
@@ -78,6 +86,7 @@ const AddEducation = ({ addEducation }) => {
             name="from"
             value={from}
             onChange={(e) => onChange(e)}
+            required
           />
         </div>
         <div className="form-group">
@@ -118,7 +127,12 @@ const AddEducation = ({ addEducation }) => {
             onChange={(e) => onChange(e)}
           />
         </div>
-        <input type="submit" className="btn btn-primary my-1" />
+        <input
+          type="submit"
+          className="btn btn-primary my-1"
+          value={submitting ? 'Adding...' : 'Add Education'}
+          disabled={submitting}
+        />
         <Link className="btn btn-light my-1" to="/dashboard">
           Go Back
         </Link>

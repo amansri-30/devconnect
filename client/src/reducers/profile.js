@@ -8,6 +8,7 @@ import {
   REQUEST_PROFILES,
   GET_POPULAR_SKILLS,
   GET_REPOS,
+  REQUEST_REPOS,
   REPOS_ERROR,
   FOLLOW_UPDATE,
   GET_FOLLOWING,
@@ -27,6 +28,8 @@ const initialState = {
   profilesRequestId: 0,
   popularSkills: [],
   repos: [],
+  reposLoading: false,
+  reposError: null,
 following: [],
         followers: [],
         leaderboard: [],
@@ -46,6 +49,8 @@ export default function profileReducer(state = initialState, action) {
       return {
         ...state,
         repos: [],
+        reposLoading: false,
+        reposError: null,
         loading: true
       };
     case GET_PROFILE:
@@ -198,6 +203,8 @@ export default function profileReducer(state = initialState, action) {
         ...state,
         profile: null,
         repos: [],
+        reposLoading: false,
+        reposError: null,
         following: [],
 followers: [],
   leaderboard: [],
@@ -209,10 +216,21 @@ followers: [],
         followingCount: 0,
         loading: false
       };
+    case REQUEST_REPOS:
+      // Clear the previous developer's repos immediately; otherwise they flash
+      // under the new profile's "GitHub Repos" heading while the fetch runs.
+      return {
+        ...state,
+        repos: [],
+        reposLoading: true,
+        reposError: null
+      };
     case GET_REPOS:
       return {
         ...state,
-        repos: action.payload,
+        repos: Array.isArray(action.payload) ? action.payload : [],
+        reposLoading: false,
+        reposError: null,
         loading: false
       };
     case REPOS_ERROR:
@@ -220,6 +238,8 @@ followers: [],
       return {
         ...state,
         repos: [],
+        reposLoading: false,
+        reposError: action.payload,
         loading: false
       };
     default:

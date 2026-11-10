@@ -24,7 +24,7 @@ const ProfileAbout = ({ profile: { bio, skills, user } }) => {
           profileSkills.map((skill, index) => (
             <div key={index} className="p-1">
               <Link
-                to={`/profiles?skill=${encodeURIComponent(skill)}`}
+                to={`/profiles?search=${encodeURIComponent(skill)}`}
                 className="skill-chip"
                 title={`Browse developers with ${skill}`}
               >

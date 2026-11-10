@@ -44,6 +44,15 @@ const parseDate = (value) => {
   return parsed.isValid() ? parsed : null;
 };
 
+// Keep this in sync with the Profile model enum and the client's
+// utils/availability.js option list.
+const AVAILABILITY_OPTIONS = ['open-to-work', 'hiring', 'open-to-mentoring'];
+
+// Trim user-entered text so whitespace-only values can't slip past validation
+// (e.g. a status of "   ") or poison directory search.
+const cleanText = (value) =>
+  typeof value === 'string' ? value.trim() : value;
+
 const escapeRegExp = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -115,6 +124,7 @@ router.get('/leaderboard', async (req, res) => {
           name: '$dev.name',
           avatar: '$dev.avatar',
           status: 1,
+          availability: 1,
           followersCount: 1
         }
       }
@@ -169,6 +179,7 @@ router.get('/suggestions', auth, async (req, res) => {
           name: '$dev.name',
           avatar: '$dev.avatar',
           status: 1,
+          availability: 1,
           followersCount: 1
         }
       }
@@ -262,6 +273,11 @@ router.get('/', async (req, res) => {
         ? new mongoose.Types.ObjectId(rawViewerId)
         : null;
     const searchMatch = buildProfileSearchMatch(req.query.search);
+    const availabilityMatch = AVAILABILITY_OPTIONS.includes(
+      req.query.availability
+    )
+      ? { availability: req.query.availability }
+      : null;
 
     const pipeline = [
       {
@@ -276,6 +292,7 @@ router.get('/', async (req, res) => {
     ];
 
     if (searchMatch) pipeline.push({ $match: searchMatch });
+    if (availabilityMatch) pipeline.push({ $match: availabilityMatch });
 
     pipeline.push(
       {
@@ -587,18 +604,32 @@ router.post(
     // The profile form always submits every field, sending an empty string when
     // the user clears one. Test for presence rather than truthiness so clearing
     // a field actually clears it instead of silently keeping the old value.
+    // Text is trimmed so whitespace-only values are treated as empty.
     if (req.body.company !== undefined)
-      profileFields.company = req.body.company;
+      profileFields.company = cleanText(req.body.company);
     if (req.body.website !== undefined)
       profileFields.website = req.body.website
-        ? normalizeUrl(req.body.website)
+        ? normalizeUrl(cleanText(req.body.website))
         : '';
     if (req.body.location !== undefined)
-      profileFields.location = req.body.location;
-    if (req.body.bio !== undefined) profileFields.bio = req.body.bio;
-    if (req.body.status !== undefined) profileFields.status = req.body.status;
+      profileFields.location = cleanText(req.body.location);
+    if (req.body.bio !== undefined) profileFields.bio = cleanText(req.body.bio);
+    if (req.body.status !== undefined)
+      profileFields.status = cleanText(req.body.status);
     if (req.body.githubusername !== undefined)
-      profileFields.githubusername = req.body.githubusername;
+      profileFields.githubusername = cleanText(req.body.githubusername);
+
+    if (req.body.availability !== undefined) {
+      const availability = cleanText(req.body.availability) || '';
+
+      if (availability && !AVAILABILITY_OPTIONS.includes(availability)) {
+        return res
+          .status(400)
+          .json({ errors: [{ msg: 'Availability option is invalid' }] });
+      }
+
+      profileFields.availability = availability;
+    }
 
     // skills - split csv into array, dropping blanks and case-insensitive
     // duplicates. A value like ",," must not slip past validation only to fail
@@ -629,7 +660,7 @@ router.post(
       (field) => {
         if (req.body[field] !== undefined) {
           profileFields.social[field] = req.body[field]
-            ? normalizeUrl(req.body[field])
+            ? normalizeUrl(cleanText(req.body[field]))
             : '';
         }
       }

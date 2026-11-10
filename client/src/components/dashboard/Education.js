@@ -10,6 +10,7 @@ const toDateInput = (value) =>
 const Education = ({ education, deleteEducation, updateEducation }) => {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [form, setForm] = useState({
     school: '',
     degree: '',
@@ -20,13 +21,22 @@ const Education = ({ education, deleteEducation, updateEducation }) => {
     description: ''
   });
 
-  const confirmDelete = (school, id) => {
+  const confirmDelete = async (school, id) => {
+    // Prevent a second DELETE while the first is in flight (which would fail
+    // with "not found" after the row has already been removed).
+    if (deletingId) return;
+
     if (
       window.confirm(
         `Are you sure you want to delete your education at ${school}?`
       )
     ) {
-      deleteEducation(id);
+      setDeletingId(id);
+      try {
+        await deleteEducation(id);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -95,8 +105,13 @@ const Education = ({ education, deleteEducation, updateEducation }) => {
           <button
             onClick={() => confirmDelete(edu.school, edu._id)}
             className="btn btn-danger"
+            disabled={deletingId === edu._id}
           >
-            Delete
+            {deletingId === edu._id ? (
+              <i className="fas fa-circle-notch fa-spin" />
+            ) : (
+              'Delete'
+            )}
           </button>
         </td>
       </tr>

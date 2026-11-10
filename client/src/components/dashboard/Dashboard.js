@@ -42,6 +42,7 @@ const Dashboard = ({
     if (!profile) return 0;
     const checks = [
       Boolean(profile.status),
+      Boolean(profile.availability),
       Array.isArray(profile.skills) && profile.skills.length > 0,
       Boolean(profile.bio),
       Boolean(profile.location),
@@ -57,6 +58,8 @@ const Dashboard = ({
   const pct = completion();
   const missingHints = [];
   if (!profile || profile.status === '') missingHints.push('status');
+  if (!profile || !profile.availability)
+    missingHints.push('availability status');
   if (!profile || !Array.isArray(profile.skills) || profile.skills.length === 0)
     missingHints.push('skills');
   if (!profile || !profile.bio) missingHints.push('bio');

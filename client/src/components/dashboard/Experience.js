@@ -10,6 +10,7 @@ const toDateInput = (value) =>
 const Experience = ({ experience, deleteExperience, updateExperience }) => {
   const [editingId, setEditingId] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [deletingId, setDeletingId] = useState(null);
   const [form, setForm] = useState({
     title: '',
     company: '',
@@ -20,13 +21,22 @@ const Experience = ({ experience, deleteExperience, updateExperience }) => {
     description: ''
   });
 
-  const confirmDelete = (company, id) => {
+  const confirmDelete = async (company, id) => {
+    // Ignore repeat clicks while a delete is already in flight; otherwise the
+    // second request fails with "not found" after the row has been removed.
+    if (deletingId) return;
+
     if (
       window.confirm(
         `Are you sure you want to delete your experience at ${company}?`
       )
     ) {
-      deleteExperience(id);
+      setDeletingId(id);
+      try {
+        await deleteExperience(id);
+      } finally {
+        setDeletingId(null);
+      }
     }
   };
 
@@ -98,8 +108,13 @@ const Experience = ({ experience, deleteExperience, updateExperience }) => {
           <button
             onClick={() => confirmDelete(exp.company, exp._id)}
             className="btn btn-danger"
+            disabled={deletingId === exp._id}
           >
-            Delete
+            {deletingId === exp._id ? (
+              <i className="fas fa-circle-notch fa-spin" />
+            ) : (
+              'Delete'
+            )}
           </button>
         </td>
       </tr>

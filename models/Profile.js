@@ -30,6 +30,14 @@ const ProfileSchema = new Schema({
   githubusername: {
     type: String
   },
+  // What the developer is currently open to ("open-to-work", "hiring" or
+  // "open-to-mentoring"). Optional, and surfaced as a badge in the directory
+  // and on the profile so the community can spot opportunities quickly.
+  availability: {
+    type: String,
+    enum: ['', 'open-to-work', 'hiring', 'open-to-mentoring'],
+    default: ''
+  },
   followers: [
     {
       type: Schema.Types.ObjectId,

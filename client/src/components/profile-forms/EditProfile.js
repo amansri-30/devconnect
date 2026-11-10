@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { createProfile, getCurrentProfile } from '../../actions/profile';
+import { AVAILABILITY_OPTIONS } from '../../utils/availability';
 
 // Small reducer to handle updating the state when
 // input fields are changed
@@ -38,6 +39,7 @@ const initializeState = (profileStateSlice, currentUserId) => {
     status: p.status || '',
     skills: Array.isArray(p.skills) ? p.skills.join(',') : (p.skills || ''),
     githubusername: p.githubusername || '',
+    availability: p.availability || '',
     bio: p.bio || '',
     twitter: social.twitter || '',
     facebook: social.facebook || '',
@@ -60,6 +62,7 @@ const EditProfile = ({
   }, [getCurrentProfile]);
 
   const [displaySocialInputs, toggleSocialInputs] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const navigate = useNavigate();
 
@@ -100,6 +103,7 @@ const EditProfile = ({
     status,
     skills,
     githubusername,
+    availability,
     bio,
     twitter,
     facebook,
@@ -115,9 +119,16 @@ const EditProfile = ({
   const onChange = (e) =>
     dispatch({ type: e.target.name, payload: e.target.value });
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    createProfile(profileInfo, navigate, true);
+    if (submitting) return;
+
+    setSubmitting(true);
+    await createProfile(profileInfo, navigate, true);
+
+    // Editing stays on this page, so always re-enable the button. Validation
+    // errors are shown as alerts and the typed values are kept.
+    setSubmitting(false);
   };
 
   return (
@@ -129,7 +140,12 @@ const EditProfile = ({
       <small>* = required field</small>
       <form className="form" onSubmit={(e) => onSubmit(e)}>
         <div className="form-group">
-          <select name="status" value={status} onChange={(e) => onChange(e)}>
+          <select
+            name="status"
+            value={status}
+            onChange={(e) => onChange(e)}
+            required
+          >
             <option value="">* Select Professional Status</option>
             <option value="Developer">Developer</option>
             <option value="Junior Developer">Junior Developer</option>
@@ -145,6 +161,24 @@ const EditProfile = ({
           </select>
           <small className="form-text">
             Give us an idea of where you are at in your career
+          </small>
+        </div>
+        <div className="form-group">
+          <select
+            name="availability"
+            value={availability}
+            onChange={(e) => onChange(e)}
+          >
+            <option value="">Availability (optional)</option>
+            {AVAILABILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <small className="form-text">
+            Let the community know if you're open to work, hiring, or open to
+            mentoring
           </small>
         </div>
         <div className="form-group">
@@ -190,6 +224,7 @@ const EditProfile = ({
             name="skills"
             value={skills}
             onChange={(e) => onChange(e)}
+            required
           />
           <small className="form-text">
             Please use comma separated values (eg. HTML,CSS,JavaScript,PHP)
@@ -288,7 +323,12 @@ const EditProfile = ({
           </Fragment>
         )}
 
-        <input type="submit" className="btn btn-primary my-1" />
+        <input
+          type="submit"
+          className="btn btn-primary my-1"
+          value={submitting ? 'Saving...' : 'Save Profile'}
+          disabled={submitting}
+        />
         <Link className="btn btn-light my-1" to="/dashboard">
           Go Back
         </Link>

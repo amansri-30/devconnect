@@ -479,6 +479,44 @@ button {
   color: inherit;
 }
 
+/* Availability badges: open to work / hiring / open to mentoring. */
+.availability-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  background: #e6f4ea;
+  color: #1e7e34;
+}
+
+.availability-hiring {
+  background: #e8f0fe;
+  color: #1a56db;
+}
+
+.availability-open-to-mentoring {
+  background: #fff4e5;
+  color: #b45309;
+}
+
+[data-theme='dark'] .availability-badge {
+  background: #22352a;
+  color: #8ee6a4;
+}
+
+[data-theme='dark'] .availability-hiring {
+  background: #1e2a44;
+  color: #9ec1ff;
+}
+
+[data-theme='dark'] .availability-open-to-mentoring {
+  background: #3a2a12;
+  color: #ffc978;
+}
+
 .directory-count {
   font-weight: 600;
   color: #666;

@@ -2,6 +2,10 @@ import React from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
+import {
+  availabilityIcon,
+  availabilityLabel
+} from '../../utils/availability';
 
 // Community leaderboard: the top developers by follower count.
 const TopDevelopers = ({ leaderboard }) => {
@@ -32,6 +36,15 @@ const TopDevelopers = ({ leaderboard }) => {
             </Link>
             <span className="leaderboard-status hide-sm">
               {developer.status}
+              {developer.availability && (
+                <span
+                  className={`availability-badge availability-${developer.availability}`}
+                  title="Current availability"
+                >
+                  <i className={availabilityIcon(developer.availability)} />{' '}
+                  {availabilityLabel(developer.availability)}
+                </span>
+              )}
             </span>
             <span className="badge badge-light">
               <i className="fas fa-users" />{' '}

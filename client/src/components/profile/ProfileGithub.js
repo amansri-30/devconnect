@@ -3,9 +3,17 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { getGithubRepos } from '../../actions/profile';
 
-const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
+const ProfileGithub = ({
+  githubusername,
+  getGithubRepos,
+  repos,
+  reposLoading,
+  reposError
+}) => {
   useEffect(() => {
-    getGithubRepos(githubusername);
+    if (githubusername) {
+      getGithubRepos(githubusername);
+    }
   }, [getGithubRepos, githubusername]);
 
   return (
@@ -21,7 +29,23 @@ const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
       >
         <i className="fab fa-github" /> View @{githubusername} on GitHub →
       </a>
-      {repos.length > 0 ? (
+      {reposLoading ? (
+        <p className="my-1" role="status">
+          <i className="fas fa-circle-notch fa-spin" /> Loading repositories...
+        </p>
+      ) : reposError ? (
+        <p className="my-1">
+          <i className="fas fa-exclamation-circle" />{' '}
+          {reposError.msg || 'Could not load GitHub repositories.'}{' '}
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => getGithubRepos(githubusername)}
+          >
+            Retry
+          </button>
+        </p>
+      ) : repos.length > 0 ? (
         repos.map((repo) => (
           <div key={repo.id} className="repo bg-white p-1 my-1">
             <div>
@@ -61,11 +85,20 @@ const ProfileGithub = ({ githubusername, getGithubRepos, repos }) => {
 ProfileGithub.propTypes = {
   githubusername: PropTypes.string.isRequired,
   getGithubRepos: PropTypes.func.isRequired,
-  repos: PropTypes.array.isRequired
+  repos: PropTypes.array.isRequired,
+  reposLoading: PropTypes.bool,
+  reposError: PropTypes.object
+};
+
+ProfileGithub.defaultProps = {
+  reposLoading: false,
+  reposError: null
 };
 
 const mapStateToProps = (state) => ({
-  repos: state.profile.repos
+  repos: state.profile.repos,
+  reposLoading: state.profile.reposLoading,
+  reposError: state.profile.reposError
 });
 
 export default connect(mapStateToProps, { getGithubRepos })(ProfileGithub);

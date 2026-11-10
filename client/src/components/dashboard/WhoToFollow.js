@@ -7,6 +7,10 @@ import {
   getSuggestions,
   getFollowing
 } from '../../actions/profile';
+import {
+  availabilityIcon,
+  availabilityLabel
+} from '../../utils/availability';
 
 // Suggests developers to follow; following one refreshes the list so it
 // disappears (the backend excludes people you already follow).
@@ -61,6 +65,13 @@ const WhoToFollow = ({
             </Link>
             <span className="who-status hide-sm">
               {developer.status}
+              {developer.availability && (
+                <>
+                  {' · '}
+                  <i className={availabilityIcon(developer.availability)} />{' '}
+                  {availabilityLabel(developer.availability)}
+                </>
+              )}
               {developer.followersCount > 0 &&
                 ` · ${developer.followersCount} ${
                   developer.followersCount === 1 ? 'follower' : 'followers'

@@ -3,6 +3,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { createProfile } from '../../actions/profile';
+import { AVAILABILITY_OPTIONS } from '../../utils/availability';
 
 const CreateProfile = ({ createProfile }) => {
   const navigate = useNavigate();
@@ -14,6 +15,7 @@ const CreateProfile = ({ createProfile }) => {
     status: '',
     skills: '',
     githubusername: '',
+    availability: '',
     bio: '',
     twitter: '',
     facebook: '',
@@ -23,6 +25,7 @@ const CreateProfile = ({ createProfile }) => {
   });
 
   const [displaySocialInputs, toggleSocialInputs] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const {
     company,
@@ -31,6 +34,7 @@ const CreateProfile = ({ createProfile }) => {
     status,
     skills,
     githubusername,
+    availability,
     bio,
     twitter,
     facebook,
@@ -42,9 +46,16 @@ const CreateProfile = ({ createProfile }) => {
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
 
-  const onSubmit = (e) => {
+  const onSubmit = async (e) => {
     e.preventDefault();
-    createProfile(formData, navigate);
+    if (submitting) return;
+
+    setSubmitting(true);
+    const created = await createProfile(formData, navigate);
+
+    // On success the action navigates away; only re-enable the form when the
+    // request failed so the user doesn't lose what they typed.
+    if (!created) setSubmitting(false);
   };
 
   return (
@@ -57,7 +68,12 @@ const CreateProfile = ({ createProfile }) => {
       <small>* = required field</small>
       <form className="form" onSubmit={(e) => onSubmit(e)}>
         <div className="form-group">
-          <select name="status" value={status} onChange={(e) => onChange(e)}>
+          <select
+            name="status"
+            value={status}
+            onChange={(e) => onChange(e)}
+            required
+          >
             <option value="">* Select Professional Status</option>
             <option value="Developer">Developer</option>
             <option value="Junior Developer">Junior Developer</option>
@@ -73,6 +89,24 @@ const CreateProfile = ({ createProfile }) => {
           </select>
           <small className="form-text">
             Give us an idea of where you are at in your career
+          </small>
+        </div>
+        <div className="form-group">
+          <select
+            name="availability"
+            value={availability}
+            onChange={(e) => onChange(e)}
+          >
+            <option value="">Availability (optional)</option>
+            {AVAILABILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+          <small className="form-text">
+            Let the community know if you're open to work, hiring, or open to
+            mentoring
           </small>
         </div>
         <div className="form-group">
@@ -118,6 +152,7 @@ const CreateProfile = ({ createProfile }) => {
             name="skills"
             value={skills}
             onChange={(e) => onChange(e)}
+            required
           />
           <small className="form-text">
             Please use comma separated values (eg. HTML,CSS,JavaScript,PHP)
@@ -216,7 +251,12 @@ const CreateProfile = ({ createProfile }) => {
           </Fragment>
         )}
 
-        <input type="submit" className="btn btn-primary my-1" />
+        <input
+          type="submit"
+          className="btn btn-primary my-1"
+          value={submitting ? 'Creating...' : 'Create Profile'}
+          disabled={submitting}
+        />
         <Link className="btn btn-light my-1" to="/dashboard">
           Go Back
         </Link>

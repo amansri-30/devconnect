@@ -11,6 +11,7 @@ GET_PROFILE,
   UPDATE_PROFILE,
   ACCOUNT_DELETED,
   GET_REPOS,
+  REQUEST_REPOS,
   REPOS_ERROR,
   FOLLOW_UPDATE,
   GET_FOLLOWING,
@@ -25,6 +26,7 @@ GET_PROFILE,
 let profileRequestId = 0;
 let networkRequestId = 0;
 let profilesRequestId = 0;
+let reposRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -71,7 +73,7 @@ export const getCurrentProfile = () => async (dispatch) => {
 // Get one page of the developer directory. Search and sorting run server-side
 // so they cover every profile rather than only the pages already loaded.
 export const getProfiles =
-  (page = 1, search = '', sort = 'recent') =>
+  (page = 1, search = '', sort = 'recent', availability = '') =>
   async (dispatch) => {
     const requestId = ++profilesRequestId;
     const term = search.trim();
@@ -85,6 +87,7 @@ export const getProfiles =
       const params = { page, limit: 12 };
       if (term) params.search = term;
       if (sort === 'followers' || sort === 'name') params.sort = sort;
+      if (availability) params.availability = availability;
 
       const res = await axios.get('/api/profile', { params });
 
@@ -281,14 +284,24 @@ export const getFollowing = () => async (dispatch) => {
 
 // Get Github repos
 export const getGithubRepos = (githubusername) => async (dispatch) => {
+  // A token so switching from one developer's profile to another can't let the
+  // first (slower) response land in the second profile's repo list.
+  const requestId = ++reposRequestId;
+
+  dispatch({ type: REQUEST_REPOS });
+
   try {
     const res = await axios.get(`/api/profile/github/${githubusername}`);
+
+    if (requestId !== reposRequestId) return;
 
     dispatch({
       type: GET_REPOS,
       payload: res.data
     });
   } catch (err) {
+    if (requestId !== reposRequestId) return;
+
     dispatch({
       type: REPOS_ERROR,
       payload: getErrorPayload(err)
@@ -321,6 +334,8 @@ export const createProfile =
       if (!edit) {
         navigate('/dashboard');
       }
+
+      return true;
     } catch (err) {
       getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -328,6 +343,8 @@ export const createProfile =
         type: PROFILE_ERROR,
         payload: getErrorPayload(err)
       });
+
+      return false;
     }
   };
 
@@ -350,6 +367,7 @@ export const addExperience = (formData, navigate) => async (dispatch) => {
     dispatch(setAlert('Experience Added', 'success'));
 
     navigate('/dashboard');
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -357,6 +375,8 @@ export const addExperience = (formData, navigate) => async (dispatch) => {
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+
+    return false;
   }
 };
 
@@ -379,6 +399,7 @@ export const addEducation = (formData, navigate) => async (dispatch) => {
     dispatch(setAlert('Education Added', 'success'));
 
     navigate('/dashboard');
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
@@ -386,6 +407,8 @@ export const addEducation = (formData, navigate) => async (dispatch) => {
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+
+    return false;
   }
 };
 
@@ -466,12 +489,14 @@ export const deleteExperience = (id) => async (dispatch) => {
     });
 
     dispatch(setAlert('Experience Removed', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not remove experience', 'danger'));
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 
@@ -486,12 +511,14 @@ export const deleteEducation = (id) => async (dispatch) => {
     });
 
     dispatch(setAlert('Education Removed', 'success'));
+    return true;
   } catch (err) {
     dispatch(setAlert('Could not remove education', 'danger'));
     dispatch({
       type: PROFILE_ERROR,
       payload: getErrorPayload(err)
     });
+    return false;
   }
 };
 

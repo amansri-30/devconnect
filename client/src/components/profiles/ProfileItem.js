@@ -3,6 +3,10 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { toggleFollow } from '../../actions/profile';
+import {
+  availabilityIcon,
+  availabilityLabel
+} from '../../utils/availability';
 
 const ProfileItem = ({
   profile: {
@@ -13,6 +17,7 @@ const ProfileItem = ({
     skills,
     followers,
     followersCount,
+    availability,
     isFollowing
   },
   auth,
@@ -57,6 +62,15 @@ const ProfileItem = ({
         <p>
           {status} {company && <span>at {company}</span>}
         </p>
+        {availability && (
+          <span
+            className={`availability-badge availability-${availability}`}
+            title="Current availability"
+          >
+            <i className={availabilityIcon(availability)} />{' '}
+            {availabilityLabel(availability)}
+          </span>
+        )}
         <p className="my-1">
           {location && <span>{location}</span>}
           {followerCount > 0 && (

@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import ProfileItem from './ProfileItem';
 import { getProfiles, getPopularSkills } from '../../actions/profile';
+import { AVAILABILITY_OPTIONS } from '../../utils/availability';
 
 const Profiles = ({
   getProfiles,
@@ -22,6 +23,7 @@ const Profiles = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const urlQuery =
     searchParams.get('search') || searchParams.get('skill') || '';
+  const availability = searchParams.get('availability') || '';
   const [query, setQuery] = useState(urlQuery);
   const [sort, setSort] = useState('recent');
   const [moreLoading, setMoreLoading] = useState(false);
@@ -33,15 +35,16 @@ const Profiles = ({
     setQuery(urlQuery);
   }, [urlQuery]);
 
-  // Server-side search: debounce typing, then re-query page 1 whenever the
-  // search term or sort order changes. A request token discards stale results.
+  // Server-side search and availability filtering: debounce typing, then
+  // re-query page 1 whenever the search term, sort order or availability
+  // changes. A request token discards stale results.
   useEffect(() => {
     const delay = query.trim() ? 350 : 0;
     const timer = setTimeout(() => {
-      getProfiles(1, query, sort);
+      getProfiles(1, query, sort, availability);
     }, delay);
     return () => clearTimeout(timer);
-  }, [getProfiles, query, sort]);
+  }, [getProfiles, query, sort, availability]);
 
   // Popular skills are computed across every profile, not just this page.
   useEffect(() => {
@@ -52,18 +55,27 @@ const Profiles = ({
     if (moreLoading || profilesLoading) return;
     setMoreLoading(true);
     try {
-      await getProfiles(profilesPage + 1, query, sort);
+      await getProfiles(profilesPage + 1, query, sort, availability);
     } finally {
       setMoreLoading(false);
     }
   };
 
+  // Keep both filters in the URL together, so changing one never silently
+  // drops the other from a shared link.
+  const updateParams = ({ search, availability: nextAvailability }) => {
+    const nextSearch = search !== undefined ? search : query;
+    const nextAvail =
+      nextAvailability !== undefined ? nextAvailability : availability;
+    const params = {};
+    if (nextSearch.trim()) params.search = nextSearch;
+    if (nextAvail) params.availability = nextAvail;
+    setSearchParams(params, { replace: true });
+  };
+
   const applySkill = (skill) => {
     setQuery(skill);
-    // Keep the URL in sync (replace so it doesn't stack history entries). The
-    // generic ?search= param keeps the filter shareable; legacy ?skill= links
-    // are still read above.
-    setSearchParams(skill ? { search: skill } : {}, { replace: true });
+    updateParams({ search: skill });
   };
 
   const onQueryChange = (e) => applySkill(e.target.value);
@@ -107,6 +119,21 @@ const Profiles = ({
             <option value="name">Name A-Z</option>
           </select>
         </label>
+        <label className="directory-sort">
+          Availability{' '}
+          <select
+            value={availability}
+            onChange={(e) => updateParams({ availability: e.target.value })}
+            aria-label="Filter developers by availability"
+          >
+            <option value="">Any</option>
+            {AVAILABILITY_OPTIONS.map((option) => (
+              <option key={option.value} value={option.value}>
+                {option.label}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
       {popularSkills.length > 0 && (
         <div className="popular-skills my-1">
@@ -147,8 +174,8 @@ const Profiles = ({
           ))
         ) : (
           <h4>
-            {term
-              ? `No developers match "${term}".`
+            {term || availability
+              ? 'No developers match these filters.'
               : 'No profiles found...'}
           </h4>
         )}

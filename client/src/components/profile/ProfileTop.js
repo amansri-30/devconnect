@@ -1,8 +1,12 @@
 import React from 'react';
 import PropTypes from 'prop-types';
+import {
+  availabilityIcon,
+  availabilityLabel
+} from '../../utils/availability';
 
 const ProfileTop = ({
-  profile: { status, company, location, website, social, user }
+  profile: { status, company, location, website, social, availability, user }
 }) => {
   // Guard against a missing user reference on a profile.
   if (!user) {
@@ -17,6 +21,17 @@ const ProfileTop = ({
       <p className="lead">
         {status} {company && <span> at {company}</span>}
       </p>
+      {availability && (
+        <p>
+          <span
+            className={`availability-badge availability-${availability}`}
+            title="Current availability"
+          >
+            <i className={availabilityIcon(availability)} />{' '}
+            {availabilityLabel(availability)}
+          </span>
+        </p>
+      )}
       <p>{location && <span>{location}</span>}</p>
       <div className="icons my-1">
         {website && (

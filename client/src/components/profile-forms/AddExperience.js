@@ -18,11 +18,27 @@ const AddExperience = ({ addExperience }) => {
   });
 
   const [toDateDisabled, toggleDisabled] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
 
   const { company, title, location, from, to, current, description } = formData;
 
   const onChange = (e) =>
     setFormData({ ...formData, [e.target.name]: e.target.value });
+
+  const onSubmit = async (e) => {
+    e.preventDefault();
+    if (submitting) return;
+
+    // If the position is the current one, never persist a "to" date.
+    const payload = current ? { ...formData, to: '' } : formData;
+
+    setSubmitting(true);
+    const added = await addExperience(payload, navigate);
+
+    // On success the action navigates to the dashboard; only re-enable the
+    // form when the request failed so nothing typed is lost.
+    if (!added) setSubmitting(false);
+  };
 
   return (
     <Fragment>
@@ -32,15 +48,7 @@ const AddExperience = ({ addExperience }) => {
         positions that you have had in the past
       </p>
       <small>* = required field</small>
-      <form
-        className="form"
-        onSubmit={(e) => {
-          e.preventDefault();
-          // If the position is the current one, never persist a "to" date.
-          const payload = current ? { ...formData, to: '' } : formData;
-          addExperience(payload, navigate);
-        }}
-      >
+      <form className="form" onSubmit={onSubmit}>
         <div className="form-group">
           <input
             type="text"
@@ -77,6 +85,7 @@ const AddExperience = ({ addExperience }) => {
             name="from"
             value={from}
             onChange={(e) => onChange(e)}
+            required
           />
         </div>
         <div className="form-group">
@@ -117,7 +126,12 @@ const AddExperience = ({ addExperience }) => {
             onChange={(e) => onChange(e)}
           />
         </div>
-        <input type="submit" className="btn btn-primary my-1" />
+        <input
+          type="submit"
+          className="btn btn-primary my-1"
+          value={submitting ? 'Adding...' : 'Add Experience'}
+          disabled={submitting}
+        />
         <Link className="btn btn-light my-1" to="/dashboard">
           Go Back
         </Link>
