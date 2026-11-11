@@ -2,17 +2,19 @@ import React, { Fragment, useEffect, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
-import { getPostLikes } from '../../actions/post';
+import { getPostLikes, getCommentLikes } from '../../actions/post';
 import { toggleFollow } from '../../actions/profile';
 
-// Small dialog listing the people who liked a post. It keeps its own pagination
-// state because the list is only useful while the dialog is open; nothing else
-// in the app needs it in Redux.
+// Small dialog listing the people who liked a post or a comment. It keeps its
+// own pagination state because the list is only useful while the dialog is
+// open; nothing else in the app needs it in Redux.
 const PostLikes = ({
   postId,
+  commentId,
   count,
   onClose,
   getPostLikes,
+  getCommentLikes,
   toggleFollow,
   auth
 }) => {
@@ -33,7 +35,11 @@ const PostLikes = ({
     setLoading(true);
     setError(false);
 
-    getPostLikes(postId, 1).then((result) => {
+    const request = commentId
+      ? getCommentLikes(postId, commentId, 1)
+      : getPostLikes(postId, 1);
+
+    request.then((result) => {
       if (!active) return;
 
       if (!result) {
@@ -51,7 +57,7 @@ const PostLikes = ({
     return () => {
       active = false;
     };
-  }, [getPostLikes, postId, attempt]);
+  }, [getPostLikes, getCommentLikes, postId, commentId, attempt]);
 
   // Escape closes the dialog, matching typical modal behaviour.
   useEffect(() => {
@@ -69,7 +75,9 @@ const PostLikes = ({
     setMoreLoading(true);
     setMoreError(false);
 
-    const result = await getPostLikes(postId, page + 1);
+    const result = commentId
+      ? await getCommentLikes(postId, commentId, page + 1)
+      : await getPostLikes(postId, page + 1);
 
     if (result) {
       setUsers((previous) => {
@@ -123,7 +131,9 @@ const PostLikes = ({
         className="likes-modal"
         role="dialog"
         aria-modal="true"
-        aria-label="People who liked this post"
+        aria-label={
+          commentId ? 'People who liked this comment' : 'People who liked this post'
+        }
       >
         <div className="likes-header">
           <h2>
@@ -249,14 +259,17 @@ const PostLikes = ({
 
 PostLikes.propTypes = {
   postId: PropTypes.string.isRequired,
+  commentId: PropTypes.string,
   count: PropTypes.number,
   onClose: PropTypes.func.isRequired,
   getPostLikes: PropTypes.func.isRequired,
+  getCommentLikes: PropTypes.func.isRequired,
   toggleFollow: PropTypes.func.isRequired,
   auth: PropTypes.object.isRequired
 };
 
 PostLikes.defaultProps = {
+  commentId: '',
   count: 0
 };
 
@@ -264,6 +277,8 @@ const mapStateToProps = (state) => ({
   auth: state.auth
 });
 
-export default connect(mapStateToProps, { getPostLikes, toggleFollow })(
-  PostLikes
-);
+export default connect(mapStateToProps, {
+  getPostLikes,
+  getCommentLikes,
+  toggleFollow
+})(PostLikes);

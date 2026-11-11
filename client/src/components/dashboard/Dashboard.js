@@ -1,4 +1,4 @@
-import React, { Fragment, useEffect } from 'react';
+import React, { Fragment, useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
@@ -28,6 +28,8 @@ const Dashboard = ({
   auth: { user },
   profile: { profile, loading }
 }) => {
+  const [deletingAccount, setDeletingAccount] = useState(false);
+
   useEffect(() => {
     getCurrentProfile();
     getFollowing();
@@ -56,6 +58,20 @@ const Dashboard = ({
   };
 
   const pct = completion();
+
+  // Guard the destructive request so a double-click can't fire a second
+  // delete after the first has already removed the account.
+  const onDeleteAccount = async () => {
+    if (deletingAccount) return;
+
+    setDeletingAccount(true);
+    const removed = await deleteAccount();
+
+    // On success the session is cleared and the app redirects; only re-enable
+    // the button when deletion failed or was cancelled.
+    if (!removed) setDeletingAccount(false);
+  };
+
   const missingHints = [];
   if (!profile || profile.status === '') missingHints.push('status');
   if (!profile || !profile.availability)
@@ -135,8 +151,17 @@ const Dashboard = ({
           <Experience experience={profile.experience || []} />
           <Education education={profile.education || []} />
           <div className="my-2">
-            <button className="btn btn-danger" onClick={() => deleteAccount()}>
-              <i className="fas fa-user-minus" /> Delete My Account
+            <button
+              className="btn btn-danger"
+              onClick={onDeleteAccount}
+              disabled={deletingAccount}
+            >
+              <i
+                className={`fas ${
+                  deletingAccount ? 'fa-circle-notch fa-spin' : 'fa-user-minus'
+                }`}
+              />{' '}
+              {deletingAccount ? 'Deleting account...' : 'Delete My Account'}
             </button>
           </div>
         </Fragment>

@@ -535,11 +535,15 @@ export const deleteAccount = () => async (dispatch) => {
       dispatch({ type: CLEAR_PROFILE });
       dispatch({ type: ACCOUNT_DELETED });
       dispatch(setAlert('Your account has been removed', 'danger'));
+      return true;
     } catch (err) {
       dispatch({
         type: PROFILE_ERROR,
         payload: getErrorPayload(err)
       });
+      return false;
     }
   }
+
+  return false;
 };

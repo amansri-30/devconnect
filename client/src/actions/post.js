@@ -277,6 +277,28 @@ export const getPostLikes =
     }
   };
 
+// Get one page of the users who liked a specific comment. Same return shape as
+// getPostLikes so the shared likes dialog can render either without changes.
+export const getCommentLikes =
+  (postId, commentId, page = 1, limit = 20) => async () => {
+    try {
+      const res = await axios.get(
+        `/api/posts/${postId}/comments/${commentId}/likes`,
+        { params: { page, limit } }
+      );
+
+      return {
+        users: res.data,
+        page,
+        total:
+          parseInt(res.headers['x-total-count'], 10) || res.data.length,
+        perPage: parseInt(res.headers['x-per-page'], 10) || limit
+      };
+    } catch (err) {
+      return null;
+    }
+  };
+
 // Edit a post's text (owner only)
 export const editPost = (postId, formData) => async dispatch => {
   const config = {

@@ -50,6 +50,72 @@ const extractTags = (text = '') => {
 const escapeRegExp = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Build a paginated, de-duplicated, newest-first list of users from a list of
+// like entries ({ user } or legacy raw id). Shared by post and comment likers
+// so both dialogs agree on ordering, paging and follow state.
+const paginateLikers = async (likes, query, viewerId) => {
+  const ids = [];
+  const seen = new Set();
+  const list = likes || [];
+
+  for (let i = list.length - 1; i >= 0; i -= 1) {
+    const entry = list[i];
+    const raw = entry && entry.user ? entry.user : entry;
+
+    if (!raw) continue;
+
+    const id = raw.toString();
+
+    if (seen.has(id)) continue;
+
+    seen.add(id);
+    ids.push(id);
+  }
+
+  const total = ids.length;
+  const page = Math.max(parseInt(query.page, 10) || 1, 1);
+  const limit = Math.min(Math.max(parseInt(query.limit, 10) || 20, 1), 50);
+  const pageIds = ids.slice((page - 1) * limit, page * limit);
+
+  const users = await User.find({ _id: { $in: pageIds } }).select(
+    'name avatar'
+  );
+
+  // Keep the newest-first order from the like list, and drop accounts that
+  // have since been deleted.
+  const byId = new Map(users.map((user) => [user._id.toString(), user]));
+
+  const me = await Profile.findOne({ user: viewerId }).select('following');
+  const following = new Set(
+    ((me && me.following) || []).map((id) => id.toString())
+  );
+
+  return {
+    total,
+    page,
+    limit,
+    users: pageIds
+      .map((id) => byId.get(id))
+      .filter(Boolean)
+      .map((user) => ({
+        _id: user._id,
+        name: user.name,
+        avatar: user.avatar,
+        isFollowing: following.has(user._id.toString())
+      }))
+  };
+};
+
+const sendLikers = (res, { total, page, limit, users }) => {
+  res.set({
+    'X-Total-Count': String(total),
+    'X-Page': String(page),
+    'X-Per-Page': String(limit)
+  });
+
+  return res.json(users);
+};
+
 // Free-text post filter shared by the public feed and the personal saved/liked
 // lists. Stored post text is HTML-escaped, so the query is matched in both its
 // raw (author names) and escaped (post text) forms; otherwise searching
@@ -461,72 +527,52 @@ router.get('/:id/likes', auth, async (req, res) => {
       return res.status(404).json({ msg: 'No post found' });
     }
 
-    // Walk the like list backwards so the most recent like comes first, and
-    // de-duplicate (a double-click race could otherwise add the same user
-    // twice). Accept both the current { user } shape and legacy raw ids.
-    const ids = [];
-    const seen = new Set();
-    const likes = post.likes || [];
+    const result = await paginateLikers(post.likes, req.query, req.user.id);
 
-    for (let i = likes.length - 1; i >= 0; i -= 1) {
-      const entry = likes[i];
-      const raw = entry && entry.user ? entry.user : entry;
-
-      if (!raw) continue;
-
-      const id = raw.toString();
-
-      if (seen.has(id)) continue;
-
-      seen.add(id);
-      ids.push(id);
-    }
-
-    const total = ids.length;
-    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
-    const limit = Math.min(
-      Math.max(parseInt(req.query.limit, 10) || 20, 1),
-      50
-    );
-    const pageIds = ids.slice((page - 1) * limit, page * limit);
-
-    const users = await User.find({ _id: { $in: pageIds } }).select(
-      'name avatar'
-    );
-
-    // Keep the newest-first order from the like list, and drop accounts that
-    // have since been deleted.
-    const byId = new Map(users.map((user) => [user._id.toString(), user]));
-
-    // Include the viewer's follow state so the list can offer follow buttons
-    // without an extra round-trip per row.
-    const me = await Profile.findOne({ user: req.user.id }).select('following');
-    const following = new Set(
-      ((me && me.following) || []).map((id) => id.toString())
-    );
-
-    const shaped = pageIds
-      .map((id) => byId.get(id))
-      .filter(Boolean)
-      .map((user) => ({
-        _id: user._id,
-        name: user.name,
-        avatar: user.avatar,
-        isFollowing: following.has(user._id.toString())
-      }));
-
-    res.set({
-      'X-Total-Count': String(total),
-      'X-Page': String(page),
-      'X-Per-Page': String(limit)
-    });
-
-    return res.json(shaped);
+    return sendLikers(res, result);
   } catch (err) {
     console.error(err.message);
 
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/posts/:post_id/comments/:comment_id/likes
+// @desc    Get the users who liked a comment, newest first (paginated)
+// @access  Private
+router.get('/:post_id/comments/:comment_id/likes', auth, async (req, res) => {
+  try {
+    if (
+      !/^[0-9a-fA-F]{24}$/.test(req.params.post_id) ||
+      !/^[0-9a-fA-F]{24}$/.test(req.params.comment_id)
+    ) {
+      return res.status(404).json({ msg: 'No comment found' });
+    }
+
+    const post = await Post.findById(req.params.post_id).select('comments');
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const comment = post.comments.id(req.params.comment_id);
+
+    if (!comment) {
+      return res.status(404).json({ msg: 'No comment found' });
+    }
+
+    const result = await paginateLikers(comment.likes, req.query, req.user.id);
+
+    return sendLikers(res, result);
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No comment found' });
     }
 
     return res.status(500).send('Server Error');
@@ -1043,6 +1089,13 @@ router.put('/comment/accept/:post_id/:comment_id', auth, async (req, res) => {
         comment: comment._id
       });
     } else {
+      // Only one answer can be accepted at a time, so retract the previous
+      // answerer's notification before announcing the newly accepted one.
+      await Notification.deleteMany({
+        type: 'accepted',
+        post: post._id
+      });
+
       await notify({
         recipient: comment.user,
         from: req.user.id,

@@ -1152,6 +1152,13 @@ router.delete('/', auth, async (req, res) => {
         { 'comments._id': { $in: objectIds } },
         { $pull: { comments: { _id: { $in: objectIds } } } }
       );
+
+      // A deleted answer can no longer be the accepted answer; clear any
+      // marker still pointing at it so the discussion isn't stuck "Answered".
+      await Post.updateMany(
+        { acceptedComment: { $in: objectIds } },
+        { $set: { acceptedComment: null } }
+      );
     }
 
     // Drop notifications sent by the deleted account

@@ -6,6 +6,7 @@ import Moment from 'react-moment';
 import { deleteComment, editComment, toggleCommentLike, acceptAnswer } from '../../actions/post';
 import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
+import PostLikes from '../posts/PostLikes';
 import CommentForm from './CommentForm';
 
 const CommentItem = ({
@@ -31,6 +32,7 @@ const CommentItem = ({
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [acceptBusy, setAcceptBusy] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
+  const [showLikes, setShowLikes] = useState(false);
 
   const isOwner =
     !auth.loading && auth.user && String(user) === String(auth.user._id);
@@ -175,8 +177,19 @@ const CommentItem = ({
           title={likedByMe ? 'Unlike comment' : 'Like comment'}
           disabled={likeBusy}
         >
-          <i className="fas fa-thumbs-up" /> <span>{commentLikes.length}</span>
+          <i className="fas fa-thumbs-up" /> {likedByMe ? 'Liked' : 'Like'}
         </button>
+        {commentLikes.length > 0 && (
+          <button
+            onClick={() => setShowLikes(true)}
+            type="button"
+            className="btn btn-light like-count-btn"
+            title="See who liked this comment"
+            aria-haspopup="dialog"
+          >
+            <i className="fas fa-users" /> <span>{commentLikes.length}</span>
+          </button>
+        )}
         <button
           onClick={() => setReplying((prev) => !prev)}
           type="button"
@@ -276,6 +289,14 @@ const CommentItem = ({
               </button>
             )}
           </div>
+        )}
+        {showLikes && (
+          <PostLikes
+            postId={postId}
+            commentId={_id}
+            count={commentLikes.length}
+            onClose={() => setShowLikes(false)}
+          />
         )}
       </div>
     </div>
