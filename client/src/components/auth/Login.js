@@ -9,6 +9,7 @@ const Login = ({ login, isAuthenticated }) => {
     email: '',
     password: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const { email, password } = formData;
 
@@ -17,7 +18,14 @@ const Login = ({ login, isAuthenticated }) => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
-    login(email, password);
+    if (submitting) return;
+
+    setSubmitting(true);
+    const success = await login(email, password);
+
+    // On success the component redirects; only re-enable the form when the
+    // credentials were rejected so the user can try again.
+    if (!success) setSubmitting(false);
   };
 
   // Navigate if login successful
@@ -53,7 +61,12 @@ const Login = ({ login, isAuthenticated }) => {
             minLength="6"
           />
         </div>
-        <input type="submit" className="btn btn-primary" value="Login" />
+        <input
+          type="submit"
+          className="btn btn-primary"
+          value={submitting ? 'Signing in...' : 'Login'}
+          disabled={submitting}
+        />
       </form>
       <p className="my-1">
         Don't have an account? <Link to="/register">Sign Up</Link>

@@ -48,6 +48,12 @@ const PostSchema = new Schema({
     type: Boolean,
     default: false
   },
+  // The comment the post author has marked as the accepted answer to their
+  // discussion. Null when nothing has been accepted yet.
+  acceptedComment: {
+    type: Schema.Types.ObjectId,
+    default: null
+  },
   comments: [
     {
       user: {

@@ -3,7 +3,7 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
-import { deleteComment, editComment, toggleCommentLike } from '../../actions/post';
+import { deleteComment, editComment, toggleCommentLike, acceptAnswer } from '../../actions/post';
 import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
 import CommentForm from './CommentForm';
@@ -15,10 +15,13 @@ const CommentItem = ({
   repliesByParent = {},
   isReply,
   forceExpand,
+  canAccept,
+  accepted,
   auth,
   deleteComment,
   editComment,
-  toggleCommentLike
+  toggleCommentLike,
+  acceptAnswer
 }) => {
   const [editing, setEditing] = useState(false);
   const [replying, setReplying] = useState(false);
@@ -26,6 +29,7 @@ const CommentItem = ({
   const [saving, setSaving] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
+  const [acceptBusy, setAcceptBusy] = useState(false);
   const [showAllReplies, setShowAllReplies] = useState(false);
 
   const isOwner =
@@ -92,6 +96,16 @@ const CommentItem = ({
     }
   };
 
+  const onAcceptAnswer = async () => {
+    if (acceptBusy) return;
+    setAcceptBusy(true);
+    try {
+      await acceptAnswer(postId, _id);
+    } finally {
+      setAcceptBusy(false);
+    }
+  };
+
   return (
     <div
       id={`comment-${_id}`}
@@ -131,6 +145,11 @@ const CommentItem = ({
           </form>
         ) : (
           <Fragment>
+            {accepted && (
+              <p className="accepted-badge" title="The post author marked this as the accepted answer">
+                <i className="fas fa-check-circle" /> Accepted answer
+              </p>
+            )}
             <p
               className="my-1"
               dangerouslySetInnerHTML={{ __html: linkify(text) }}
@@ -173,6 +192,26 @@ const CommentItem = ({
         >
           <i className="fas fa-link" />
         </Link>
+        {canAccept && !isReply && !isOwner && (
+          <button
+            onClick={onAcceptAnswer}
+            type="button"
+            className={`btn ${accepted ? 'btn-success' : 'btn-light'}`}
+            title={
+              accepted
+                ? 'Remove the accepted answer marker'
+                : 'Mark this comment as the accepted answer'
+            }
+            disabled={acceptBusy}
+          >
+            <i
+              className={`fas ${
+                acceptBusy ? 'fa-circle-notch fa-spin' : 'fa-check-circle'
+              }`}
+            />{' '}
+            {accepted ? 'Unaccept' : 'Accept answer'}
+          </button>
+        )}
         {isOwner && (
           <Fragment>
             {!editing && (
@@ -250,10 +289,18 @@ CommentItem.propTypes = {
   repliesByParent: PropTypes.object,
   isReply: PropTypes.bool,
   forceExpand: PropTypes.bool,
+  canAccept: PropTypes.bool,
+  accepted: PropTypes.bool,
   auth: PropTypes.object.isRequired,
   deleteComment: PropTypes.func.isRequired,
   editComment: PropTypes.func.isRequired,
-  toggleCommentLike: PropTypes.func.isRequired
+  toggleCommentLike: PropTypes.func.isRequired,
+  acceptAnswer: PropTypes.func.isRequired
+};
+
+CommentItem.defaultProps = {
+  canAccept: false,
+  accepted: false
 };
 
 const mapStateToProps = (state) => ({
@@ -263,5 +310,6 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   deleteComment,
   editComment,
-  toggleCommentLike
+  toggleCommentLike,
+  acceptAnswer
 })(CommentItem);

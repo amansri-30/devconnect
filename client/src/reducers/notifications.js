@@ -5,7 +5,8 @@ import {
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
-  NOTIFICATIONS_ERROR
+  NOTIFICATIONS_ERROR,
+  LOGOUT
 } from '../actions/types';
 
 const emptySummary = () => ({
@@ -141,6 +142,14 @@ export default function notificationReducer(state = initialState, action) {
       return {
         ...state,
         error: action.payload,
+        loading: false
+      };
+    case LOGOUT:
+      // Never carry another account's notifications, unread badge or summary
+      // into the next session.
+      return {
+        ...initialState,
+        summary: emptySummary(),
         loading: false
       };
     default:

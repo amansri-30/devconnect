@@ -990,6 +990,80 @@ router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
   }
 });
 
+// @route   PUT api/posts/comment/accept/:post_id/:comment_id
+// @desc    Accept (or un-accept) a top-level comment as the discussion's answer
+// @access  Private (post owner only)
+router.put('/comment/accept/:post_id/:comment_id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.post_id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    // Only the author of the discussion can decide which answer is accepted.
+    if (post.user.toString() !== req.user.id) {
+      return res.status(403).json({ msg: 'User not authorized' });
+    }
+
+    const comment = post.comments.id(req.params.comment_id);
+
+    if (!comment) {
+      return res.status(400).json({ msg: 'Comment does not exist' });
+    }
+
+    // Keep this concept to top-level answers; replies are part of the
+    // discussion under an answer rather than answers themselves.
+    if (comment.parent) {
+      return res
+        .status(400)
+        .json({ msg: 'Only top-level comments can be accepted answers' });
+    }
+
+    const alreadyAccepted =
+      post.acceptedComment &&
+      post.acceptedComment.toString() === req.params.comment_id;
+
+    if (!alreadyAccepted && comment.user.toString() === req.user.id) {
+      return res.status(400).json({ msg: "You can't accept your own comment" });
+    }
+
+    if (alreadyAccepted) {
+      post.acceptedComment = null;
+    } else {
+      post.acceptedComment = comment._id;
+    }
+
+    await post.save();
+
+    if (alreadyAccepted) {
+      // Remove the notification for the answer that is no longer accepted.
+      await Notification.deleteMany({
+        type: 'accepted',
+        comment: comment._id
+      });
+    } else {
+      await notify({
+        recipient: comment.user,
+        from: req.user.id,
+        type: 'accepted',
+        post: post._id,
+        comment: comment._id
+      });
+    }
+
+    return res.json(shapePost(post, req.user.id));
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   DELETE api/posts/comment/:post_id/:comment_id
 // @desc    Remove comment from a post
 // @access  Private
@@ -1039,6 +1113,15 @@ router.delete('/comment/:post_id/:comment_id', auth, async (req, res) => {
     post.comments = post.comments.filter(
       (c) => !removedIds.has(c.id.toString())
     );
+
+    // If the accepted answer was part of the deleted thread, clear the marker
+    // so the discussion doesn't point at a comment that no longer exists.
+    if (
+      post.acceptedComment &&
+      removedIds.has(post.acceptedComment.toString())
+    ) {
+      post.acceptedComment = null;
+    }
 
     await post.save();
 

@@ -35,7 +35,7 @@ const sortComments = (list, sort) => {
   return copy.sort(byDate);
 };
 
-const Post = ({ getSinglePost, post: { post, loading } }) => {
+const Post = ({ getSinglePost, post: { post, loading }, auth }) => {
   const { postId } = useParams();
   const location = useLocation();
   const [commentSort, setCommentSort] = useState('oldest');
@@ -102,6 +102,15 @@ const Post = ({ getSinglePost, post: { post, loading } }) => {
 
   const commentCount = allComments.length;
 
+  // Only the author of the discussion can mark an answer, and only top-level
+  // comments are eligible. IDs are normalised to strings because the post and
+  // comment payloads can hold either raw ids or ObjectIds.
+  const isPostOwner =
+    Boolean(post && auth.user) &&
+    String(post.user) === String(auth.user._id);
+  const acceptedCommentId =
+    post && post.acceptedComment ? String(post.acceptedComment) : null;
+
   return loading ? (
     <Spinner />
   ) : !post ? (
@@ -126,6 +135,11 @@ const Post = ({ getSinglePost, post: { post, loading } }) => {
         <h2 className="comments-title">
           <i className="fas fa-comments" /> {commentCount}{' '}
           {commentCount === 1 ? 'Comment' : 'Comments'}
+          {acceptedCommentId && (
+            <span className="accepted-badge" title="This discussion has an accepted answer">
+              <i className="fas fa-check-circle" /> Answered
+            </span>
+          )}
         </h2>
         {commentCount > 1 && (
           <label className="comment-sort">
@@ -154,6 +168,8 @@ const Post = ({ getSinglePost, post: { post, loading } }) => {
               replies={repliesByParent[String(comment._id)] || []}
               repliesByParent={repliesByParent}
               forceExpand={Boolean(anchorId)}
+              canAccept={isPostOwner}
+              accepted={acceptedCommentId === String(comment._id)}
             />
           ))
         ) : (
@@ -166,11 +182,13 @@ const Post = ({ getSinglePost, post: { post, loading } }) => {
 
 Post.propTypes = {
   getSinglePost: PropTypes.func.isRequired,
-  post: PropTypes.object.isRequired
+  post: PropTypes.object.isRequired,
+  auth: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-  post: state.post
+  post: state.post,
+  auth: state.auth
 });
 
 export default connect(mapStateToProps, { getSinglePost })(Post);

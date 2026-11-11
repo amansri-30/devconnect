@@ -17,6 +17,7 @@ const FILTERS = [
   { key: 'like', label: 'Likes', icon: 'fas fa-thumbs-up' },
   { key: 'comment', label: 'Comments', icon: 'fas fa-comment' },
   { key: 'reply', label: 'Replies', icon: 'fas fa-reply' },
+  { key: 'accepted', label: 'Accepted answers', icon: 'fas fa-check-circle' },
   { key: 'comment_like', label: 'Comment likes', icon: 'fas fa-heart' }
 ];
 
@@ -112,6 +113,8 @@ const Notifications = ({
         return { icon: 'fas fa-comment', className: 'badge-light' };
       case 'reply':
         return { icon: 'fas fa-reply', className: 'badge-light' };
+      case 'accepted':
+        return { icon: 'fas fa-check-circle', className: 'badge-success' };
       case 'comment_like':
         return { icon: 'fas fa-heart', className: 'badge-danger' };
       default:
@@ -130,6 +133,8 @@ const Notifications = ({
         return <Fragment>{who} commented on your post</Fragment>;
       case 'reply':
         return <Fragment>{who} replied to your comment</Fragment>;
+      case 'accepted':
+        return <Fragment>{who} accepted your answer</Fragment>;
       case 'comment_like':
         return <Fragment>{who} liked your comment</Fragment>;
       default:

@@ -12,6 +12,7 @@ const Register = ({ setAlert, register, isAuthenticated }) => {
     password: '',
     password2: ''
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const { name, email, password, password2 } = formData;
 
@@ -20,11 +21,19 @@ const Register = ({ setAlert, register, isAuthenticated }) => {
 
   const onSubmit = async (e) => {
     e.preventDefault();
+    if (submitting) return;
+
     if (password !== password2) {
       setAlert('Passwords do not match', 'danger');
-    } else {
-      register({ name, email, password });
+      return;
     }
+
+    setSubmitting(true);
+    const success = await register({ name, email, password });
+
+    // On success the component redirects; only re-enable the form when
+    // registration failed so the user's input is kept.
+    if (!success) setSubmitting(false);
   };
 
   // Navigate if registration successful
@@ -85,7 +94,12 @@ const Register = ({ setAlert, register, isAuthenticated }) => {
             minLength="6"
           />
         </div>
-        <input type="submit" className="btn btn-primary" value="Register" />
+        <input
+          type="submit"
+          className="btn btn-primary"
+          value={submitting ? 'Creating account...' : 'Register'}
+          disabled={submitting}
+        />
       </form>
       <p className="my-1">
         Already have an account? <Link to="/login">Sign In</Link>

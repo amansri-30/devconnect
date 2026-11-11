@@ -11,7 +11,8 @@ const NOTIFICATION_TYPES = [
   'like',
   'comment',
   'comment_like',
-  'reply'
+  'reply',
+  'accepted'
 ];
 
 const isUnreadFilter = (value) => value === 'true' || value === '1';

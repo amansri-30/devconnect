@@ -70,12 +70,14 @@ export const register = ({ name, email, password }) => async dispatch => {
       type: REGISTER_SUCCESS,
       payload: res.data
     });
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
     dispatch({
       type: REGISTER_FAIL
     });
+    return false;
   }
 };
 
@@ -96,12 +98,14 @@ export const login = (email, password) => async dispatch => {
       type: LOGIN_SUCCESS,
       payload: res.data
     });
+    return true;
   } catch (err) {
     getErrorMessages(err).forEach((msg) => dispatch(setAlert(msg, 'danger')));
 
     dispatch({
       type: LOGIN_FAIL
     });
+    return false;
   }
 };
 

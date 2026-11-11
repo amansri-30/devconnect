@@ -401,6 +401,10 @@ export const getUserPostArchive =
         }
       });
     } catch (err) {
+      // A slow failure from a profile/sort the viewer has already left must
+      // not clear the loading flag or error banner for the active archive.
+      if (requestId !== archiveRequestId) return;
+
       dispatch({
         type: POST_ERROR,
         payload: getErrorPayload(err)
@@ -656,6 +660,37 @@ export const toggleCommentLike = (postId, commentId) => async (dispatch) => {
       type: POST_ERROR,
       payload: getErrorPayload(err)
     });
+  }
+};
+
+// Accept or un-accept a top-level comment as the post author's chosen answer.
+export const acceptAnswer = (postId, commentId) => async (dispatch) => {
+  try {
+    const res = await axios.put(
+      `/api/posts/comment/accept/${postId}/${commentId}`
+    );
+
+    // The endpoint returns the updated post (including its comments and the
+    // acceptedComment marker), so merge it into every list that renders it.
+    dispatch({
+      type: UPDATE_POST,
+      payload: res.data
+    });
+
+    return true;
+  } catch (err) {
+    const data = err.response && err.response.data;
+    const msg =
+      (data && data.msg) ||
+      (data && data.errors && data.errors[0] && data.errors[0].msg) ||
+      'Could not update the accepted answer';
+
+    dispatch(setAlert(msg, 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+    return false;
   }
 };
 
