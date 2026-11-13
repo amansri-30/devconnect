@@ -31,7 +31,10 @@ import {
   DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
-  REMOVE_COMMENT
+  REMOVE_COMMENT,
+  REQUEST_RELATED_POSTS,
+  GET_RELATED_POSTS,
+  RELATED_POSTS_ERROR
 } from './types';
 
 // Monotonic token so a stale archive response (e.g. after switching profiles
@@ -49,6 +52,7 @@ let singlePostRequestId = 0;
 let savedRequestId = 0;
 let likedRequestId = 0;
 let myPostsRequestId = 0;
+let relatedRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -256,6 +260,39 @@ export const getSinglePost = postId => async dispatch => {
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get a short list of discussions related to the open post. The request token
+// makes sure a slow response for the previous post can't replace the list while
+// the viewer is already reading another discussion.
+export const getRelatedPosts = (postId, limit = 4) => async (dispatch) => {
+  const requestId = ++relatedRequestId;
+
+  dispatch({
+    type: REQUEST_RELATED_POSTS,
+    payload: { postId, requestId }
+  });
+
+  try {
+    const res = await axios.get(`/api/posts/${postId}/related`, {
+      params: { limit }
+    });
+
+    if (requestId !== relatedRequestId) return;
+
+    dispatch({
+      type: GET_RELATED_POSTS,
+      payload: { postId, posts: res.data, requestId }
+    });
+  } catch (err) {
+    // A stale failure must not stop the spinner of the current post.
+    if (requestId !== relatedRequestId) return;
+
+    dispatch({
+      type: RELATED_POSTS_ERROR,
+      payload: { requestId }
     });
   }
 };

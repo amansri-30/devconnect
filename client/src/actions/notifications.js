@@ -115,6 +115,10 @@ export const markNotificationsRead = (id) => async (dispatch) => {
       dispatch({ type: MARK_ALL_NOTIFICATIONS_READ });
     }
   } catch (err) {
+    // Opening a notification that was already cleared must not surface an
+    // error banner; the click still navigates to its target.
+    if (id && err.response && err.response.status === 404) return;
+
     dispatch({
       type: NOTIFICATIONS_ERROR,
       payload: getErrorPayload(err)

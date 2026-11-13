@@ -32,6 +32,9 @@ import {
   UPDATE_COMMENT,
   REMOVE_COMMENT,
   REQUEST_MY_POSTS,
+  REQUEST_RELATED_POSTS,
+  GET_RELATED_POSTS,
+  RELATED_POSTS_ERROR,
   LOGOUT,
   LOGIN_SUCCESS,
   REGISTER_SUCCESS,
@@ -72,6 +75,12 @@ const initialState = {
   },
   followingFeed: [],
   trendingPosts: [],
+  related: {
+    for: null,
+    posts: [],
+    loading: false,
+    requestId: 0
+  },
   loading: true,
   postsLoading: true,
   requestId: 0,
@@ -139,6 +148,8 @@ export default function postReducer(state = initialState, action) {
         ...state,
         singleRequestId: action.payload.requestId,
         post: null,
+        // Starting a new discussion replaces the related list too.
+        related: initialState.related,
         loading: true
       };
     case GET_SINGLE_POST: {
@@ -443,6 +454,10 @@ export default function postReducer(state = initialState, action) {
         },
         followingFeed: state.followingFeed.map(merge),
         trendingPosts: state.trendingPosts.map(merge),
+        related: {
+          ...state.related,
+          posts: state.related.posts.map(merge)
+        },
         loading: false
       };
     }
@@ -509,6 +524,52 @@ export default function postReducer(state = initialState, action) {
           loading: false
         }
       };
+    case REQUEST_RELATED_POSTS: {
+      const { postId, requestId } = action.payload;
+      // Switching posts starts a clean list; retrying the same post keeps what
+      // is already on screen until the new response lands.
+      const reset = state.related.for !== postId;
+
+      return {
+        ...state,
+        related: {
+          for: postId,
+          posts: reset ? [] : state.related.posts,
+          loading: true,
+          requestId
+        }
+      };
+    }
+    case GET_RELATED_POSTS: {
+      const { postId, posts, requestId } = action.payload;
+
+      if (
+        state.related.for !== postId ||
+        state.related.requestId !== requestId
+      ) {
+        return state;
+      }
+
+      return {
+        ...state,
+        related: {
+          ...state.related,
+          posts,
+          loading: false
+        }
+      };
+    }
+    case RELATED_POSTS_ERROR:
+      // Keep any previous rows; only stop the spinner for the active request.
+      if (action.payload.requestId !== state.related.requestId) return state;
+
+      return {
+        ...state,
+        related: {
+          ...state.related,
+          loading: false
+        }
+      };
     case UPDATE_LIKES:
       return {
         ...state,
@@ -559,6 +620,14 @@ export default function postReducer(state = initialState, action) {
             ? { ...post, likes: action.payload.likes }
             : post
         ),
+        related: {
+          ...state.related,
+          posts: state.related.posts.map((post) =>
+            post._id === action.payload.postId
+              ? { ...post, likes: action.payload.likes }
+              : post
+          )
+        },
         loading: false
       };
     case DELETE_POST: {
@@ -597,6 +666,10 @@ export default function postReducer(state = initialState, action) {
         trendingPosts: state.trendingPosts.filter(
           (p) => p._id !== action.payload
         ),
+        related: {
+          ...state.related,
+          posts: state.related.posts.filter((p) => p._id !== action.payload)
+        },
         total: Math.max(state.total - 1, 0),
         loading: false
       };

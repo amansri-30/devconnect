@@ -44,6 +44,24 @@ const parseDate = (value) => {
   return parsed.isValid() ? parsed : null;
 };
 
+// Parse and validate an experience/education date range. A current role
+// ignores the end date, and an end date before the start date is rejected
+// instead of saving a nonsensical "finished before I started" entry.
+const resolveDateRange = (body) => {
+  const from = parseDate(body.from);
+  if (!from) return { error: 'From date is invalid' };
+
+  const current = isCurrentRole(body.current);
+  const to = current ? null : parseDate(body.to);
+
+  if (!current && body.to && !to) return { error: 'To date is invalid' };
+  if (to && to.isBefore(from)) {
+    return { error: 'To date cannot be before the from date' };
+  }
+
+  return { from, to, current };
+};
+
 // Keep this in sync with the Profile model enum and the client's
 // utils/availability.js option list.
 const AVAILABILITY_OPTIONS = ['open-to-work', 'hiring', 'open-to-mentoring'];
@@ -654,12 +672,14 @@ router.post(
       }
     }
 
-    // social links
-    profileFields.social = {};
+    // Social links are collected separately: only the fields the client
+    // actually submitted should change. Writing `social: {}` on every request
+    // wiped links the form didn't manage (e.g. a partial API update).
+    const socialFields = {};
     ['youtube', 'twitter', 'facebook', 'linkedin', 'instagram'].forEach(
       (field) => {
         if (req.body[field] !== undefined) {
-          profileFields.social[field] = req.body[field]
+          socialFields[field] = req.body[field]
             ? normalizeUrl(cleanText(req.body[field]))
             : '';
         }
@@ -676,10 +696,16 @@ router.post(
       let profile = await Profile.findOne({ user: req.user.id });
 
       if (profile) {
-        //Update profile
+        // Update only the submitted fields. Social links use dotted paths so
+        // clearing one link never removes the others.
+        const updates = { ...profileFields };
+        Object.keys(socialFields).forEach((field) => {
+          updates[`social.${field}`] = socialFields[field];
+        });
+
         profile = await Profile.findOneAndUpdate(
           { user: req.user.id },
-          { $set: profileFields },
+          { $set: updates },
           { new: true }
         );
 
@@ -687,6 +713,10 @@ router.post(
       }
 
       // Create profile
+      if (Object.keys(socialFields).length > 0) {
+        profileFields.social = socialFields;
+      }
+
       profile = new Profile(profileFields);
       await profile.save();
       return res.json(profile);
@@ -705,8 +735,8 @@ router.put(
   [
     auth,
     [
-      check('title', 'Title is required').not().isEmpty(),
-      check('company', 'Company is required').not().isEmpty(),
+      check('title', 'Title is required').trim().not().isEmpty(),
+      check('company', 'Company is required').trim().not().isEmpty(),
       check('from', 'From date is required').not().isEmpty()
     ]
   ],
@@ -717,32 +747,20 @@ router.put(
     }
 
     const { title, company, location, description } = req.body;
-    const current = isCurrentRole(req.body.current);
+    const dates = resolveDateRange(req.body);
 
-    const from = parseDate(req.body.from);
-    if (!from) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: 'From date is invalid' }] });
-    }
-
-    // A missing end date must stay null instead of defaulting to "now" (the
-    // old code only compared against "", so an omitted field became today).
-    const to = current ? null : parseDate(req.body.to);
-    if (!current && req.body.to && !to) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: 'To date is invalid' }] });
+    if (dates.error) {
+      return res.status(400).json({ errors: [{ msg: dates.error }] });
     }
 
     const newExp = {
-      title,
-      company,
-      location,
-      from,
-      to,
-      current,
-      description
+      title: cleanText(title),
+      company: cleanText(company),
+      location: cleanText(location),
+      from: dates.from,
+      to: dates.to,
+      current: dates.current,
+      description: cleanText(description)
     };
 
     try {
@@ -774,9 +792,9 @@ router.put(
   [
     auth,
     [
-      check('school', 'School is required').not().isEmpty(),
-      check('degree', 'Degree is required').not().isEmpty(),
-      check('fieldofstudy', 'Field of study is required').not().isEmpty(),
+      check('school', 'School is required').trim().not().isEmpty(),
+      check('degree', 'Degree is required').trim().not().isEmpty(),
+      check('fieldofstudy', 'Field of study is required').trim().not().isEmpty(),
       check('from', 'From date is required').not().isEmpty()
     ]
   ],
@@ -787,30 +805,20 @@ router.put(
     }
 
     const { school, degree, fieldofstudy, description } = req.body;
-    const current = isCurrentRole(req.body.current);
+    const dates = resolveDateRange(req.body);
 
-    const from = parseDate(req.body.from);
-    if (!from) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: 'From date is invalid' }] });
-    }
-
-    const to = current ? null : parseDate(req.body.to);
-    if (!current && req.body.to && !to) {
-      return res
-        .status(400)
-        .json({ errors: [{ msg: 'To date is invalid' }] });
+    if (dates.error) {
+      return res.status(400).json({ errors: [{ msg: dates.error }] });
     }
 
     const newEdu = {
-      school,
-      degree,
-      fieldofstudy,
-      from,
-      to,
-      current,
-      description
+      school: cleanText(school),
+      degree: cleanText(degree),
+      fieldofstudy: cleanText(fieldofstudy),
+      from: dates.from,
+      to: dates.to,
+      current: dates.current,
+      description: cleanText(description)
     };
 
     try {
@@ -842,8 +850,8 @@ router.put(
   [
     auth,
     [
-      check('title', 'Title is required').not().isEmpty(),
-      check('company', 'Company is required').not().isEmpty(),
+      check('title', 'Title is required').trim().not().isEmpty(),
+      check('company', 'Company is required').trim().not().isEmpty(),
       check('from', 'From date is required').not().isEmpty()
     ]
   ],
@@ -871,31 +879,21 @@ router.put(
       }
 
       const { title, company, location, description } = req.body;
-      const current = isCurrentRole(req.body.current);
+      const dates = resolveDateRange(req.body);
 
-      const from = parseDate(req.body.from);
-      if (!from) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: 'From date is invalid' }] });
-      }
-
-      const to = current ? null : parseDate(req.body.to);
-      if (!current && req.body.to && !to) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: 'To date is invalid' }] });
+      if (dates.error) {
+        return res.status(400).json({ errors: [{ msg: dates.error }] });
       }
 
       profile.experience[targetIndex] = {
         ...profile.experience[targetIndex].toObject(),
-        title,
-        company,
-        location,
-        from,
-        to,
-        current,
-        description
+        title: cleanText(title),
+        company: cleanText(company),
+        location: cleanText(location),
+        from: dates.from,
+        to: dates.to,
+        current: dates.current,
+        description: cleanText(description)
       };
 
       await profile.save();
@@ -916,9 +914,9 @@ router.put(
   [
     auth,
     [
-      check('school', 'School is required').not().isEmpty(),
-      check('degree', 'Degree is required').not().isEmpty(),
-      check('fieldofstudy', 'Field of study is required').not().isEmpty(),
+      check('school', 'School is required').trim().not().isEmpty(),
+      check('degree', 'Degree is required').trim().not().isEmpty(),
+      check('fieldofstudy', 'Field of study is required').trim().not().isEmpty(),
       check('from', 'From date is required').not().isEmpty()
     ]
   ],
@@ -946,31 +944,21 @@ router.put(
       }
 
       const { school, degree, fieldofstudy, description } = req.body;
-      const current = isCurrentRole(req.body.current);
+      const dates = resolveDateRange(req.body);
 
-      const from = parseDate(req.body.from);
-      if (!from) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: 'From date is invalid' }] });
-      }
-
-      const to = current ? null : parseDate(req.body.to);
-      if (!current && req.body.to && !to) {
-        return res
-          .status(400)
-          .json({ errors: [{ msg: 'To date is invalid' }] });
+      if (dates.error) {
+        return res.status(400).json({ errors: [{ msg: dates.error }] });
       }
 
       profile.education[targetIndex] = {
         ...profile.education[targetIndex].toObject(),
-        school,
-        degree,
-        fieldofstudy,
-        from,
-        to,
-        current,
-        description
+        school: cleanText(school),
+        degree: cleanText(degree),
+        fieldofstudy: cleanText(fieldofstudy),
+        from: dates.from,
+        to: dates.to,
+        current: dates.current,
+        description: cleanText(description)
       };
 
       await profile.save();

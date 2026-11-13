@@ -16,6 +16,8 @@ import {
   GET_LEADERBOARD,
   GET_SUGGESTIONS,
   GET_NETWORK_USERS,
+  REQUEST_NETWORK_USERS,
+  NETWORK_ERROR,
   LOGOUT,
   LOGIN_SUCCESS,
   REGISTER_SUCCESS,
@@ -39,6 +41,7 @@ const initialState = {
   leaderboard: [],
   suggestions: [],
   networkUsers: [],
+  networkError: null,
   isFollowing: false,
   followsYou: false,
   followersCount: 0,
@@ -185,10 +188,26 @@ export default function profileReducer(state = initialState, action) {
         suggestions: action.payload,
         loading: false
       };
+    case REQUEST_NETWORK_USERS:
+      // Clear the previous tab's rows while the new list loads so a failure
+      // can never leave them visible under the wrong heading.
+      return {
+        ...state,
+        networkUsers: [],
+        networkError: null
+      };
     case GET_NETWORK_USERS:
       return {
         ...state,
         networkUsers: action.payload,
+        networkError: null,
+        loading: false
+      };
+    case NETWORK_ERROR:
+      return {
+        ...state,
+        networkUsers: [],
+        networkError: action.payload,
         loading: false
       };
     case PROFILE_ERROR:
@@ -214,6 +233,7 @@ export default function profileReducer(state = initialState, action) {
         leaderboard: [],
         suggestions: [],
         networkUsers: [],
+        networkError: null,
         isFollowing: false,
         followsYou: false,
         followersCount: 0,

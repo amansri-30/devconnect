@@ -18,7 +18,9 @@ GET_PROFILE,
   GET_FOLLOWERS,
   GET_LEADERBOARD,
   GET_SUGGESTIONS,
-  GET_NETWORK_USERS
+  GET_NETWORK_USERS,
+  REQUEST_NETWORK_USERS,
+  NETWORK_ERROR
 } from './types';
 
 // Monotonic tokens so a slow response for a profile/network tab/directory
@@ -187,6 +189,8 @@ export const toggleFollow = (userId) => async (dispatch) => {
 const fetchNetworkList = (url) => async (dispatch) => {
   const requestId = ++networkRequestId;
 
+  dispatch({ type: REQUEST_NETWORK_USERS });
+
   try {
     const res = await axios.get(url);
 
@@ -199,8 +203,11 @@ const fetchNetworkList = (url) => async (dispatch) => {
   } catch (err) {
     if (requestId !== networkRequestId) return;
 
+    // Clear the list as well as reporting the error: leaving the previous
+    // tab's rows on screen under the new heading is worse than showing an
+    // empty/error state.
     dispatch({
-      type: PROFILE_ERROR,
+      type: NETWORK_ERROR,
       payload: getErrorPayload(err)
     });
   }

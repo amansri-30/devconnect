@@ -7,6 +7,7 @@ import { getSinglePost } from '../../actions/post';
 import PostItem from '../posts/PostItem';
 import CommentForm from './CommentForm';
 import CommentItem from './CommentItem';
+import RelatedPosts from './RelatedPosts';
 
 const COMMENT_SORTS = [
   { value: 'oldest', label: 'Oldest first' },
@@ -202,6 +203,7 @@ const Post = ({ getSinglePost, post: { post, loading }, auth }) => {
           <p className="my-1">No comments yet. Be the first to comment!</p>
         )}
       </div>
+      <RelatedPosts postId={post._id} />
     </Fragment>
   );
 };

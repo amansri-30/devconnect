@@ -585,17 +585,103 @@ router.get('/:post_id/comments/:comment_id/likes', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/posts/:id/related
+// @desc    Get discussions related to this one (shared hashtags first, then
+//          more posts by the same author)
+// @access  Private
+router.get('/:id/related', auth, async (req, res) => {
+  try {
+    if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const post = await Post.findById(req.params.id).select('tags user');
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 4, 1),
+      10
+    );
+    const tags = (post.tags || []).map((tag) => String(tag)).filter(Boolean);
+
+    // Rank candidates by how many hashtags they share with the open post, then
+    // by engagement. Aggregations don't cast ids, so match with the ObjectIds
+    // already held by the fetched document.
+    const rank = (match, take) =>
+      Post.aggregate([
+        { $match: match },
+        {
+          $addFields: {
+            sharedTags: {
+              $size: {
+                $setIntersection: [{ $ifNull: ['$tags', []] }, tags]
+              }
+            },
+            likesCount: { $size: { $ifNull: ['$likes', []] } },
+            commentsCount: { $size: { $ifNull: ['$comments', []] } }
+          }
+        },
+        {
+          $sort: {
+            sharedTags: -1,
+            likesCount: -1,
+            commentsCount: -1,
+            date: -1
+          }
+        },
+        { $limit: take }
+      ]);
+
+    // Only search by hashtag when there is one; otherwise the tag query would
+    // match every post and the ranking would be meaningless.
+    let related = tags.length
+      ? await rank({ _id: { $ne: post._id }, tags: { $in: tags } }, limit)
+      : [];
+
+    // Top up with the author's other discussions so a post that shares a tag
+    // with only one other post still gets a useful list.
+    if (related.length < limit) {
+      const seenIds = related.map((doc) => doc._id);
+      const more = await rank(
+        {
+          _id: { $nin: [post._id, ...seenIds] },
+          user: post.user
+        },
+        limit - related.length
+      );
+      related = related.concat(more);
+    }
+
+    return res.json(related.map((doc) => shapePost(doc, req.user.id)));
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/posts/:id
 // @desc    Get post by id
 // @access  Private
 router.get('/:id', auth, async (req, res) => {
   try {
-    // Atomic view counter: increments on every open and returns the updated doc.
-    const post = await Post.findByIdAndUpdate(
-      req.params.id,
+    // Atomic view counter: only count reads by other people, so an author
+    // refreshing their own discussion doesn't inflate its stats. The fallback
+    // fetch handles the author's own post (where the update matches nothing).
+    const viewed = await Post.findOneAndUpdate(
+      { _id: req.params.id, user: { $ne: req.user.id } },
       { $inc: { views: 1 } },
       { new: true }
     );
+
+    const post = viewed || (await Post.findById(req.params.id));
 
     if (!post) {
       return res.status(404).json({ msg: 'No post found' });

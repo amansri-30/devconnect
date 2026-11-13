@@ -142,10 +142,21 @@ router.get('/unread-count', auth, async (req, res) => {
 router.put('/read/:id?', auth, async (req, res) => {
   try {
     if (req.params.id) {
-      await Notification.findOneAndUpdate(
+      // A stale notification link should not report success for something the
+      // viewer no longer owns (or that was already cleared), otherwise the
+      // unread badge can never reconcile.
+      if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) {
+        return res.status(404).json({ msg: 'Notification not found' });
+      }
+
+      const notification = await Notification.findOneAndUpdate(
         { _id: req.params.id, recipient: req.user.id },
         { read: true }
       );
+
+      if (!notification) {
+        return res.status(404).json({ msg: 'Notification not found' });
+      }
     } else {
       await Notification.updateMany(
         { recipient: req.user.id, read: false },

@@ -13,7 +13,7 @@ import {
 const Network = ({
   getNetworkFollowers,
   getNetworkFollowing,
-  profile: { networkUsers, loading }
+  profile: { networkUsers, networkError, loading }
 }) => {
   const { userId } = useParams();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -41,6 +41,21 @@ const Network = ({
 
   const switchTab = (next) => {
     setSearchParams({ tab: next }, { replace: true });
+  };
+
+  // Retry the failed list without changing the URL; the spinner stays up until
+  // the refreshed result (or a new error) is on screen.
+  const reload = async () => {
+    if (!userId) return;
+
+    setSwitching(true);
+    try {
+      await (tab === 'following'
+        ? getNetworkFollowing(userId)
+        : getNetworkFollowers(userId));
+    } finally {
+      setSwitching(false);
+    }
   };
 
   const label = tab === 'following' ? 'Following' : 'Followers';
@@ -73,7 +88,16 @@ const Network = ({
         </button>
       </div>
       <div className="profiles">
-        {users.length > 0 ? (
+        {networkError ? (
+          <div className="network-error my-1">
+            <p>
+              {networkError.msg || 'Could not load this list. Please try again.'}
+            </p>
+            <button type="button" className="btn btn-primary" onClick={reload}>
+              <i className="fas fa-sync-alt" /> Retry
+            </button>
+          </div>
+        ) : users.length > 0 ? (
           users.map((user) => (
             <div key={user._id} className="profile bg-light">
               <img className="round-img" src={user.avatar} alt={user.name} />
