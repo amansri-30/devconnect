@@ -15,7 +15,11 @@ import {
   GET_FOLLOWERS,
   GET_LEADERBOARD,
   GET_SUGGESTIONS,
-  GET_NETWORK_USERS
+  GET_NETWORK_USERS,
+  LOGOUT,
+  LOGIN_SUCCESS,
+  REGISTER_SUCCESS,
+  ACCOUNT_DELETED
 } from '../actions/types';
 
 const initialState = {
@@ -30,11 +34,11 @@ const initialState = {
   repos: [],
   reposLoading: false,
   reposError: null,
-following: [],
-        followers: [],
-        leaderboard: [],
-        suggestions: [],
-        networkUsers: [],
+  following: [],
+  followers: [],
+  leaderboard: [],
+  suggestions: [],
+  networkUsers: [],
   isFollowing: false,
   followsYou: false,
   followersCount: 0,
@@ -206,15 +210,26 @@ export default function profileReducer(state = initialState, action) {
         reposLoading: false,
         reposError: null,
         following: [],
-followers: [],
-  leaderboard: [],
-  suggestions: [],
-  networkUsers: [],
+        followers: [],
+        leaderboard: [],
+        suggestions: [],
+        networkUsers: [],
         isFollowing: false,
         followsYou: false,
         followersCount: 0,
         followingCount: 0,
         loading: false
+      };
+    case LOGOUT:
+    case LOGIN_SUCCESS:
+    case REGISTER_SUCCESS:
+    case ACCOUNT_DELETED:
+      // Following/followers, suggestion and directory rows all carry the
+      // previous account's relationship state; start the next session clean.
+      return {
+        ...initialState,
+        loading: false,
+        profilesLoading: false
       };
     case REQUEST_REPOS:
       // Clear the previous developer's repos immediately; otherwise they flash

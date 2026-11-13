@@ -8,7 +8,11 @@ import {
   SAVE_POST,
   DELETE_POST,
   UPDATE_POST,
-  TOGGLE_PIN
+  TOGGLE_PIN,
+  LOGOUT,
+  LOGIN_SUCCESS,
+  REGISTER_SUCCESS,
+  ACCOUNT_DELETED
 } from '../actions/types';
 
 const initialState = {
@@ -152,6 +156,13 @@ export default function searchReducer(state = initialState, action) {
       };
     }
     case CLEAR_SEARCH:
+      return initialState;
+    case LOGOUT:
+    case LOGIN_SUCCESS:
+    case REGISTER_SUCCESS:
+    case ACCOUNT_DELETED:
+      // Search results include follow state and auth-only post actions, so a
+      // new session must start from a clean slate.
       return initialState;
     default:
       return state;

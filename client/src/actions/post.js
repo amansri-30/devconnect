@@ -17,6 +17,7 @@ import {
   REQUEST_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
+  REQUEST_MY_POSTS,
   GET_USER_POSTS,
   REQUEST_USER_POSTS,
   GET_USER_POST_ARCHIVE,
@@ -47,6 +48,7 @@ let singlePostRequestId = 0;
 // fire several requests, and only the newest one may touch the list.
 let savedRequestId = 0;
 let likedRequestId = 0;
+let myPostsRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
 // response body exists.
@@ -63,12 +65,14 @@ const getErrorPayload = (err) => ({
 // scope may be 'all' (default) or 'following' (posts from developers you follow).
 // search filters by post text or author name (server-side, across all posts).
 // tag limits the feed to posts carrying that hashtag.
+// unanswered limits the feed to discussions without an accepted answer.
 export const getPosts = (
   page = 1,
   sort = 'recent',
   scope = 'all',
   search = '',
-  tag = ''
+  tag = '',
+  unanswered = false
 ) => async (dispatch) => {
   const requestId = ++postsRequestId;
 
@@ -84,6 +88,7 @@ export const getPosts = (
     if (scope === 'following') params.scope = 'following';
     if (search.trim()) params.search = search.trim();
     if (tag.trim()) params.tag = tag.trim();
+    if (unanswered) params.unanswered = 'true';
 
     const res = await axios.get('/api/posts', { params });
 
@@ -242,7 +247,7 @@ export const getSinglePost = postId => async dispatch => {
 
     dispatch({
       type: GET_SINGLE_POST,
-      payload: res.data
+      payload: { post: res.data, requestId }
     });
   } catch (err) {
     // A stale failure must not blank the post the viewer is now reading.
@@ -348,14 +353,26 @@ export const togglePinPost = (postId, userId) => async (dispatch) => {
 
 // Get the current user's own posts (for the dashboard)
 export const getMyPosts = () => async (dispatch) => {
+  const requestId = ++myPostsRequestId;
+
+  dispatch({
+    type: REQUEST_MY_POSTS,
+    payload: { requestId }
+  });
+
   try {
     const res = await axios.get('/api/posts/mine');
 
+    if (requestId !== myPostsRequestId) return;
+
     dispatch({
       type: GET_MY_POSTS,
-      payload: res.data
+      payload: { posts: res.data, requestId }
     });
   } catch (err) {
+    // Ignore a failure from a request the dashboard has already replaced.
+    if (requestId !== myPostsRequestId) return;
+
     dispatch({
       type: POST_ERROR,
       payload: getErrorPayload(err)

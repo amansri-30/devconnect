@@ -1126,6 +1126,25 @@ button {
   color: inherit;
 }
 
+.comments-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.jump-to-answer {
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+}
+
+[data-theme='dark'] .jump-to-answer {
+  background: #232a31;
+  border-color: #3a424a;
+  color: #f1f1f1;
+}
+
 .reply-toggle {
   font-size: 0.85rem;
   padding: 0.3rem 0.6rem;

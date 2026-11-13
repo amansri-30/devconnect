@@ -30,7 +30,12 @@ import {
   DELETE_LIKED_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
-  REMOVE_COMMENT
+  REMOVE_COMMENT,
+  REQUEST_MY_POSTS,
+  LOGOUT,
+  LOGIN_SUCCESS,
+  REGISTER_SUCCESS,
+  ACCOUNT_DELETED
 } from '../actions/types';
 
 const initialState = {
@@ -50,6 +55,7 @@ const initialState = {
   likedLoading: true,
   likedRequestId: 0,
   myPosts: [],
+  myPostsRequestId: 0,
   userPosts: [],
   userPostsFor: null,
   userPostsTotal: 0,
@@ -76,6 +82,16 @@ const initialState = {
   perPage: 8,
   sort: 'recent'
 };
+
+// A different account must never inherit the previous session's cached feed,
+// saved/liked lists, dashboard rows, or in-flight request tokens.
+const signedOutState = () => ({
+  ...initialState,
+  loading: false,
+  postsLoading: false,
+  savedLoading: false,
+  likedLoading: false
+});
 
 export default function postReducer(state = initialState, action) {
   switch (action.type) {
@@ -125,14 +141,19 @@ export default function postReducer(state = initialState, action) {
         post: null,
         loading: true
       };
-    case GET_SINGLE_POST:
-      // A null payload is the "clear before fetch" signal: keep the spinner up
-      // until the real post (or an error) arrives.
+    case GET_SINGLE_POST: {
+      const { post, requestId } = action.payload;
+
+      // Ignore a response for a post the viewer has already left, or one that
+      // belongs to a session that has since signed out.
+      if (requestId !== state.singleRequestId) return state;
+
       return {
         ...state,
-        post: action.payload,
-        loading: action.payload === null
+        post,
+        loading: false
       };
+    }
     case REQUEST_SAVED_POSTS:
       // Keep the current rows on screen while a new search page loads; only the
       // newest request is allowed to apply its result.
@@ -207,10 +228,19 @@ export default function postReducer(state = initialState, action) {
         loading: false
       };
     }
-    case GET_MY_POSTS:
+    case REQUEST_MY_POSTS:
       return {
         ...state,
-        myPosts: action.payload,
+        myPostsRequestId: action.payload.requestId,
+        loading: true
+      };
+    case GET_MY_POSTS:
+      // Discard a response for an account/session that has since changed.
+      if (action.payload.requestId !== state.myPostsRequestId) return state;
+
+      return {
+        ...state,
+        myPosts: action.payload.posts,
         loading: false
       };
     case REQUEST_USER_POSTS:
@@ -667,6 +697,14 @@ export default function postReducer(state = initialState, action) {
         loading: false
       };
     }
+    case LOGOUT:
+    case LOGIN_SUCCESS:
+    case REGISTER_SUCCESS:
+    case ACCOUNT_DELETED:
+      // Drop every cached list when the active account changes, including the
+      // request tokens so an in-flight response from the previous session can't
+      // repopulate the new account's pages.
+      return signedOutState();
     default:
       return state;
   }

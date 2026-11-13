@@ -111,6 +111,20 @@ const Post = ({ getSinglePost, post: { post, loading }, auth }) => {
   const acceptedCommentId =
     post && post.acceptedComment ? String(post.acceptedComment) : null;
 
+  // Scroll to the accepted answer and briefly highlight it. Comments are all
+  // already rendered (top-level), so this works regardless of the sort order.
+  const jumpToAnswer = () => {
+    if (!acceptedCommentId) return;
+
+    const target = document.getElementById(`comment-${acceptedCommentId}`);
+    if (!target) return;
+
+    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    target.classList.add('comment-highlight');
+
+    setTimeout(() => target.classList.remove('comment-highlight'), 2200);
+  };
+
   return loading ? (
     <Spinner />
   ) : !post ? (
@@ -141,22 +155,34 @@ const Post = ({ getSinglePost, post: { post, loading }, auth }) => {
             </span>
           )}
         </h2>
-        {commentCount > 1 && (
-          <label className="comment-sort">
-            Sort by{' '}
-            <select
-              value={commentSort}
-              onChange={(e) => setCommentSort(e.target.value)}
-              aria-label="Sort comments"
+        <div className="comments-controls">
+          {acceptedCommentId && (
+            <button
+              type="button"
+              className="btn btn-light jump-to-answer"
+              onClick={jumpToAnswer}
+              title="Scroll to the accepted answer"
             >
-              {COMMENT_SORTS.map((option) => (
-                <option key={option.value} value={option.value}>
-                  {option.label}
-                </option>
-              ))}
-            </select>
-          </label>
-        )}
+              <i className="fas fa-arrow-down" /> Jump to answer
+            </button>
+          )}
+          {commentCount > 1 && (
+            <label className="comment-sort">
+              Sort by{' '}
+              <select
+                value={commentSort}
+                onChange={(e) => setCommentSort(e.target.value)}
+                aria-label="Sort comments"
+              >
+                {COMMENT_SORTS.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+        </div>
       </div>
       <div className="comments">
         {commentCount > 0 ? (

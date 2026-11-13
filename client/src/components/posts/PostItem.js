@@ -39,7 +39,8 @@ const PostItem = ({
     tags,
     pinned,
     isFollowing,
-    editedAt
+    editedAt,
+    acceptedComment
   },
   showActions,
   detail
@@ -210,6 +211,14 @@ const PostItem = ({
         {pinned && !editing && (
           <p className="pinned-badge">
             <i className="fas fa-thumbtack" /> Pinned
+          </p>
+        )}
+        {acceptedComment && !editing && (
+          <p
+            className="accepted-badge"
+            title="This discussion has an accepted answer"
+          >
+            <i className="fas fa-check-circle" /> Answered
           </p>
         )}
         {editing ? (

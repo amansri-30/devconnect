@@ -6,7 +6,10 @@ import {
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR,
-  LOGOUT
+  LOGOUT,
+  LOGIN_SUCCESS,
+  REGISTER_SUCCESS,
+  ACCOUNT_DELETED
 } from '../actions/types';
 
 const emptySummary = () => ({
@@ -145,6 +148,9 @@ export default function notificationReducer(state = initialState, action) {
         loading: false
       };
     case LOGOUT:
+    case LOGIN_SUCCESS:
+    case REGISTER_SUCCESS:
+    case ACCOUNT_DELETED:
       // Never carry another account's notifications, unread badge or summary
       // into the next session.
       return {

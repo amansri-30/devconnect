@@ -18,6 +18,7 @@ const Posts = ({
   const [searchParams, setSearchParams] = useSearchParams();
   const tag = (searchParams.get('tag') || '').toLowerCase();
   const urlSearch = searchParams.get('search') || '';
+  const unansweredOnly = searchParams.get('unanswered') === '1';
 
   const [moreLoading, setMoreLoading] = useState(false);
   const [query, setQuery] = useState(urlSearch);
@@ -31,14 +32,14 @@ const Posts = ({
   }, [urlSearch]);
 
   // Server-side search: debounce typing, then re-query page 1 whenever the
-  // search term, sort, scope, or active tag changes.
+  // search term, sort, scope, active tag, or unanswered filter changes.
   useEffect(() => {
     const delay = query.trim() ? 350 : 0;
     const timer = setTimeout(() => {
-      getPosts(1, sort, scope, query, tag);
+      getPosts(1, sort, scope, query, tag, unansweredOnly);
     }, delay);
     return () => clearTimeout(timer);
-  }, [getPosts, sort, scope, query, tag]);
+  }, [getPosts, sort, scope, query, tag, unansweredOnly]);
 
   // Refresh the trending tag chips whenever the feed is opened.
   useEffect(() => {
@@ -49,7 +50,7 @@ const Posts = ({
     if (moreLoading || postsLoading) return;
     setMoreLoading(true);
     try {
-      await getPosts(page + 1, sort, scope, query, tag);
+      await getPosts(page + 1, sort, scope, query, tag, unansweredOnly);
     } finally {
       setMoreLoading(false);
     }
@@ -64,11 +65,12 @@ const Posts = ({
   };
 
   // Write the active filters back to the URL (replace, so typing doesn't stack
-  // history entries) while preserving the other filter.
-  const applyFilters = (nextSearch, nextTag) => {
+  // history entries) while preserving the other filters.
+  const applyFilters = (nextSearch, nextTag, nextUnanswered = unansweredOnly) => {
     const params = {};
     if (nextTag) params.tag = nextTag;
     if (nextSearch.trim()) params.search = nextSearch;
+    if (nextUnanswered) params.unanswered = '1';
     setSearchParams(params, { replace: true });
   };
 
@@ -80,6 +82,10 @@ const Posts = ({
 
   const applyTag = (nextTag) => {
     applyFilters(query, nextTag);
+  };
+
+  const toggleUnanswered = () => {
+    applyFilters(query, tag, !unansweredOnly);
   };
 
   // Number of currently loaded posts (used for the "Load More" hint).
@@ -97,7 +103,10 @@ const Posts = ({
         <i className="fas fa-user" /> Welcome to the community
       </p>
       <PostForm />
-      <div className="my-1" style={{ display: 'flex', alignItems: 'center' }}>
+      <div
+        className="my-1"
+        style={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap' }}
+      >
         <div className="search-bar" style={{ flex: 1 }}>
           <input
             type="text"
@@ -135,6 +144,23 @@ const Posts = ({
           <option value="trending">Trending</option>
           <option value="views">Most Viewed</option>
         </select>
+        <button
+          type="button"
+          className={`btn my-1 ${
+            unansweredOnly ? 'btn-primary' : 'btn-light'
+          }`}
+          style={{ marginLeft: '1rem' }}
+          onClick={toggleUnanswered}
+          aria-pressed={unansweredOnly}
+          title={
+            unansweredOnly
+              ? 'Show all discussions'
+              : 'Only show discussions without an accepted answer'
+          }
+        >
+          <i className="fas fa-question-circle" />{' '}
+          {unansweredOnly ? 'Unanswered only' : 'Unanswered'}
+        </button>
       </div>
       {(tags.length > 0 || tag) && (
         <div className="tag-filter" aria-label="Filter posts by hashtag">
@@ -178,6 +204,8 @@ const Posts = ({
               ? `No posts tagged #${tag} yet.`
               : q
               ? `No posts match "${q}".`
+              : unansweredOnly
+              ? 'No unanswered discussions here. Every matching post already has an accepted answer.'
               : scope === 'following'
               ? 'No posts from people you follow yet. Follow developers to see their posts here.'
               : 'No posts yet. Be the first to start a discussion!'}

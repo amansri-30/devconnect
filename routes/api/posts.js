@@ -237,6 +237,12 @@ router.get('/', auth, async (req, res) => {
       filter = { ...filter, tags: tag };
     }
 
+    // Optional unanswered filter: discussions that still have no accepted
+    // answer. `null` also matches documents created before the field existed.
+    if (req.query.unanswered === 'true' || req.query.unanswered === '1') {
+      filter = { ...filter, acceptedComment: null };
+    }
+
     // Whether the current user already follows each post's author, so the feed
     // can offer an inline Follow button. In the "following" scope every author
     // is by definition followed, so no extra lookup is needed there.
