@@ -114,9 +114,11 @@ router.put(
     auth,
     [
       check('currentPassword', 'Current password is required').not().isEmpty(),
-      check('newPassword', 'New password must be at least 6 characters').isLength(
-        { min: 6 }
-      )
+      check('newPassword', 'New password must be at least 6 characters')
+        .isLength({ min: 6 })
+        // Six spaces pass the length check but are not a usable password.
+        .custom((value) => !/^\s+$/.test(String(value)))
+        .withMessage('New password cannot be only spaces')
     ]
   ],
   async (req, res) => {

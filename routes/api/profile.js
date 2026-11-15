@@ -1037,6 +1037,15 @@ router.delete('/education/:edu_id', auth, async (req, res) => {
 // @access  Private
 router.delete('/', auth, async (req, res) => {
   try {
+    // Remember the account's post ids before deleting them. Notifications that
+    // other people received about those posts (likes, comments, accepted
+    // answers) would otherwise survive with a dead `post` link and open a
+    // "post not found" page for every recipient.
+    const ownedPosts = await Post.find({ user: req.user.id })
+      .select('_id')
+      .lean();
+    const ownedPostIds = ownedPosts.map((post) => post._id);
+
     // Remove user's posts
     await Post.deleteMany({ user: req.user.id });
 
@@ -1153,6 +1162,11 @@ router.delete('/', auth, async (req, res) => {
     await Notification.deleteMany({ from: req.user.id });
     // ...and any it received
     await Notification.deleteMany({ recipient: req.user.id });
+    // ...and every notification that pointed at one of its posts, otherwise
+    // other people keep deep links to discussions that no longer exist.
+    if (ownedPostIds.length > 0) {
+      await Notification.deleteMany({ post: { $in: ownedPostIds } });
+    }
 
     // Remove user
     await User.findByIdAndDelete(req.user.id);

@@ -19,6 +19,7 @@ import Alert from './components/layout/Alert';
 import BackToTop from './components/layout/BackToTop';
 import ScrollToTop from './components/layout/ScrollToTop';
 import Dashboard from './components/dashboard/Dashboard';
+import PostInsights from './components/dashboard/PostInsights';
 import PrivateRoute from './components/routing/PrivateRoute';
 import CreateProfile from './components/profile-forms/CreateProfile';
 import EditProfile from './components/profile-forms/EditProfile';
@@ -83,6 +84,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <Dashboard />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/insights"
+                element={
+                  <PrivateRoute>
+                    <PostInsights />
                   </PrivateRoute>
                 }
               />

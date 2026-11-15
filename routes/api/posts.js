@@ -445,6 +445,94 @@ router.get('/mine', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/posts/insights
+// @desc    Aggregate performance stats for the current user's own discussions
+// @access  Private
+router.get('/insights', auth, async (req, res) => {
+  try {
+    // Views, likes and saves are all tracked per post; this rolls them up so
+    // authors can see how their discussions perform without opening each one.
+    const posts = await Post.find({ user: req.user.id })
+      .select('text date views likes comments savedBy acceptedComment')
+      .lean();
+
+    const totals = posts.reduce(
+      (acc, post) => {
+        acc.totalViews += post.views || 0;
+        acc.totalLikes += Array.isArray(post.likes) ? post.likes.length : 0;
+        acc.totalComments += Array.isArray(post.comments)
+          ? post.comments.length
+          : 0;
+        acc.totalSaves += Array.isArray(post.savedBy)
+          ? post.savedBy.length
+          : 0;
+
+        if (post.acceptedComment) acc.answered += 1;
+
+        return acc;
+      },
+      {
+        totalViews: 0,
+        totalLikes: 0,
+        totalComments: 0,
+        totalSaves: 0,
+        answered: 0
+      }
+    );
+
+    const summarize = (post) => ({
+      _id: post._id,
+      text: post.text,
+      date: post.date,
+      views: post.views || 0,
+      likes: Array.isArray(post.likes) ? post.likes.length : 0,
+      comments: Array.isArray(post.comments) ? post.comments.length : 0,
+      saves: Array.isArray(post.savedBy) ? post.savedBy.length : 0,
+      answered: Boolean(post.acceptedComment)
+    });
+
+    const topPosts = posts
+      .map(summarize)
+      .sort(
+        (a, b) =>
+          b.views - a.views ||
+          b.likes - a.likes ||
+          new Date(b.date) - new Date(a.date)
+      )
+      .slice(0, 5);
+
+    // The newest discussions still waiting for an accepted answer are the most
+    // actionable follow-up for an author.
+    const needsAnswer = posts
+      .filter((post) => !post.acceptedComment)
+      .sort((a, b) => new Date(b.date) - new Date(a.date))
+      .slice(0, 3)
+      .map(summarize);
+
+    // Views only count reads by other people, so this is roughly the share of
+    // readers who went on to like or comment.
+    const engagement =
+      totals.totalViews > 0
+        ? Math.round(
+            ((totals.totalLikes + totals.totalComments) / totals.totalViews) *
+              100
+          )
+        : 0;
+
+    return res.json({
+      totalPosts: posts.length,
+      ...totals,
+      unanswered: posts.length - totals.answered,
+      engagement,
+      topPosts,
+      needsAnswer
+    });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
 // @route   GET api/posts/user/:user_id
 // @desc    Get a user's posts (public profile preview / paginated archive)
 // @access  Public

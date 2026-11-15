@@ -4,13 +4,14 @@ import { connect } from 'react-redux';
 import { Link } from 'react-router-dom';
 import Moment from 'react-moment';
 import Spinner from '../layout/Spinner';
-import { getMyPosts, deletePost, togglePinPost } from '../../actions/post';
+import { getMyPosts, deletePost, togglePinPost, getPostInsights } from '../../actions/post';
 import { decodeHtml } from '../../utils/linkify';
 
 const MyPosts = ({
   getMyPosts,
   deletePost,
   togglePinPost,
+  getPostInsights,
   post: { myPosts, loading }
 }) => {
   const [pinBusyId, setPinBusyId] = useState(null);
@@ -40,8 +41,14 @@ const MyPosts = ({
 
     setDeleteBusyId(id);
     const removed = await deletePost(id);
-    // On success the row is gone; only re-enable the button when it failed.
-    if (!removed) setDeleteBusyId(null);
+    if (removed) {
+      // The insights page aggregates the same posts, so drop the deleted
+      // discussion from those totals immediately.
+      getPostInsights();
+    } else {
+      // On success the row is gone; only re-enable the button when it failed.
+      setDeleteBusyId(null);
+    }
   };
 
   // Stored text is HTML-escaped; decode before truncating for plain-text output.
@@ -62,6 +69,7 @@ const MyPosts = ({
           <thead>
             <tr>
               <th>Post</th>
+              <th>Views</th>
               <th className="hide-sm">Date</th>
               <th />
             </tr>
@@ -78,6 +86,7 @@ const MyPosts = ({
                   )}{' '}
                   {preview(post.text)}
                 </td>
+                <td>{post.views || 0}</td>
                 <td className="hide-sm">
                   <Moment format="MMM D, YYYY" date={post.date} />
                 </td>
@@ -121,6 +130,7 @@ MyPosts.propTypes = {
   getMyPosts: PropTypes.func.isRequired,
   deletePost: PropTypes.func.isRequired,
   togglePinPost: PropTypes.func.isRequired,
+  getPostInsights: PropTypes.func.isRequired,
   post: PropTypes.object.isRequired
 };
 
@@ -131,5 +141,6 @@ const mapStateToProps = (state) => ({
 export default connect(mapStateToProps, {
   getMyPosts,
   deletePost,
-  togglePinPost
+  togglePinPost,
+  getPostInsights
 })(MyPosts);

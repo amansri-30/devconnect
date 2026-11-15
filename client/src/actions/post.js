@@ -18,6 +18,8 @@ import {
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   REQUEST_MY_POSTS,
+  GET_POST_INSIGHTS,
+  REQUEST_POST_INSIGHTS,
   GET_USER_POSTS,
   REQUEST_USER_POSTS,
   GET_USER_POST_ARCHIVE,
@@ -52,6 +54,7 @@ let singlePostRequestId = 0;
 let savedRequestId = 0;
 let likedRequestId = 0;
 let myPostsRequestId = 0;
+let insightsRequestId = 0;
 let relatedRequestId = 0;
 
 // Safely derive an error payload, guarding against network errors where no
@@ -409,6 +412,35 @@ export const getMyPosts = () => async (dispatch) => {
   } catch (err) {
     // Ignore a failure from a request the dashboard has already replaced.
     if (requestId !== myPostsRequestId) return;
+
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Get aggregate performance stats for the current user's own discussions.
+export const getPostInsights = () => async (dispatch) => {
+  const requestId = ++insightsRequestId;
+
+  dispatch({
+    type: REQUEST_POST_INSIGHTS,
+    payload: { requestId }
+  });
+
+  try {
+    const res = await axios.get('/api/posts/insights');
+
+    if (requestId !== insightsRequestId) return;
+
+    dispatch({
+      type: GET_POST_INSIGHTS,
+      payload: { insights: res.data, requestId }
+    });
+  } catch (err) {
+    // Ignore a failure from a request that has already been superseded.
+    if (requestId !== insightsRequestId) return;
 
     dispatch({
       type: POST_ERROR,

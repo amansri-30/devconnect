@@ -70,6 +70,12 @@ const Navbar = ({
         </Link>
       </li>
       <li>
+        <Link to="/insights">
+          <i className="fas fa-chart-line" />{' '}
+          <span className="hide-sm">Insights</span>
+        </Link>
+      </li>
+      <li>
         <a
           href="#!"
           onClick={(e) => {

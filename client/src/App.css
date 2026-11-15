@@ -1462,29 +1462,8 @@ button {
   padding-left: 0.75rem;
 }
 
-/* Mobile Styles */
-@media (max-width: 700px) {
-  .container {
-    margin-top: 8rem;
-  }
-
-  .hide-sm {
-    display: none;
-  }
-
-  /* Text Styles */
-  .x-large {
-    font-size: 3rem;
-  }
-
-  .large {
-    font-size: 2rem;
-  }
-
-  .lead {
-    font-size: 1rem;
-  }
-
+/* Dashboard activity tiles. These live outside the mobile media query below so
+   the row lays out as cards on desktop too, not just on narrow screens. */
 .activity-stats {
   display: flex;
   gap: 1rem;
@@ -1516,7 +1495,49 @@ button {
   font-size: 0.85rem;
 }
 
-/* Navbar */
+/* Author insights: keep the wide stats table scrollable on small screens. */
+.insights-table-wrap {
+  overflow-x: auto;
+}
+
+.insights-followup {
+  list-style: none;
+  margin: 0.5rem 0 0;
+}
+
+.insights-followup li {
+  padding: 0.5rem 0;
+  border-bottom: 1px solid #eee;
+}
+
+.insights-followup li:last-child {
+  border-bottom: none;
+}
+
+/* Mobile Styles */
+@media (max-width: 700px) {
+  .container {
+    margin-top: 8rem;
+  }
+
+  .hide-sm {
+    display: none;
+  }
+
+  /* Text Styles */
+  .x-large {
+    font-size: 3rem;
+  }
+
+  .large {
+    font-size: 2rem;
+  }
+
+  .lead {
+    font-size: 1rem;
+  }
+
+  /* Navbar */
   .navbar {
     display: block;
     text-align: center;
@@ -1652,6 +1673,10 @@ button {
 [data-theme='dark'] .profile-exp > div,
 [data-theme='dark'] .profile-edu > div,
 [data-theme='dark'] .profile-post-item {
+  border-bottom-color: #3a424a;
+}
+
+[data-theme='dark'] .insights-followup li {
   border-bottom-color: #3a424a;
 }
 

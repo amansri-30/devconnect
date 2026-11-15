@@ -23,6 +23,11 @@ const ChangePassword = ({ changePassword }) => {
     if (form.newPassword.length < 6) {
       return;
     }
+    // Six spaces clears the length check but the server rejects it; block it
+    // here too so the form never sends an unusable password.
+    if (form.newPassword.trim() === '') {
+      return;
+    }
     setSubmitting(true);
     await changePassword(
       {
@@ -37,6 +42,8 @@ const ChangePassword = ({ changePassword }) => {
   const mismatch =
     form.confirmPassword !== '' && form.newPassword !== form.confirmPassword;
   const tooShort = form.newPassword !== '' && form.newPassword.length < 6;
+  const onlySpaces =
+    form.newPassword !== '' && form.newPassword.trim() === '';
 
   return (
     <div className="my-2">
@@ -80,11 +87,16 @@ const ChangePassword = ({ changePassword }) => {
             New password must be at least 6 characters.
           </p>
         )}
+        {onlySpaces && (
+          <p className="form-text text-danger">
+            New password cannot be only spaces.
+          </p>
+        )}
         <input
           type="submit"
           className="btn btn-primary my-1"
           value={submitting ? 'Updating...' : 'Update Password'}
-          disabled={submitting || mismatch || tooShort}
+          disabled={submitting || mismatch || tooShort || onlySpaces}
         />
       </form>
     </div>

@@ -15,6 +15,8 @@ import {
   REQUEST_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
+  GET_POST_INSIGHTS,
+  REQUEST_POST_INSIGHTS,
   GET_USER_POSTS,
   REQUEST_USER_POSTS,
   CLEAR_USER_POSTS,
@@ -59,6 +61,9 @@ const initialState = {
   likedRequestId: 0,
   myPosts: [],
   myPostsRequestId: 0,
+  insights: null,
+  insightsLoading: true,
+  insightsRequestId: 0,
   userPosts: [],
   userPostsFor: null,
   userPostsTotal: 0,
@@ -253,6 +258,21 @@ export default function postReducer(state = initialState, action) {
         ...state,
         myPosts: action.payload.posts,
         loading: false
+      };
+    case REQUEST_POST_INSIGHTS:
+      return {
+        ...state,
+        insightsRequestId: action.payload.requestId,
+        insightsLoading: true
+      };
+    case GET_POST_INSIGHTS:
+      // Discard a response for an account/session that has since changed.
+      if (action.payload.requestId !== state.insightsRequestId) return state;
+
+      return {
+        ...state,
+        insights: action.payload.insights,
+        insightsLoading: false
       };
     case REQUEST_USER_POSTS:
       return {
@@ -519,6 +539,7 @@ export default function postReducer(state = initialState, action) {
         savedLoading: false,
         likedLoading: false,
         userPostsLoading: false,
+        insightsLoading: false,
         archive: {
           ...state.archive,
           loading: false
