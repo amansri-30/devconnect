@@ -18,6 +18,9 @@ import {
   DELETE_SAVED_POST,
   GET_MY_POSTS,
   REQUEST_MY_POSTS,
+  GET_MY_COMMENTS,
+  REQUEST_MY_COMMENTS,
+  MY_COMMENTS_ERROR,
   GET_POST_INSIGHTS,
   REQUEST_POST_INSIGHTS,
   GET_USER_POSTS,
@@ -54,6 +57,7 @@ let singlePostRequestId = 0;
 let savedRequestId = 0;
 let likedRequestId = 0;
 let myPostsRequestId = 0;
+let myCommentsRequestId = 0;
 let insightsRequestId = 0;
 let relatedRequestId = 0;
 
@@ -419,6 +423,48 @@ export const getMyPosts = () => async (dispatch) => {
     });
   }
 };
+
+// Get a page of the current user's own comments and replies, newest first.
+// Optional search matches the comment text or the discussion it belongs to.
+export const getMyComments =
+  (page = 1, search = '') =>
+  async (dispatch) => {
+    const requestId = ++myCommentsRequestId;
+
+    dispatch({
+      type: REQUEST_MY_COMMENTS,
+      payload: { page, requestId }
+    });
+
+    try {
+      const params = { page, limit: 12 };
+      if (search.trim()) params.search = search.trim();
+
+      const res = await axios.get('/api/posts/comments/mine', { params });
+
+      // Ignore a stale response from a debounced search or a page the viewer
+      // has already replaced.
+      if (requestId !== myCommentsRequestId) return;
+
+      dispatch({
+        type: GET_MY_COMMENTS,
+        payload: {
+          comments: res.data,
+          page,
+          requestId,
+          total: parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 12
+        }
+      });
+    } catch (err) {
+      if (requestId !== myCommentsRequestId) return;
+
+      dispatch({
+        type: MY_COMMENTS_ERROR,
+        payload: { ...getErrorPayload(err), requestId }
+      });
+    }
+  };
 
 // Get aggregate performance stats for the current user's own discussions.
 export const getPostInsights = () => async (dispatch) => {

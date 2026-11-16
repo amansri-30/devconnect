@@ -26,7 +26,12 @@ router.post(
     check(
       'password',
       'Please enter a password with 6 or more characters'
-    ).isLength({ min: 6 })
+    )
+      .isLength({ min: 6 })
+      // A run of spaces is six characters long, so length alone lets an
+      // unusable password through. Reject whitespace-only values without
+      // trimming (spaces inside a password are legitimate).
+      .custom((value) => typeof value === 'string' && value.trim().length > 0)
   ],
   async (req, res) => {
     const errors = validationResult(req);

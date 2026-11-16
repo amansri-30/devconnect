@@ -15,6 +15,9 @@ import {
   REQUEST_SAVED_POSTS,
   DELETE_SAVED_POST,
   GET_MY_POSTS,
+  GET_MY_COMMENTS,
+  REQUEST_MY_COMMENTS,
+  MY_COMMENTS_ERROR,
   GET_POST_INSIGHTS,
   REQUEST_POST_INSIGHTS,
   GET_USER_POSTS,
@@ -61,6 +64,15 @@ const initialState = {
   likedRequestId: 0,
   myPosts: [],
   myPostsRequestId: 0,
+  myComments: {
+    rows: [],
+    page: 0,
+    total: 0,
+    perPage: 12,
+    loading: true,
+    error: null,
+    requestId: 0
+  },
   insights: null,
   insightsLoading: true,
   insightsRequestId: 0,
@@ -258,6 +270,66 @@ export default function postReducer(state = initialState, action) {
         ...state,
         myPosts: action.payload.posts,
         loading: false
+      };
+    case REQUEST_MY_COMMENTS: {
+      const { page, requestId } = action.payload;
+
+      return {
+        ...state,
+        myComments: {
+          ...state.myComments,
+          requestId,
+          loading: true,
+          error: null,
+          // A new search starts a fresh list; loading a later page keeps the
+          // rows already on screen.
+          rows: page === 1 ? [] : state.myComments.rows,
+          page: page === 1 ? 0 : state.myComments.page,
+          total: page === 1 ? 0 : state.myComments.total
+        }
+      };
+    }
+    case GET_MY_COMMENTS: {
+      const { comments, page, total, perPage, requestId } = action.payload;
+
+      // Discard a stale debounced-search or page response.
+      if (requestId !== state.myComments.requestId) return state;
+
+      const rows =
+        page === 1
+          ? comments
+          : Array.from(
+              new Map(
+                [...state.myComments.rows, ...comments].map((comment) => [
+                  String(comment._id),
+                  comment
+                ])
+              ).values()
+            );
+
+      return {
+        ...state,
+        myComments: {
+          ...state.myComments,
+          rows,
+          page,
+          total,
+          perPage,
+          loading: false,
+          error: null
+        }
+      };
+    }
+    case MY_COMMENTS_ERROR:
+      if (action.payload.requestId !== state.myComments.requestId) return state;
+
+      return {
+        ...state,
+        myComments: {
+          ...state.myComments,
+          loading: false,
+          error: action.payload
+        }
       };
     case REQUEST_POST_INSIGHTS:
       return {
@@ -659,6 +731,12 @@ export default function postReducer(state = initialState, action) {
         (p) => p._id === action.payload
       );
 
+      // Comments on the removed discussion can no longer be deep-linked, so
+      // drop them from the "My comments" history as well.
+      const removedComments = state.myComments.rows.filter(
+        (row) => row.post && String(row.post._id) === String(action.payload)
+      ).length;
+
       return {
         ...state,
         posts: state.posts.filter((post) => post._id !== action.payload),
@@ -690,6 +768,14 @@ export default function postReducer(state = initialState, action) {
         related: {
           ...state.related,
           posts: state.related.posts.filter((p) => p._id !== action.payload)
+        },
+        myComments: {
+          ...state.myComments,
+          rows: state.myComments.rows.filter(
+            (row) =>
+              !row.post || String(row.post._id) !== String(action.payload)
+          ),
+          total: Math.max(state.myComments.total - removedComments, 0)
         },
         total: Math.max(state.total - 1, 0),
         loading: false

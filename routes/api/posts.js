@@ -143,9 +143,9 @@ router.post(
     auth,
     [
       check('text', 'Text is required')
+        .trim()
         .not()
         .isEmpty()
-        .trim()
         .isLength({ max: 1000 })
     ]
   ],
@@ -423,6 +423,110 @@ router.get('/liked', auth, async (req, res) => {
     });
 
     return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/posts/comments/mine
+// @desc    Get the current user's comments and replies, newest first
+// @access  Private
+router.get('/comments/mine', auth, async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+    // Aggregations don't cast string ids, so match with a real ObjectId.
+    const viewerId = new mongoose.Types.ObjectId(req.user.id);
+
+    const match = { 'comments.user': viewerId };
+
+    // Search covers both the comment and the discussion it belongs to, so an
+    // old answer can be found by topic as well as by its own wording. Stored
+    // text is HTML-escaped, hence the raw/escaped regex pair.
+    const term = (req.query.search || '').trim();
+    let searchOr = null;
+
+    if (term) {
+      const rawRx = new RegExp(escapeRegExp(term), 'i');
+      const escaped = sanitizeHtml(term);
+      const textRx =
+        escaped === term ? rawRx : new RegExp(escapeRegExp(escaped), 'i');
+      const textRxs = textRx === rawRx ? [rawRx] : [rawRx, textRx];
+
+      // Applied AFTER unwinding, so a post is only included when the user's own
+      // comment (or the discussion itself) actually matches the search term.
+      searchOr = [
+        ...textRxs.map((rx) => ({ 'comments.text': rx })),
+        ...textRxs.map((rx) => ({ text: rx })),
+        { name: rawRx }
+      ];
+    }
+
+    const [result] = await Post.aggregate([
+      { $match: match },
+      // Keep only the current user's own comment on each matched post, and
+      // carry the discussion context along with it.
+      { $unwind: '$comments' },
+      {
+        $match: searchOr
+          ? { 'comments.user': viewerId, $or: searchOr }
+          : { 'comments.user': viewerId }
+      },
+      {
+        $project: {
+          text: 1,
+          name: 1,
+          avatar: 1,
+          user: 1,
+          date: 1,
+          acceptedComment: 1,
+          comment: '$comments'
+        }
+      },
+      { $sort: { 'comment.date': -1, 'comment._id': -1 } },
+      {
+        $facet: {
+          rows: [{ $skip: skip }, { $limit: limit }],
+          total: [{ $count: 'count' }]
+        }
+      }
+    ]);
+
+    const total = result.total.length ? result.total[0].count : 0;
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
+
+    return res.json(
+      result.rows.map((row) => ({
+        _id: row.comment._id,
+        text: row.comment.text,
+        date: row.comment.date,
+        editedAt: row.comment.editedAt || null,
+        parent: row.comment.parent || null,
+        likes: Array.isArray(row.comment.likes) ? row.comment.likes.length : 0,
+        accepted: Boolean(
+          row.acceptedComment &&
+            String(row.acceptedComment) === String(row.comment._id)
+        ),
+        post: {
+          _id: row._id,
+          text: row.text,
+          name: row.name,
+          avatar: row.avatar,
+          user: row.user,
+          date: row.date
+        }
+      }))
+    );
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');
@@ -830,9 +934,9 @@ router.put(
     auth,
     [
       check('text', 'Text is required')
+        .trim()
         .not()
         .isEmpty()
-        .trim()
         .isLength({ max: 1000 })
     ]
   ],
@@ -1072,9 +1176,9 @@ router.post(
     auth,
     [
       check('text', 'Text is required')
+        .trim()
         .not()
         .isEmpty()
-        .trim()
         .isLength({ max: 1000 })
     ]
   ],
@@ -1383,9 +1487,9 @@ router.put(
     auth,
     [
       check('text', 'Text is required')
+        .trim()
         .not()
         .isEmpty()
-        .trim()
         .isLength({ max: 1000 })
     ]
   ],

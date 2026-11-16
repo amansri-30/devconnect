@@ -16,6 +16,9 @@ const DashboardActions = () => {
       <Link to="/insights" className="btn btn-light">
         <i className="fas fa-chart-line text-primary" /> Post Insights
       </Link>
+      <Link to="/my-comments" className="btn btn-light">
+        <i className="fas fa-comments text-primary" /> My Comments
+      </Link>
     </div>
   );
 };

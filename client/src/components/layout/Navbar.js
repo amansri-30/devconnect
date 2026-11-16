@@ -54,6 +54,12 @@ const Navbar = ({
         </Link>
       </li>
       <li>
+        <Link to="/my-comments" title="Comments and answers you've written">
+          <i className="fas fa-comments" />{' '}
+          <span className="hide-sm">Comments</span>
+        </Link>
+      </li>
+      <li>
         <Link to="/following">
           <i className="fas fa-user-friends" /> <span className="hide-sm">Following</span>
         </Link>

@@ -58,7 +58,6 @@ const Login = ({ login, isAuthenticated }) => {
             value={password}
             onChange={(e) => onChange(e)}
             required
-            minLength="6"
           />
         </div>
         <input

@@ -28,6 +28,13 @@ const Register = ({ setAlert, register, isAuthenticated }) => {
       return;
     }
 
+    // HTML's minLength counts spaces, so "      " would pass the browser check
+    // and then fail (or create an unusable account) on the server.
+    if (!password.trim()) {
+      setAlert('Password cannot be only spaces', 'danger');
+      return;
+    }
+
     setSubmitting(true);
     const success = await register({ name, email, password });
 
