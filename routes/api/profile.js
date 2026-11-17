@@ -17,6 +17,7 @@ const Profile = require('../../models/Profile');
 const User = require('../../models/User');
 const Post = require('../../models/Post');
 const Notification = require('../../models/Notification');
+const Collection = require('../../models/Collection');
 
 // Ensure a user-entered URL always has a protocol so it never turns into a
 // broken relative anchor on the profile page.
@@ -1167,6 +1168,9 @@ router.delete('/', auth, async (req, res) => {
     if (ownedPostIds.length > 0) {
       await Notification.deleteMany({ post: { $in: ownedPostIds } });
     }
+
+    // The account's saved-post folders belong to no one after deletion.
+    await Collection.deleteMany({ user: req.user.id });
 
     // Remove user
     await User.findByIdAndDelete(req.user.id);

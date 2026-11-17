@@ -612,7 +612,7 @@ export const getTrendingPosts = () => async (dispatch) => {
 // Get one page of the current user's saved posts. Search runs server-side so
 // it covers every saved post, not just the ones already loaded.
 export const getSavedPosts =
-  (page = 1, search = '') =>
+  (page = 1, search = '', collectionId = '') =>
   async (dispatch) => {
     const requestId = ++savedRequestId;
     const term = search.trim();
@@ -625,6 +625,7 @@ export const getSavedPosts =
     try {
       const params = { page, limit: 12 };
       if (term) params.search = term;
+      if (collectionId) params.collection = collectionId;
 
       const res = await axios.get('/api/posts/saved', { params });
 
@@ -634,6 +635,7 @@ export const getSavedPosts =
           posts: res.data,
           page,
           term,
+          collectionId,
           requestId,
           total:
             parseInt(res.headers['x-total-count'], 10) || res.data.length,

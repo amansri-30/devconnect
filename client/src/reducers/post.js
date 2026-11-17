@@ -53,6 +53,9 @@ const initialState = {
   savedPosts: [],
   savedPage: 0,
   savedTotal: 0,
+  // Total across ALL folders. `savedTotal` is scoped to the current collection
+  // filter, so this separate value keeps the "All saved" chip honest.
+  allSavedTotal: 0,
   savedPerPage: 12,
   savedLoading: true,
   savedRequestId: 0,
@@ -191,10 +194,22 @@ export default function postReducer(state = initialState, action) {
         savedLoading: true
       };
     case GET_SAVED_POSTS: {
-      const { posts, page, total, perPage, requestId } = action.payload;
+      const {
+        posts,
+        page,
+        total,
+        perPage,
+        requestId,
+        collectionId,
+        term
+      } = action.payload;
 
       // Ignore a stale debounced search / page response.
       if (requestId !== state.savedRequestId) return state;
+
+      // Only an unscoped, unsearched page 1 is an authoritative count of every
+      // saved post. A collection/search total must not overwrite it.
+      const isAllSaved = !collectionId && !term && page === 1;
 
       const allPosts =
         page === 1
@@ -210,6 +225,7 @@ export default function postReducer(state = initialState, action) {
         savedPosts: allPosts,
         savedPage: page,
         savedTotal: total,
+        allSavedTotal: isAllSaved ? total : state.allSavedTotal,
         savedPerPage: perPage,
         savedLoading: false,
         loading: false
@@ -491,6 +507,12 @@ export default function postReducer(state = initialState, action) {
           !action.payload.saved && savedExists
             ? Math.max(state.savedTotal - 1, 0)
             : state.savedTotal,
+        // This action only fires when the post's saved state actually changed,
+        // so an unsave always removes one from the all-saved count (DELETE_
+        // SAVED_POST deliberately does not touch it to avoid double counting).
+        allSavedTotal: !action.payload.saved
+          ? Math.max(state.allSavedTotal - 1, 0)
+          : state.allSavedTotal,
         likedPosts: state.likedPosts.map((p) =>
           p._id === action.payload.postId
             ? { ...p, saved: action.payload.saved }
@@ -754,6 +776,9 @@ export default function postReducer(state = initialState, action) {
         savedTotal: wasSaved
           ? Math.max(state.savedTotal - 1, 0)
           : state.savedTotal,
+        allSavedTotal: wasSaved
+          ? Math.max(state.allSavedTotal - 1, 0)
+          : state.allSavedTotal,
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         likedTotal: wasLiked
           ? Math.max(state.likedTotal - 1, 0)

@@ -14,6 +14,8 @@ const User = require('../../models/User');
 const Profile = require('../../models/Profile');
 // Load Notification model (to clean up when a post is removed)
 const Notification = require('../../models/Notification');
+// Load Collection model (to keep saved-post folders consistent)
+const Collection = require('../../models/Collection');
 
 // @route   GET api/posts/test
 // @desc    Tests post route
@@ -384,6 +386,27 @@ router.get('/saved', auth, async (req, res) => {
     const filter = searchFilter
       ? { savedBy: req.user.id, ...searchFilter }
       : { savedBy: req.user.id };
+
+    // Optional collection scope. Confirm the folder belongs to the viewer so
+    // post ids from someone else's collection can't be probed here.
+    if (req.query.collection) {
+      let collection;
+
+      try {
+        collection = await Collection.findOne({
+          _id: req.query.collection,
+          user: req.user.id
+        });
+      } catch (castErr) {
+        return res.status(404).json({ msg: 'Collection not found' });
+      }
+
+      if (!collection) {
+        return res.status(404).json({ msg: 'Collection not found' });
+      }
+
+      filter._id = { $in: collection.posts };
+    }
 
     const [posts, total] = await Promise.all([
       Post.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
@@ -922,6 +945,13 @@ router.delete('/:id', auth, async (req, res) => {
     // nobody keeps a notification linking to a post that no longer exists.
     await Notification.deleteMany({ post: req.params.id });
 
+    // The post is gone for everyone, so remove it from any saved-post folder
+    // that still references it.
+    await Collection.updateMany(
+      { posts: post._id },
+      { $pull: { posts: post._id } }
+    );
+
     return res.json({ msg: 'Post removed' });
   } catch (err) {
     console.error(err.message);
@@ -1003,6 +1033,12 @@ router.put('/save/:id', auth, async (req, res) => {
       post.savedBy = post.savedBy.filter(
         (id) => id.toString() !== req.user.id
       );
+
+      // A post that is no longer saved cannot stay in the user's folders.
+      await Collection.updateMany(
+        { user: req.user.id, posts: post._id },
+        { $pull: { posts: post._id } }
+      );
     } else {
       post.savedBy.push(req.user.id);
     }
@@ -1039,6 +1075,12 @@ router.delete('/save/:id', auth, async (req, res) => {
     );
 
     await post.save();
+
+    // Remove the bookmark from every folder it belonged to as well.
+    await Collection.updateMany(
+      { user: req.user.id, posts: post._id },
+      { $pull: { posts: post._id } }
+    );
 
     return res.json({ saved: false });
   } catch (err) {

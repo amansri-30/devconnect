@@ -33,6 +33,7 @@ app.use('/api/users', authLimiter, require('./routes/api/users'));
 app.use('/api/profile', require('./routes/api/profile'));
 app.use('/api/posts', require('./routes/api/posts'));
 app.use('/api/notifications', require('./routes/api/notifications'));
+app.use('/api/collections', require('./routes/api/collections'));
 
 // Health check endpoint (public) - useful for diagnosing the most common
 // serverless failures (missing env vars, DB connectivity).

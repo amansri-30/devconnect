@@ -880,6 +880,123 @@ button {
   margin-bottom: 0.6rem;
 }
 
+/* Saved-post collections */
+.collection-panel {
+  border: 1px solid var(--light-color);
+  border-radius: 4px;
+  padding: 0.9rem;
+  margin: 1rem 0;
+}
+
+.collection-panel-heading {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-bottom: 0.6rem;
+}
+
+.collection-panel-status {
+  color: #6c757d;
+  font-size: 0.85rem;
+}
+
+.collection-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.collection-chip-group {
+  display: inline-flex;
+  align-items: stretch;
+}
+
+.collection-chip {
+  margin: 0;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  border: 1px solid var(--light-color);
+  background: #f8f9fa;
+  color: #333;
+  border-radius: 4px 0 0 4px;
+  cursor: pointer;
+}
+
+.collection-chip:hover {
+  border-color: var(--primary-color);
+}
+
+.collection-chip.is-active {
+  background: var(--primary-color);
+  color: #fff;
+  border-color: var(--primary-color);
+}
+
+.collection-chip-remove {
+  margin: 0;
+  padding: 0 0.45rem;
+  border: 1px solid var(--light-color);
+  border-left: 0;
+  border-radius: 0 4px 4px 0;
+  background: #f8f9fa;
+  color: #6c757d;
+  cursor: pointer;
+}
+
+.collection-chip-remove:hover {
+  color: #dc3545;
+}
+
+.collection-create {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.75rem;
+}
+
+.collection-create input {
+  flex: 1 1 220px;
+  min-width: 0;
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.collection-create .btn {
+  margin: 0;
+}
+
+.collection-picker {
+  margin: 0.6rem 0;
+}
+
+.collection-picker summary {
+  cursor: pointer;
+  color: var(--primary-color);
+  font-size: 0.9rem;
+}
+
+.collection-picker-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1.25rem;
+  padding: 0.5rem 0.75rem;
+}
+
+.collection-picker-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.collection-picker-item input {
+  margin: 0;
+}
+
 .post > div:first-child {
   text-align: center;
 }
@@ -1723,6 +1840,23 @@ button {
 
 [data-theme='dark'] .notification-prefs {
   border-color: #3a424a;
+}
+
+[data-theme='dark'] .collection-panel {
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .collection-chip,
+[data-theme='dark'] .collection-chip-remove,
+[data-theme='dark'] .collection-create input {
+  background: #1f2428;
+  color: #e6e6e6;
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .collection-chip.is-active {
+  background: var(--primary-color);
+  color: #fff;
 }
 
 [data-theme='dark'] .profile-exp,
