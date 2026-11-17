@@ -72,10 +72,19 @@ const paginateLikers = async (likes, query, viewerId) => {
     ids.push(id);
   }
 
-  const total = ids.length;
+  // Resolve the accounts first: a deleted account can leave its id embedded in
+  // a like array, and counting those ids makes "show more" loop forever on an
+  // empty page. Paginate only ids that still exist, in the original order.
+  const existing = await User.find({ _id: { $in: ids } })
+    .select('_id')
+    .lean();
+  const existingIds = new Set(existing.map((user) => String(user._id)));
+  const validIds = ids.filter((id) => existingIds.has(id));
+
+  const total = validIds.length;
   const page = Math.max(parseInt(query.page, 10) || 1, 1);
   const limit = Math.min(Math.max(parseInt(query.limit, 10) || 20, 1), 50);
-  const pageIds = ids.slice((page - 1) * limit, page * limit);
+  const pageIds = validIds.slice((page - 1) * limit, page * limit);
 
   const users = await User.find({ _id: { $in: pageIds } }).select(
     'name avatar'

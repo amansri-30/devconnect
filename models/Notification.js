@@ -1,5 +1,6 @@
 const mongoose = require('mongoose');
 const Schema = mongoose.Schema;
+const NOTIFICATION_TYPES = require('../util/notificationTypes');
 
 // Create Schema
 const NotificationSchema = new Schema({
@@ -15,7 +16,7 @@ const NotificationSchema = new Schema({
   },
   type: {
     type: String,
-    enum: ['follow', 'like', 'comment', 'comment_like', 'reply', 'accepted'],
+    enum: NOTIFICATION_TYPES,
     required: true
   },
   post: {

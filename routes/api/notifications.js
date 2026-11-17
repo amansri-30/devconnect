@@ -4,16 +4,7 @@ const router = express.Router();
 const auth = require('../../middleware/auth');
 
 const Notification = require('../../models/Notification');
-
-// Keep this in sync with the Notification model's type enum.
-const NOTIFICATION_TYPES = [
-  'follow',
-  'like',
-  'comment',
-  'comment_like',
-  'reply',
-  'accepted'
-];
+const NOTIFICATION_TYPES = require('../../util/notificationTypes');
 
 const isUnreadFilter = (value) => value === 'true' || value === '1';
 

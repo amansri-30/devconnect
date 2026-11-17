@@ -855,7 +855,9 @@ export const deleteComment = (postId, commentId) => async dispatch => {
 
     dispatch({
       type: REMOVE_COMMENT,
-      payload: commentId
+      // Carry the post id too, so the reducer can clear that post's accepted
+      // answer even if the discussion page is no longer mounted.
+      payload: { postId, commentId }
     });
 
     dispatch(setAlert('Comment removed', 'success'));

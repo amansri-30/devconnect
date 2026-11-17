@@ -6,6 +6,9 @@ import {
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR,
+  REQUEST_NOTIFICATION_PREFS,
+  GET_NOTIFICATION_PREFS,
+  NOTIFICATION_PREFS_ERROR,
   LOGOUT,
   LOGIN_SUCCESS,
   REGISTER_SUCCESS,
@@ -24,6 +27,7 @@ const initialState = {
   unreadCount: 0,
   summary: emptySummary(),
   filters: { type: '', unread: false },
+  prefs: { muted: [], loading: false, error: null, requestId: 0 },
   loading: true,
   error: {},
   page: 1,
@@ -89,6 +93,39 @@ export default function notificationReducer(state = initialState, action) {
         loading: false
       };
     }
+    case REQUEST_NOTIFICATION_PREFS:
+      return {
+        ...state,
+        prefs: {
+          ...state.prefs,
+          loading: true,
+          error: null,
+          requestId: action.payload.requestId
+        }
+      };
+    case GET_NOTIFICATION_PREFS:
+      if (action.payload.requestId !== state.prefs.requestId) return state;
+
+      return {
+        ...state,
+        prefs: {
+          ...state.prefs,
+          muted: action.payload.muted,
+          loading: false,
+          error: null
+        }
+      };
+    case NOTIFICATION_PREFS_ERROR:
+      if (action.payload.requestId !== state.prefs.requestId) return state;
+
+      return {
+        ...state,
+        prefs: {
+          ...state.prefs,
+          loading: false,
+          error: action.payload
+        }
+      };
     case GET_NOTIFICATION_SUMMARY:
       return {
         ...state,

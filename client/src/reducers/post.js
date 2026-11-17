@@ -736,6 +736,12 @@ export default function postReducer(state = initialState, action) {
       const removedComments = state.myComments.rows.filter(
         (row) => row.post && String(row.post._id) === String(action.payload)
       ).length;
+      // Only an archive that actually held this post should lose one from its
+      // total; deleting a post from the feed must not corrupt another user's
+      // cached archive count.
+      const wasInArchive = state.archive.posts.some(
+        (post) => String(post._id) === String(action.payload)
+      );
 
       return {
         ...state,
@@ -757,7 +763,9 @@ export default function postReducer(state = initialState, action) {
         archive: {
           ...state.archive,
           posts: state.archive.posts.filter((p) => p._id !== action.payload),
-          total: Math.max(state.archive.total - 1, 0)
+          total: wasInArchive
+            ? Math.max(state.archive.total - 1, 0)
+            : state.archive.total
         },
         followingFeed: state.followingFeed.filter(
           (p) => p._id !== action.payload
@@ -834,46 +842,81 @@ export default function postReducer(state = initialState, action) {
       // Drop the comment and every reply threaded under it (the backend removes
       // the whole descendant chain too), so the UI stays consistent without a
       // refetch even for replies to replies.
-      const removeFrom = (comments) => {
-        const removedIds = new Set([String(action.payload)]);
+      const payload = action.payload;
+      const commentId =
+        payload && typeof payload === 'object' ? payload.commentId : payload;
+      const explicitPostId =
+        payload && typeof payload === 'object' ? payload.postId : null;
+      const removedIds = new Set([String(commentId)]);
+      const currentComments =
+        (state.post && state.post.comments) || [];
 
-        let foundNew = true;
-        while (foundNew) {
-          foundNew = false;
-          for (const comment of comments) {
-            if (!comment.parent) continue;
+      let foundNew = true;
+      while (foundNew) {
+        foundNew = false;
+        for (const comment of currentComments) {
+          if (!comment.parent) continue;
 
-            const parentId = String(comment.parent);
-            const commentId = String(comment._id);
+          const parentId = String(comment.parent);
+          const commentId = String(comment._id);
 
-            if (removedIds.has(parentId) && !removedIds.has(commentId)) {
-              removedIds.add(commentId);
-              foundNew = true;
-            }
+          if (removedIds.has(parentId) && !removedIds.has(commentId)) {
+            removedIds.add(commentId);
+            foundNew = true;
           }
         }
+      }
 
-        return comments.filter(
-          (comment) => !removedIds.has(String(comment._id))
-        );
+      const targetId = explicitPostId || (state.post && state.post._id);
+
+      // The server clears acceptedComment when its answer is deleted, so the
+      // cached post must do the same or the "Answered" badge stays on screen.
+      const strip = (p) => {
+        if (!p || String(p._id) !== String(targetId)) return p;
+
+        const next = {
+          ...p,
+          comments: (p.comments || []).filter(
+            (comment) => !removedIds.has(String(comment._id))
+          )
+        };
+
+        if (
+          next.acceptedComment &&
+          removedIds.has(String(next.acceptedComment))
+        ) {
+          next.acceptedComment = null;
+        }
+
+        return next;
       };
-      const strip = (p) => ({ ...p, comments: removeFrom(p.comments) });
-      const targetId = state.post && state.post._id;
-      const stripIfTarget = (p) => (p._id === targetId ? strip(p) : p);
+
+      // Keep the personal comment history in sync as well.
+      const removedRows = state.myComments.rows.filter((row) =>
+        removedIds.has(String(row._id))
+      ).length;
+
       return {
         ...state,
-        post: state.post ? strip(state.post) : state.post,
-        posts: state.posts.map(stripIfTarget),
-        myPosts: state.myPosts.map(stripIfTarget),
-        savedPosts: state.savedPosts.map(stripIfTarget),
-        likedPosts: state.likedPosts.map(stripIfTarget),
-        userPosts: state.userPosts.map(stripIfTarget),
+        post: strip(state.post),
+        posts: state.posts.map(strip),
+        myPosts: state.myPosts.map(strip),
+        savedPosts: state.savedPosts.map(strip),
+        likedPosts: state.likedPosts.map(strip),
+        userPosts: state.userPosts.map(strip),
         archive: {
           ...state.archive,
-          posts: state.archive.posts.map(stripIfTarget)
+          posts: state.archive.posts.map(strip)
         },
-        followingFeed: state.followingFeed.map(stripIfTarget),
-        trendingPosts: state.trendingPosts.map(stripIfTarget),
+        followingFeed: state.followingFeed.map(strip),
+        trendingPosts: state.trendingPosts.map(strip),
+        myComments: {
+          ...state.myComments,
+          rows: state.myComments.rows.filter(
+            (row) => !removedIds.has(String(row._id))
+          ),
+          total: Math.max(state.myComments.total - removedRows, 0)
+        },
         loading: false
       };
     }

@@ -6,12 +6,16 @@ import {
   GET_UNREAD_COUNT,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
-  NOTIFICATIONS_ERROR
+  NOTIFICATIONS_ERROR,
+  REQUEST_NOTIFICATION_PREFS,
+  GET_NOTIFICATION_PREFS,
+  NOTIFICATION_PREFS_ERROR
 } from './types';
 
 // Monotonic token so a slow page-1 response (e.g. after rapidly switching a
 // filter) can never overwrite the list the user is currently looking at.
 let notificationsRequestId = 0;
+let preferencesRequestId = 0;
 
 const getErrorPayload = (err) => {
   const data = err.response && err.response.data;
@@ -139,5 +143,67 @@ export const clearNotifications = (filters = {}) => async (dispatch) => {
       type: NOTIFICATIONS_ERROR,
       payload: getErrorPayload(err)
     });
+  }
+};
+
+// Load the categories the current user has muted. A request token keeps an old
+// response from overwriting a newer preference change.
+export const getNotificationPreferences = () => async (dispatch) => {
+  const requestId = ++preferencesRequestId;
+
+  dispatch({
+    type: REQUEST_NOTIFICATION_PREFS,
+    payload: { requestId }
+  });
+
+  try {
+    const res = await axios.get('/api/users/notification-preferences');
+
+    if (requestId !== preferencesRequestId) return;
+
+    dispatch({
+      type: GET_NOTIFICATION_PREFS,
+      payload: { muted: res.data.muted || [], requestId }
+    });
+  } catch (err) {
+    if (requestId !== preferencesRequestId) return;
+
+    dispatch({
+      type: NOTIFICATION_PREFS_ERROR,
+      payload: { ...getErrorPayload(err), requestId }
+    });
+  }
+};
+
+// Replace the full muted list. The caller passes the complete next list so a
+// toggled checkbox can't be lost to a stale local copy.
+export const updateNotificationPreferences = (muted) => async (dispatch) => {
+  const requestId = ++preferencesRequestId;
+
+  dispatch({
+    type: REQUEST_NOTIFICATION_PREFS,
+    payload: { requestId }
+  });
+
+  try {
+    const res = await axios.put('/api/users/notification-preferences', {
+      muted
+    });
+
+    if (requestId !== preferencesRequestId) return false;
+
+    dispatch({
+      type: GET_NOTIFICATION_PREFS,
+      payload: { muted: res.data.muted || [], requestId }
+    });
+    return true;
+  } catch (err) {
+    if (requestId !== preferencesRequestId) return false;
+
+    dispatch({
+      type: NOTIFICATION_PREFS_ERROR,
+      payload: { ...getErrorPayload(err), requestId }
+    });
+    return false;
   }
 };

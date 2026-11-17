@@ -4,8 +4,10 @@ const gravatar = require('gravatar');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const { check, validationResult } = require('express-validator');
+const auth = require('../../middleware/auth');
 const { JWT_SECRET } = require('../../config/keys');
 const { normalizeEmail, emailMatch } = require('../../util/email');
+const NOTIFICATION_TYPES = require('../../util/notificationTypes');
 
 // Load User model
 const User = require('../../models/User');
@@ -14,6 +16,54 @@ const User = require('../../models/User');
 // @desc    Tests users route
 // @access  Public
 router.get('/test', (req, res) => res.json({ message: 'Users works' }));
+
+// @route   GET api/users/notification-preferences
+// @desc    Get the notification categories muted by the current user
+// @access  Private
+router.get('/notification-preferences', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('mutedNotifications');
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    return res.json({
+      muted: (user.mutedNotifications || []).map(String)
+    });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server error');
+  }
+});
+
+// @route   PUT api/users/notification-preferences
+// @desc    Replace the notification categories muted by the current user
+// @access  Private
+router.put('/notification-preferences', auth, async (req, res) => {
+  // Unknown/stale values are ignored instead of rejected so an older client
+  // can't break its own settings by sending a category it no longer knows.
+  const requested = Array.isArray(req.body.muted) ? req.body.muted : [];
+  const muted = [
+    ...new Set(requested.filter((type) => NOTIFICATION_TYPES.includes(type)))
+  ];
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    user.mutedNotifications = muted;
+    await user.save();
+
+    return res.json({ muted });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server error');
+  }
+});
 
 // @route   POST api/users/register
 // @desc    Register user

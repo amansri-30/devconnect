@@ -8,7 +8,9 @@ import {
   getNotifications,
   getNotificationSummary,
   markNotificationsRead,
-  clearNotifications
+  clearNotifications,
+  getNotificationPreferences,
+  updateNotificationPreferences
 } from '../../actions/notifications';
 
 const FILTERS = [
@@ -26,16 +28,32 @@ const Notifications = ({
   getNotificationSummary,
   markNotificationsRead,
   clearNotifications,
-  notification: { notifications, unreadCount, summary, loading, page, total }
+  getNotificationPreferences,
+  updateNotificationPreferences,
+  notification: {
+    notifications,
+    unreadCount,
+    summary,
+    prefs,
+    loading,
+    page,
+    total
+  }
 }) => {
   const navigate = useNavigate();
   const [loadingMore, setLoadingMore] = useState(false);
   const [type, setType] = useState('');
   const [unreadOnly, setUnreadOnly] = useState(false);
   const [clearing, setClearing] = useState(false);
+  const [showPrefs, setShowPrefs] = useState(false);
+  const [savingPref, setSavingPref] = useState('');
 
   const filters = { type, unread: unreadOnly };
   const hasFilters = Boolean(type) || unreadOnly;
+
+  useEffect(() => {
+    getNotificationPreferences();
+  }, [getNotificationPreferences]);
 
   // Fetch without clearing the unread badge, so unread items stay visible.
   // Changing a filter re-queries page 1 with that filter.
@@ -86,6 +104,24 @@ const Notifications = ({
   const resetFilters = () => {
     setType('');
     setUnreadOnly(false);
+  };
+
+  // A checked box means "muted". Send the full next list so the server has an
+  // unambiguous set even if several toggles happen in quick succession.
+  const toggleMute = async (filter) => {
+    if (savingPref || prefs.loading) return;
+
+    const isMuted = prefs.muted.includes(filter.key);
+    const next = isMuted
+      ? prefs.muted.filter((key) => key !== filter.key)
+      : [...prefs.muted, filter.key];
+
+    setSavingPref(filter.key);
+    try {
+      await updateNotificationPreferences(next);
+    } finally {
+      setSavingPref('');
+    }
   };
 
   const notificationLink = (n) => {
@@ -155,6 +191,50 @@ const Notifications = ({
         <i className="fas fa-bell" /> Notifications
       </h1>
       <p className="lead">Stay up to date with activity on your posts and profile</p>
+
+      <div className="notification-settings my-1">
+        <button
+          type="button"
+          className="btn btn-light"
+          onClick={() => setShowPrefs((shown) => !shown)}
+          aria-expanded={showPrefs}
+        >
+          <i className="fas fa-sliders-h" /> Notification settings
+        </button>
+        {showPrefs && (
+          <div className="notification-prefs bg-white p-1 my-1">
+            <p className="my-1 text-muted">
+              Checked categories won't create new notifications. Anything you've
+              already received stays in your list until you clear it.
+            </p>
+            {prefs.error && (
+              <p className="my-1 text-danger" role="status">
+                Could not save your preferences. Please try again.
+              </p>
+            )}
+            <div className="notification-pref-grid">
+              {FILTERS.filter((filter) => filter.key).map((filter) => {
+                const muted = prefs.muted.includes(filter.key);
+
+                return (
+                  <label
+                    key={filter.key}
+                    className={`notification-pref ${muted ? 'is-muted' : ''}`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={muted}
+                      disabled={Boolean(savingPref) || prefs.loading}
+                      onChange={() => toggleMute(filter)}
+                    />{' '}
+                    <i className={filter.icon} /> {filter.label}
+                  </label>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
 
       <div className="notification-filters my-1">
         {FILTERS.map((filter) => {
@@ -298,6 +378,8 @@ Notifications.propTypes = {
   getNotificationSummary: PropTypes.func.isRequired,
   markNotificationsRead: PropTypes.func.isRequired,
   clearNotifications: PropTypes.func.isRequired,
+  getNotificationPreferences: PropTypes.func.isRequired,
+  updateNotificationPreferences: PropTypes.func.isRequired,
   notification: PropTypes.object.isRequired
 };
 
@@ -309,5 +391,7 @@ export default connect(mapStateToProps, {
   getNotifications,
   getNotificationSummary,
   markNotificationsRead,
-  clearNotifications
+  clearNotifications,
+  getNotificationPreferences,
+  updateNotificationPreferences
 })(Notifications);

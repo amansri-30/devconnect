@@ -982,6 +982,35 @@ button {
   margin: 0;
 }
 
+/* Mute preferences: checked means new notifications of that type are skipped. */
+.notification-prefs {
+  border-radius: 4px;
+  border: 1px solid #e6e6e6;
+}
+
+.notification-pref-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+}
+
+.notification-pref {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.notification-pref input {
+  margin: 0;
+}
+
+.notification-pref.is-muted {
+  color: #8a939b;
+  text-decoration: line-through;
+}
+
 .notification-reset {
   background: none;
   border: none;
@@ -1690,6 +1719,10 @@ button {
 [data-theme='dark'] .form textarea::placeholder,
 [data-theme='dark'] .search-bar input::placeholder {
   color: #9aa4ad;
+}
+
+[data-theme='dark'] .notification-prefs {
+  border-color: #3a424a;
 }
 
 [data-theme='dark'] .profile-exp,
