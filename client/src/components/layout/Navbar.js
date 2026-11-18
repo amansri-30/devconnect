@@ -60,6 +60,11 @@ const Navbar = ({
         </Link>
       </li>
       <li>
+        <Link to="/watching-posts" title="Discussions you're following">
+          <i className="fas fa-eye" /> <span className="hide-sm">Watching</span>
+        </Link>
+      </li>
+      <li>
         <Link to="/following">
           <i className="fas fa-user-friends" /> <span className="hide-sm">Following</span>
         </Link>

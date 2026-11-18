@@ -1167,10 +1167,24 @@ router.delete('/', auth, async (req, res) => {
     // other people keep deep links to discussions that no longer exist.
     if (ownedPostIds.length > 0) {
       await Notification.deleteMany({ post: { $in: ownedPostIds } });
+
+      // Other people may have filed the deleted account's posts into their own
+      // collections. Drop those ids too, otherwise the folder chips keep a
+      // count for posts that no longer exist (and the scoped list comes up
+      // short). DELETE /api/posts/:id does the same for a single post.
+      await Collection.updateMany(
+        { posts: { $in: ownedPostIds } },
+        { $pull: { posts: { $in: ownedPostIds } } }
+      );
     }
 
     // The account's saved-post folders belong to no one after deletion.
     await Collection.deleteMany({ user: req.user.id });
+    // Stop following other people's discussions with a removed account.
+    await Post.updateMany(
+      { subscribers: req.user.id },
+      { $pull: { subscribers: req.user.id } }
+    );
 
     // Remove user
     await User.findByIdAndDelete(req.user.id);

@@ -30,8 +30,15 @@ const shapePost = (doc, userId) => {
   const savedBy = Array.isArray(plain.savedBy)
     ? plain.savedBy.map((id) => id.toString())
     : [];
-  const { savedBy: _drop, ...rest } = plain;
-  return { ...rest, saved: savedBy.includes(userId) };
+  const subscribers = Array.isArray(plain.subscribers)
+    ? plain.subscribers.map((id) => id.toString())
+    : [];
+  const { savedBy: _drop, subscribers: _dropWatchers, ...rest } = plain;
+  return {
+    ...rest,
+    saved: savedBy.includes(userId),
+    watching: userId ? subscribers.includes(String(userId)) : false
+  };
 };
 
 // Hashtags are derived from the post text on write so feeds can filter and
@@ -457,6 +464,78 @@ router.get('/liked', auth, async (req, res) => {
     return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
   } catch (err) {
     console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/posts/watching
+// @desc    Get discussions the current user is following (must precede /:id)
+// @access  Private
+router.get('/watching', auth, async (req, res) => {
+  try {
+    const page = Math.max(parseInt(req.query.page, 10) || 1, 1);
+    const limit = Math.min(
+      Math.max(parseInt(req.query.limit, 10) || 12, 1),
+      50
+    );
+    const skip = (page - 1) * limit;
+
+    const searchFilter = buildSearchFilter(req.query.search);
+    const filter = searchFilter
+      ? { subscribers: req.user.id, ...searchFilter }
+      : { subscribers: req.user.id };
+
+    const [posts, total] = await Promise.all([
+      Post.find(filter).sort({ date: -1 }).skip(skip).limit(limit),
+      Post.countDocuments(filter)
+    ]);
+
+    res.set({
+      'X-Total-Count': String(total),
+      'X-Page': String(page),
+      'X-Per-Page': String(limit)
+    });
+
+    return res.json(posts.map((doc) => shapePost(doc, req.user.id)));
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/posts/watch/:id
+// @desc    Follow or unfollow a discussion
+// @access  Private
+router.put('/watch/:id', auth, async (req, res) => {
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    const subscribers = post.subscribers || [];
+    const index = subscribers.findIndex(
+      (id) => String(id) === String(req.user.id)
+    );
+
+    if (index === -1) {
+      subscribers.push(req.user.id);
+    } else {
+      subscribers.splice(index, 1);
+    }
+
+    post.subscribers = subscribers;
+    await post.save();
+
+    return res.json({ watching: index === -1 });
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
     return res.status(500).send('Server Error');
   }
 });
@@ -1296,6 +1375,28 @@ router.post(
           comment: savedComment._id
         });
       }
+
+      // Watchers follow the whole discussion. Skip the author (already
+      // notified above) and, for replies, the parent comment's author. The
+      // commenter is skipped by notify() itself.
+      const skipIds = new Set([String(post.user)]);
+      if (parentComment) skipIds.add(String(parentComment.user));
+
+      const watcherIds = (post.subscribers || [])
+        .map((id) => String(id))
+        .filter((id) => !skipIds.has(id));
+
+      await Promise.all(
+        watcherIds.map((id) =>
+          notify({
+            recipient: id,
+            from: req.user.id,
+            type: parentComment ? 'reply' : 'comment',
+            post: post._id,
+            comment: savedComment._id
+          })
+        )
+      );
 
       return res.json(post.comments);
     } catch (err) {

@@ -8,6 +8,7 @@ import {
   removeLike,
   deletePost,
   toggleSavePost,
+  toggleWatchPost,
   editPost,
   togglePinPost
 } from '../../actions/post';
@@ -21,6 +22,7 @@ const PostItem = ({
   removeLike,
   deletePost,
   toggleSavePost,
+  toggleWatchPost,
   editPost,
   togglePinPost,
   toggleFollow,
@@ -35,6 +37,7 @@ const PostItem = ({
     comments,
     date,
     saved,
+    watching,
     views,
     tags,
     pinned,
@@ -53,6 +56,7 @@ const PostItem = ({
   const [followBusy, setFollowBusy] = useState(false);
   const [likeBusy, setLikeBusy] = useState(false);
   const [saveBusy, setSaveBusy] = useState(false);
+  const [watchBusy, setWatchBusy] = useState(false);
   const [deleteBusy, setDeleteBusy] = useState(false);
   const [showLikes, setShowLikes] = useState(false);
 
@@ -147,6 +151,16 @@ const PostItem = ({
       await toggleSavePost(_id);
     } finally {
       setSaveBusy(false);
+    }
+  };
+
+  const handleWatch = async () => {
+    if (watchBusy) return;
+    setWatchBusy(true);
+    try {
+      await toggleWatchPost(_id);
+    } finally {
+      setWatchBusy(false);
     }
   };
 
@@ -341,6 +355,23 @@ const PostItem = ({
                 {saved ? 'Saved' : 'Save'}
               </span>
             </button>
+            <button
+              onClick={handleWatch}
+              type="button"
+              className={`btn btn-light ${watching ? 'btn-primary' : ''}`}
+              title={
+                watching
+                  ? 'Stop following this discussion'
+                  : 'Follow this discussion to get notified about replies'
+              }
+              disabled={watchBusy}
+            >
+              <i className="fas fa-eye" />
+              <span className="hide-sm">
+                {' '}
+                {watching ? 'Watching' : 'Watch'}
+              </span>
+            </button>
             {!auth.loading &&
               auth.user &&
               String(user) === String(auth.user._id) && (
@@ -407,6 +438,7 @@ PostItem.propTypes = {
   removeLike: PropTypes.func.isRequired,
   deletePost: PropTypes.func.isRequired,
   toggleSavePost: PropTypes.func.isRequired,
+  toggleWatchPost: PropTypes.func.isRequired,
   editPost: PropTypes.func.isRequired,
   togglePinPost: PropTypes.func.isRequired,
   toggleFollow: PropTypes.func.isRequired,
@@ -423,6 +455,7 @@ export default connect(mapStateToProps, {
   removeLike,
   deletePost,
   toggleSavePost,
+  toggleWatchPost,
   editPost,
   togglePinPost,
   toggleFollow

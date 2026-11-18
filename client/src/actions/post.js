@@ -34,6 +34,9 @@ import {
   GET_LIKED_POSTS,
   REQUEST_LIKED_POSTS,
   DELETE_LIKED_POST,
+  GET_WATCHING_POSTS,
+  REQUEST_WATCHING_POSTS,
+  WATCH_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT,
@@ -56,6 +59,7 @@ let singlePostRequestId = 0;
 // fire several requests, and only the newest one may touch the list.
 let savedRequestId = 0;
 let likedRequestId = 0;
+let watchingRequestId = 0;
 let myPostsRequestId = 0;
 let myCommentsRequestId = 0;
 let insightsRequestId = 0;
@@ -693,6 +697,66 @@ export const getLikedPosts =
       });
     }
   };
+
+// Get one page of discussions the current user is following.
+export const getWatchingPosts =
+  (page = 1, search = '') =>
+  async (dispatch) => {
+    const requestId = ++watchingRequestId;
+    const term = search.trim();
+
+    dispatch({
+      type: REQUEST_WATCHING_POSTS,
+      payload: { page, term, requestId }
+    });
+
+    try {
+      const params = { page, limit: 12 };
+      if (term) params.search = term;
+
+      const res = await axios.get('/api/posts/watching', { params });
+
+      dispatch({
+        type: GET_WATCHING_POSTS,
+        payload: {
+          posts: res.data,
+          page,
+          term,
+          requestId,
+          total:
+            parseInt(res.headers['x-total-count'], 10) || res.data.length,
+          perPage: parseInt(res.headers['x-per-page'], 10) || 12
+        }
+      });
+    } catch (err) {
+      if (requestId !== watchingRequestId) return;
+
+      dispatch({
+        type: POST_ERROR,
+        payload: getErrorPayload(err)
+      });
+    }
+  };
+
+// Follow or unfollow a discussion. New comments then notify the viewer.
+export const toggleWatchPost = (postId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/watch/${postId}`);
+
+    dispatch({
+      type: WATCH_POST,
+      payload: { postId, watching: res.data.watching }
+    });
+    return true;
+  } catch (err) {
+    dispatch(setAlert('Could not update followed discussions', 'danger'));
+    dispatch({
+      type: POST_ERROR,
+      payload: getErrorPayload(err)
+    });
+    return false;
+  }
+};
 
 // Save or unsave a post for the current user
 export const toggleSavePost = (postId) => async (dispatch) => {

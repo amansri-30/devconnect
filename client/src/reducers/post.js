@@ -33,6 +33,9 @@ import {
   GET_LIKED_POSTS,
   REQUEST_LIKED_POSTS,
   DELETE_LIKED_POST,
+  GET_WATCHING_POSTS,
+  REQUEST_WATCHING_POSTS,
+  WATCH_POST,
   ADD_COMMENT,
   UPDATE_COMMENT,
   REMOVE_COMMENT,
@@ -65,6 +68,12 @@ const initialState = {
   likedPerPage: 12,
   likedLoading: true,
   likedRequestId: 0,
+  watchingPosts: [],
+  watchingPage: 0,
+  watchingTotal: 0,
+  watchingPerPage: 12,
+  watchingLoading: true,
+  watchingRequestId: 0,
   myPosts: [],
   myPostsRequestId: 0,
   myComments: {
@@ -269,6 +278,81 @@ export default function postReducer(state = initialState, action) {
         likedTotal: exists
           ? Math.max(state.likedTotal - 1, 0)
           : state.likedTotal,
+        loading: false
+      };
+    }
+    case REQUEST_WATCHING_POSTS:
+      return {
+        ...state,
+        watchingRequestId: action.payload.requestId,
+        watchingLoading: true
+      };
+    case GET_WATCHING_POSTS: {
+      const { posts, page, total, perPage, requestId } = action.payload;
+
+      if (requestId !== state.watchingRequestId) return state;
+
+      const allPosts =
+        page === 1
+          ? posts
+          : Array.from(
+              new Map(
+                [...state.watchingPosts, ...posts].map((p) => [p._id, p])
+              ).values()
+            );
+
+      return {
+        ...state,
+        watchingPosts: allPosts,
+        watchingPage: page,
+        watchingTotal: total,
+        watchingPerPage: perPage,
+        watchingLoading: false,
+        loading: false
+      };
+    }
+    case WATCH_POST: {
+      const { postId, watching } = action.payload;
+      const setWatching = (p) =>
+        p && p._id === postId ? { ...p, watching } : p;
+      const existed = state.watchingPosts.some((p) => p._id === postId);
+      const cached =
+        state.posts.find((p) => p._id === postId) ||
+        (state.post && state.post._id === postId ? state.post : null);
+      const added = watching && !existed && Boolean(cached);
+
+      return {
+        ...state,
+        posts: state.posts.map(setWatching),
+        post: state.post ? setWatching(state.post) : state.post,
+        savedPosts: state.savedPosts.map(setWatching),
+        likedPosts: state.likedPosts.map(setWatching),
+        myPosts: state.myPosts.map(setWatching),
+        userPosts: state.userPosts.map(setWatching),
+        followingFeed: state.followingFeed.map(setWatching),
+        trendingPosts: state.trendingPosts.map(setWatching),
+        archive: {
+          ...state.archive,
+          posts: state.archive.posts.map(setWatching)
+        },
+        related: {
+          ...state.related,
+          posts: state.related.posts.map(setWatching)
+        },
+        watchingPosts: watching
+          ? existed
+            ? state.watchingPosts.map(setWatching)
+            : added
+              ? [{ ...cached, watching }, ...state.watchingPosts]
+              : state.watchingPosts
+          : state.watchingPosts.filter((p) => p._id !== postId),
+        watchingTotal: watching
+          ? existed
+            ? state.watchingTotal
+            : state.watchingTotal + (added ? 1 : 0)
+          : existed
+            ? Math.max(state.watchingTotal - 1, 0)
+            : state.watchingTotal,
         loading: false
       };
     }
@@ -779,6 +863,14 @@ export default function postReducer(state = initialState, action) {
         allSavedTotal: wasSaved
           ? Math.max(state.allSavedTotal - 1, 0)
           : state.allSavedTotal,
+        watchingPosts: state.watchingPosts.filter(
+          (p) => p._id !== action.payload
+        ),
+        watchingTotal: state.watchingPosts.some(
+          (p) => p._id === action.payload
+        )
+          ? Math.max(state.watchingTotal - 1, 0)
+          : state.watchingTotal,
         likedPosts: state.likedPosts.filter((p) => p._id !== action.payload),
         likedTotal: wasLiked
           ? Math.max(state.likedTotal - 1, 0)

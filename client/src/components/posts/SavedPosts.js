@@ -213,9 +213,10 @@ const SavedPosts = ({
           switch folders.
         </p>
       )}
-      {savedLoading && savedPosts.length > 0 && (
+      {savedLoading && (
         <p className="my-1 text-muted" role="status">
-          <i className="fas fa-circle-notch fa-spin" /> Searching...
+          <i className="fas fa-circle-notch fa-spin" />{' '}
+          {savedPosts.length > 0 ? 'Searching...' : 'Loading...'}
         </p>
       )}
       <div className="posts">
@@ -275,7 +276,7 @@ const SavedPosts = ({
               </div>
             </div>
           ))
-        ) : term || activeCollection ? (
+        ) : !savedLoading && (term || activeCollection) ? (
           <p className="my-1">
             No saved posts match {term ? `"${term}"` : 'this collection'}.
           </p>

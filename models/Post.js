@@ -31,6 +31,14 @@ const PostSchema = new Schema({
       ref: 'users'
     }
   ],
+  // People following this discussion. They get a notification for new
+  // comments/replies without having to take part in the thread themselves.
+  subscribers: [
+    {
+      type: Schema.Types.ObjectId,
+      ref: 'users'
+    }
+  ],
   views: {
     type: Number,
     default: 0

@@ -33,6 +33,7 @@ import Post from './components/post/Post';
 import SavedPosts from './components/posts/SavedPosts';
 import LikedPosts from './components/posts/LikedPosts';
 import MyComments from './components/posts/MyComments';
+import WatchingPosts from './components/posts/WatchingPosts';
 import Following from './components/profiles/Following';
 import Followers from './components/profiles/Followers';
 import Network from './components/profiles/Network';
@@ -157,6 +158,14 @@ const App = () => {
                 element={
                   <PrivateRoute>
                     <MyComments />
+                  </PrivateRoute>
+                }
+              />
+              <Route
+                path="/watching-posts"
+                element={
+                  <PrivateRoute>
+                    <WatchingPosts />
                   </PrivateRoute>
                 }
               />
