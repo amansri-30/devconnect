@@ -65,6 +65,61 @@ router.put('/notification-preferences', auth, async (req, res) => {
   }
 });
 
+// @route   GET api/users/followed-tags
+// @desc    Get the hashtags the current user follows
+// @access  Private
+router.get('/followed-tags', auth, async (req, res) => {
+  try {
+    const user = await User.findById(req.user.id).select('followedTags');
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    return res.json({ tags: (user.followedTags || []).map(String) });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server error');
+  }
+});
+
+// @route   POST api/users/followed-tags/:tag
+// @desc    Follow or unfollow a hashtag
+// @access  Private
+router.post('/followed-tags/:tag', auth, async (req, res) => {
+  const tag = String(req.params.tag || '').trim().toLowerCase();
+
+  if (!/^[a-z0-9_]{1,30}$/.test(tag)) {
+    return res.status(400).json({ msg: 'Invalid hashtag' });
+  }
+
+  try {
+    const user = await User.findById(req.user.id);
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    const tags = (user.followedTags || []).map(String);
+    const index = tags.indexOf(tag);
+    const following = index === -1;
+
+    if (following) {
+      tags.push(tag);
+    } else {
+      tags.splice(index, 1);
+    }
+
+    user.followedTags = tags;
+    await user.save();
+
+    return res.json({ tags, following, tag });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server error');
+  }
+});
+
 // @route   POST api/users/register
 // @desc    Register user
 // @access  Public

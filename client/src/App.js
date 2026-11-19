@@ -217,7 +217,7 @@ const App = () => {
                   </PrivateRoute>
                 }
               />
-              <Route element={<NotFound />} />
+              <Route path="*" element={<NotFound />} />
             </Route>
           </Routes>
         </Fragment>

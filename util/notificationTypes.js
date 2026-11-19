@@ -7,7 +7,8 @@ const NOTIFICATION_TYPES = [
   'comment',
   'comment_like',
   'reply',
-  'accepted'
+  'accepted',
+  'tag'
 ];
 
 module.exports = NOTIFICATION_TYPES;

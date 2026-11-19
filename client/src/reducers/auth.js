@@ -6,14 +6,18 @@ import {
   LOGIN_SUCCESS,
   LOGIN_FAIL,
   LOGOUT,
-  ACCOUNT_DELETED
+  ACCOUNT_DELETED,
+  GET_FOLLOWED_TAGS,
+  FOLLOWED_TAG_UPDATE
 } from '../actions/types';
 
 const initialState = {
   token: localStorage.getItem('token'),
   isAuthenticated: null,
   loading: true,
-  user: null
+  user: null,
+  followedTags: [],
+  followedTagsRequestId: 0
 };
 
 export default function authReducer(state = initialState, action) {
@@ -23,7 +27,10 @@ export default function authReducer(state = initialState, action) {
         ...state,
         isAuthenticated: true,
         loading: false,
-        user: action.payload
+        user: action.payload,
+        followedTags: Array.isArray(action.payload.followedTags)
+          ? action.payload.followedTags.map(String)
+          : state.followedTags
       };
     case REGISTER_SUCCESS:
     case LOGIN_SUCCESS:
@@ -32,7 +39,10 @@ export default function authReducer(state = initialState, action) {
         ...state,
         ...action.payload,
         isAuthenticated: true,
-        loading: false
+        loading: false,
+        // Login responses don't include topic preferences; don't let the
+        // previous account's follows leak into this session.
+        followedTags: []
       };
     case REGISTER_FAIL:
     case AUTH_ERROR:
@@ -47,7 +57,17 @@ export default function authReducer(state = initialState, action) {
         // Drop the user too: otherwise a signed-out client keeps the previous
         // account in state (e.g. PostItem's liked/own-post checks read it).
         user: null,
-        loading: false
+        loading: false,
+        followedTags: []
+      };
+    case GET_FOLLOWED_TAGS:
+    case FOLLOWED_TAG_UPDATE:
+      // Ignore a slow response from before the latest toggle/account switch.
+      if (action.payload.requestId < state.followedTagsRequestId) return state;
+      return {
+        ...state,
+        followedTags: action.payload.tags.map(String),
+        followedTagsRequestId: action.payload.requestId
       };
     default:
       return state;

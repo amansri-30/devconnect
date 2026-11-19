@@ -77,7 +77,8 @@ const getErrorPayload = (err) => ({
 
 // Get posts (paginated; page 1 replaces the list, later pages append).
 // sort may be 'recent' (default) or 'likes' (most liked first).
-// scope may be 'all' (default) or 'following' (posts from developers you follow).
+// scope may be 'all' (default), 'following' (developers you follow), or
+// 'topics' (hashtags you follow).
 // search filters by post text or author name (server-side, across all posts).
 // tag limits the feed to posts carrying that hashtag.
 // unanswered limits the feed to discussions without an accepted answer.
@@ -100,7 +101,7 @@ export const getPosts = (
     const params = { page, limit: 8 };
     if (sort === 'likes' || sort === 'trending' || sort === 'views')
       params.sort = sort;
-    if (scope === 'following') params.scope = 'following';
+    if (scope === 'following' || scope === 'topics') params.scope = scope;
     if (search.trim()) params.search = search.trim();
     if (tag.trim()) params.tag = tag.trim();
     if (unanswered) params.unanswered = 'true';

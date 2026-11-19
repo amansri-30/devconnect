@@ -1499,6 +1499,71 @@ button {
   color: #fff;
 }
 
+.topic-toolbar {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.tag-chip-group {
+  display: inline-flex;
+  align-items: center;
+}
+
+.tag-chip-group .tag-chip:first-child {
+  border-top-right-radius: 0;
+  border-bottom-right-radius: 0;
+}
+
+.tag-chip-follow {
+  padding: 0.2rem 0.45rem;
+  border-left: none;
+  border-top-left-radius: 0;
+  border-bottom-left-radius: 0;
+  font-size: 0.8rem;
+}
+
+.tag-chip-follow.is-following {
+  background: var(--primary-color);
+  color: #fff;
+}
+
+.tag-chip-followed {
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.tag-chip-followed:hover,
+.tag-chip-followed:focus {
+  background: var(--success-color);
+  color: #fff;
+}
+
+.topic-follow-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.topic-follow-form input {
+  flex: 1;
+  min-width: 180px;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.topic-follow-form .btn {
+  margin: 0;
+}
+
+[data-theme='dark'] .topic-follow-form input {
+  background: #1f2428;
+  border-color: #3a424a;
+  color: #e6e6e6;
+}
+
 .post-tags {
   display: flex;
   flex-wrap: wrap;

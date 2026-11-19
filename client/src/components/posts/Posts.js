@@ -3,13 +3,25 @@ import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { useSearchParams } from 'react-router-dom';
 import { getPosts, getTags } from '../../actions/post';
+import { getFollowedTags, toggleFollowedTag } from '../../actions/auth';
+import { setAlert } from '../../actions/alert';
 import Spinner from '../layout/Spinner';
 import PostItem from './PostItem';
 import PostForm from './PostForm';
 
+const normalizeTag = value =>
+  String(value || '')
+    .trim()
+    .replace(/^#+/, '')
+    .toLowerCase();
+
 const Posts = ({
   getPosts,
   getTags,
+  getFollowedTags,
+  toggleFollowedTag,
+  setAlert,
+  auth: { followedTags },
   post: { posts, tags, postsLoading, page, total }
 }) => {
   // Hashtag filters and searches are mirrored in the URL (?tag=react,
@@ -24,6 +36,7 @@ const Posts = ({
   const [query, setQuery] = useState(urlSearch);
   const [sort, setSort] = useState('recent');
   const [scope, setScope] = useState('all');
+  const [topicInput, setTopicInput] = useState('');
 
   // Keep the input in sync when the URL changes (same route, so React Router
   // won't remount the page).
@@ -46,6 +59,10 @@ const Posts = ({
     getTags();
   }, [getTags]);
 
+  useEffect(() => {
+    getFollowedTags();
+  }, [getFollowedTags]);
+
   const loadMore = async () => {
     if (moreLoading || postsLoading) return;
     setMoreLoading(true);
@@ -62,6 +79,47 @@ const Posts = ({
 
   const onScopeChange = (value) => {
     setScope(value);
+  };
+
+  const onToggleFollow = async (rawTag) => {
+    const name = normalizeTag(rawTag);
+
+    if (!/^[a-z0-9_]{1,30}$/.test(name)) {
+      setAlert('Topics use 1-30 letters, numbers, or underscores.', 'danger');
+      return;
+    }
+
+    const next = await toggleFollowedTag(name);
+
+    if (next === null) return;
+
+    // A topic feed must drop unfollowed posts immediately, not on next mount.
+    if (scope === 'topics') {
+      getPosts(1, sort, scope, query, tag, unansweredOnly);
+    }
+
+    setAlert(
+      next
+        ? `Following #${name}. New posts will notify you.`
+        : `Unfollowed #${name}.`,
+      'success'
+    );
+  };
+
+  const onFollowTopic = (e) => {
+    e.preventDefault();
+    const name = normalizeTag(topicInput);
+
+    if (!name) return;
+
+    if (followedTags.includes(name)) {
+      setAlert(`You already follow #${name}.`, 'success');
+      setTopicInput('');
+      return;
+    }
+
+    onToggleFollow(name);
+    setTopicInput('');
   };
 
   // Write the active filters back to the URL (replace, so typing doesn't stack
@@ -121,15 +179,30 @@ const Posts = ({
             type="button"
             className={`btn ${scope === 'all' ? 'btn-primary' : 'btn-light'}`}
             onClick={() => onScopeChange('all')}
+            aria-pressed={scope === 'all'}
           >
             Everyone
           </button>
           <button
             type="button"
-            className={`btn ${scope === 'following' ? 'btn-primary' : 'btn-light'}`}
+            className={`btn ${
+              scope === 'following' ? 'btn-primary' : 'btn-light'
+            }`}
             onClick={() => onScopeChange('following')}
+            aria-pressed={scope === 'following'}
           >
             Following
+          </button>
+          <button
+            type="button"
+            className={`btn ${
+              scope === 'topics' ? 'btn-primary' : 'btn-light'
+            }`}
+            onClick={() => onScopeChange('topics')}
+            aria-pressed={scope === 'topics'}
+            title="Posts from hashtags you follow"
+          >
+            <i className="fas fa-hashtag" /> Topics
           </button>
         </div>
         <select
@@ -162,34 +235,91 @@ const Posts = ({
           {unansweredOnly ? 'Unanswered only' : 'Unanswered'}
         </button>
       </div>
-      {(tags.length > 0 || tag) && (
-        <div className="tag-filter" aria-label="Filter posts by hashtag">
-          <span className="tag-filter-label">
-            <i className="fas fa-hashtag" /> Trending tags
-          </span>
-          {tags.map(({ tag: name, count }) => (
-            <button
-              key={name}
-              type="button"
-              className={`tag-chip ${tag === name ? 'tag-chip-active' : ''}`}
-              onClick={() => applyTag(tag === name ? '' : name)}
-              title={`${count} post${count === 1 ? '' : 's'} tagged #${name}`}
-            >
-              #{name}
-            </button>
-          ))}
-          {tag && (
-            <button
-              type="button"
-              className="tag-chip tag-chip-clear"
-              onClick={() => applyTag('')}
-              title="Clear the hashtag filter"
-            >
-              <i className="fas fa-times" /> Clear #{tag}
-            </button>
-          )}
-        </div>
-      )}
+      <div className="topic-toolbar my-1">
+        {(tags.length > 0 || tag) && (
+          <div className="tag-filter" aria-label="Filter posts by hashtag">
+            <span className="tag-filter-label">
+              <i className="fas fa-hashtag" /> Trending tags
+            </span>
+            {tags.map(({ tag: name, count }) => {
+              const isFollowing = followedTags.includes(name);
+
+              return (
+                <span className="tag-chip-group" key={name}>
+                  <button
+                    type="button"
+                    className={`tag-chip ${
+                      tag === name ? 'tag-chip-active' : ''
+                    }`}
+                    onClick={() => applyTag(tag === name ? '' : name)}
+                    title={`${count} post${count === 1 ? '' : 's'} tagged #${name}`}
+                  >
+                    #{name}
+                  </button>
+                  <button
+                    type="button"
+                    className={`tag-chip tag-chip-follow ${
+                      isFollowing ? 'is-following' : ''
+                    }`}
+                    onClick={() => onToggleFollow(name)}
+                    aria-pressed={isFollowing}
+                    aria-label={`${isFollowing ? 'Unfollow' : 'Follow'} #${name}`}
+                    title={`${isFollowing ? 'Unfollow' : 'Follow'} #${name}`}
+                  >
+                    <i
+                      className={`fas fa-${isFollowing ? 'check' : 'plus'}`}
+                    />
+                  </button>
+                </span>
+              );
+            })}
+            {tag && (
+              <button
+                type="button"
+                className="tag-chip tag-chip-clear"
+                onClick={() => applyTag('')}
+                title="Clear the hashtag filter"
+              >
+                <i className="fas fa-times" /> Clear #{tag}
+              </button>
+            )}
+          </div>
+        )}
+        {followedTags.length > 0 && (
+          <div
+            className="tag-filter followed-topics"
+            aria-label="Hashtag topics you follow"
+          >
+            <span className="tag-filter-label">
+              <i className="fas fa-star" /> Your topics
+            </span>
+            {followedTags.map((name) => (
+              <button
+                key={name}
+                type="button"
+                className="tag-chip tag-chip-followed"
+                onClick={() => onToggleFollow(name)}
+                aria-label={`Unfollow #${name}`}
+                title={`Unfollow #${name}`}
+              >
+                #{name} <i className="fas fa-times" />
+              </button>
+            ))}
+          </div>
+        )}
+        <form className="topic-follow-form" onSubmit={onFollowTopic}>
+          <input
+            type="text"
+            value={topicInput}
+            onChange={(e) => setTopicInput(e.target.value)}
+            placeholder="Follow a topic, e.g. react"
+            aria-label="Hashtag topic to follow"
+          />
+          <button type="submit" className="btn btn-light">
+            <i className="fas fa-plus" /> Follow topic
+          </button>
+        </form>
+      </div>
       {postsLoading && loadedCount > 0 && (
         <p className="my-1 text-muted" role="status">
           <i className="fas fa-circle-notch fa-spin" /> Updating posts...
@@ -206,6 +336,10 @@ const Posts = ({
               ? `No posts match "${q}".`
               : unansweredOnly
               ? 'No unanswered discussions here. Every matching post already has an accepted answer.'
+              : scope === 'topics'
+              ? followedTags.length === 0
+                ? 'No topics followed yet. Follow a hashtag above to build your topic feed.'
+                : 'No posts in your followed topics yet. Try another topic or check back later.'
               : scope === 'following'
               ? 'No posts from people you follow yet. Follow developers to see their posts here.'
               : 'No posts yet. Be the first to start a discussion!'}
@@ -230,11 +364,22 @@ const Posts = ({
 Posts.propTypes = {
   getPosts: PropTypes.func.isRequired,
   getTags: PropTypes.func.isRequired,
+  getFollowedTags: PropTypes.func.isRequired,
+  toggleFollowedTag: PropTypes.func.isRequired,
+  setAlert: PropTypes.func.isRequired,
+  auth: PropTypes.object.isRequired,
   post: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
+  auth: state.auth,
   post: state.post
 });
 
-export default connect(mapStateToProps, { getPosts, getTags })(Posts);
+export default connect(mapStateToProps, {
+  getPosts,
+  getTags,
+  getFollowedTags,
+  toggleFollowedTag,
+  setAlert
+})(Posts);

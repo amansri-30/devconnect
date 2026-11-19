@@ -56,6 +56,35 @@ const extractTags = (text = '') => {
   ].slice(0, MAX_TAGS);
 };
 
+// Tell everyone subscribed to one of a new post's hashtags about it. The
+// author is skipped by notify(), and a failure here never rolls back the post
+// that was already saved.
+const notifyTopicFollowers = async (tags, post, authorId) => {
+  if (!Array.isArray(tags) || tags.length === 0) return;
+
+  try {
+    const followers = await User.find({
+      followedTags: { $in: tags },
+      _id: { $ne: authorId }
+    })
+      .select('_id')
+      .lean();
+
+    await Promise.all(
+      followers.map((follower) =>
+        notify({
+          recipient: follower._id,
+          from: authorId,
+          type: 'tag',
+          post: post._id
+        })
+      )
+    );
+  } catch (err) {
+    console.error('topic notify error:', err.message);
+  }
+};
+
 const escapeRegExp = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
@@ -190,6 +219,8 @@ router.post(
 
       const post = await newPost.save();
 
+      await notifyTopicFollowers(post.tags, post, req.user.id);
+
       return res.json(post);
     } catch (err) {
       console.error(err.message);
@@ -226,9 +257,12 @@ router.get('/', auth, async (req, res) => {
         : { date: -1 };
 
     // Optional scope=following limits the feed to posts by developers the
-    // current user follows.
-    const scope = req.query.scope === 'following' ? 'following' : 'all';
+    // current user follows; scope=topics limits it to hashtags they follow.
+    const scope = ['following', 'topics'].includes(req.query.scope)
+      ? req.query.scope
+      : 'all';
     let filter = {};
+    let followedTopics = [];
 
     if (scope === 'following') {
       const me = await Profile.findOne({ user: req.user.id }).select('following');
@@ -237,6 +271,14 @@ router.get('/', auth, async (req, res) => {
       // match nothing and the "Following" feed would come back empty.
       const followingIds = (me && me.following) || [];
       filter = { user: { $in: followingIds } };
+    }
+
+    if (scope === 'topics') {
+      const viewer = await User.findById(req.user.id).select('followedTags');
+      followedTopics = ((viewer && viewer.followedTags) || []).map(String);
+      // An empty $in matches nothing, which is the correct result for a topic
+      // feed before the user has followed any hashtags.
+      filter = { tags: { $in: followedTopics } };
     }
 
     // Optional free-text search across post text and denormalized author name.
@@ -252,7 +294,12 @@ router.get('/', auth, async (req, res) => {
       .replace(/^#/, '')
       .toLowerCase();
     if (tag) {
-      filter = { ...filter, tags: tag };
+      const tagFilter = { tags: tag };
+      // In the topic feed a #chip click narrows the selection further; it must
+      // not replace the followed-topics restriction with an all-users search.
+      filter = filter.tags
+        ? { $and: [filter, tagFilter] }
+        : { ...filter, ...tagFilter };
     }
 
     // Optional unanswered filter: discussions that still have no accepted
@@ -265,7 +312,7 @@ router.get('/', auth, async (req, res) => {
     // can offer an inline Follow button. In the "following" scope every author
     // is by definition followed, so no extra lookup is needed there.
     let followingSet = null;
-    if (scope === 'all') {
+    if (scope !== 'following') {
       const viewer = await Profile.findOne({ user: req.user.id }).select(
         'following'
       );

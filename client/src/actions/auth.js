@@ -8,9 +8,15 @@ import {
   LOGIN_SUCCESS,
   LOGIN_FAIL,
   LOGOUT,
-  CLEAR_PROFILE
+  CLEAR_PROFILE,
+  GET_FOLLOWED_TAGS,
+  FOLLOWED_TAG_UPDATE
 } from './types';
 import setAuthToken from '../utils/setAuthToken';
+
+// Monotonic id so a slow "load followed topics" response can't overwrite a
+// newer toggle result after the user has switched accounts or clicked fast.
+let followedTagsRequestId = 0;
 
 // Pull the list of error messages from an API error response, guarding
 // against network errors where no response body exists.
@@ -50,6 +56,52 @@ export const loadUser = () => async dispatch => {
     dispatch({
       type: AUTH_ERROR
     });
+  }
+};
+
+// Load the hashtag topics the current user follows
+export const getFollowedTags = () => async dispatch => {
+  const requestId = ++followedTagsRequestId;
+
+  try {
+    const res = await axios.get('/api/users/followed-tags');
+
+    dispatch({
+      type: GET_FOLLOWED_TAGS,
+      payload: { tags: res.data.tags || [], requestId }
+    });
+  } catch (err) {
+    // A failed preferences fetch shouldn't log anyone out or spam alerts;
+    // the feed simply shows the unsubscribed state until it is retried.
+  }
+};
+
+// Follow or unfollow a hashtag. Returns the server's next follow state so the
+// caller can refresh a topic-scoped feed if needed.
+export const toggleFollowedTag = tag => async dispatch => {
+  const normalized = String(tag || '')
+    .trim()
+    .replace(/^#/, '')
+    .toLowerCase();
+
+  if (!/^[a-z0-9_]{1,30}$/.test(normalized)) return null;
+
+  const requestId = ++followedTagsRequestId;
+
+  try {
+    const res = await axios.post(
+      `/api/users/followed-tags/${encodeURIComponent(normalized)}`
+    );
+
+    dispatch({
+      type: FOLLOWED_TAG_UPDATE,
+      payload: { tags: res.data.tags || [], requestId }
+    });
+
+    return Boolean(res.data.following);
+  } catch (err) {
+    getErrorMessages(err).forEach(msg => dispatch(setAlert(msg, 'danger')));
+    return null;
   }
 };
 

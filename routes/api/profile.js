@@ -422,7 +422,11 @@ router.get('/user/:user_id', async (req, res) => {
 // @access  Private
 router.put('/follow/:user_id', auth, async (req, res) => {
   try {
-    if (req.params.user_id === req.user.id) {
+    // Mongoose casts hex ids case-insensitively, so compare lowercased values.
+    // Otherwise an uppercase version of your own id bypasses this check.
+    const targetUserId = String(req.params.user_id).toLowerCase();
+
+    if (targetUserId === String(req.user.id).toLowerCase()) {
       return res.status(400).json({ msg: "You can't follow yourself" });
     }
 
@@ -437,7 +441,7 @@ router.put('/follow/:user_id', auth, async (req, res) => {
         .json({ msg: 'Create a profile before following other developers' });
     }
 
-    const target = await Profile.findOne({ user: req.params.user_id });
+    const target = await Profile.findOne({ user: targetUserId });
 
     if (!target) {
       return res.status(404).json({ msg: 'No profile found' });
@@ -457,13 +461,13 @@ router.put('/follow/:user_id', auth, async (req, res) => {
     // Maintain my own "following" list for the Following page, basing the
     // change on my list (not the target's) so any past desync self-heals.
     const followingIndex = (me.following || []).findIndex(
-      (f) => f.toString() === req.params.user_id
+      (f) => f.toString().toLowerCase() === targetUserId
     );
 
     if (wasFollowing) {
       if (followingIndex !== -1) me.following.splice(followingIndex, 1);
     } else if (followingIndex === -1) {
-      me.following.push(req.params.user_id);
+      me.following.push(targetUserId);
     }
 
     await me.save();
@@ -652,7 +656,14 @@ router.post(
 
     // skills - split csv into array, dropping blanks and case-insensitive
     // duplicates. A value like ",," must not slip past validation only to fail
-    // schema validation with an unhelpful 500.
+    // schema validation with an unhelpful 500. `not().isEmpty()` also accepts
+    // arrays/objects, so guard the type before calling .split().
+    if (req.body.skills !== undefined && typeof req.body.skills !== 'string') {
+      return res.status(400).json({
+        errors: [{ msg: 'Skills must be a comma-separated string' }]
+      });
+    }
+
     if (req.body.skills !== undefined) {
       const seenSkills = new Set();
       profileFields.skills = (req.body.skills || '')
@@ -1157,6 +1168,11 @@ router.delete('/', auth, async (req, res) => {
         { acceptedComment: { $in: objectIds } },
         { $set: { acceptedComment: null } }
       );
+
+      // Those ids include replies by other users that are removed with the
+      // account. Their deep links no longer resolve, so drop their
+      // notifications too (same cleanup as deleting a single comment).
+      await Notification.deleteMany({ comment: { $in: objectIds } });
     }
 
     // Drop notifications sent by the deleted account

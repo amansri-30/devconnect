@@ -30,6 +30,14 @@ const UserSchema = new Schema({
     type: [String],
     enum: NOTIFICATION_TYPES,
     default: []
+  },
+  // Hashtags the user follows. New posts carrying one of these tags notify
+  // them, so they can keep up with a topic without following every author.
+  followedTags: {
+    type: [String],
+    default: [],
+    lowercase: true,
+    trim: true
   }
 });
 
