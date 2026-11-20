@@ -122,13 +122,14 @@ const initialState = {
 };
 
 // A different account must never inherit the previous session's cached feed,
-// saved/liked lists, dashboard rows, or in-flight request tokens.
+// saved/liked/watched lists, dashboard rows, or in-flight request tokens.
 const signedOutState = () => ({
   ...initialState,
   loading: false,
   postsLoading: false,
   savedLoading: false,
-  likedLoading: false
+  likedLoading: false,
+  watchingLoading: false
 });
 
 export default function postReducer(state = initialState, action) {
@@ -716,6 +717,7 @@ export default function postReducer(state = initialState, action) {
         postsLoading: false,
         savedLoading: false,
         likedLoading: false,
+        watchingLoading: false,
         userPostsLoading: false,
         insightsLoading: false,
         archive: {

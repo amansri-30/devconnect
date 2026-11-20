@@ -76,6 +76,33 @@ export const getFollowedTags = () => async dispatch => {
   }
 };
 
+// Download a portable copy of the signed-in user's posts, comments, profile,
+// folders, bookmarks and preferences.
+export const exportMyData = () => async dispatch => {
+  try {
+    const res = await axios.get('/api/users/export');
+    const blob = new Blob([JSON.stringify(res.data, null, 2)], {
+      type: 'application/json'
+    });
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `devconnect-export-${new Date()
+      .toISOString()
+      .slice(0, 10)}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+
+    dispatch(setAlert('Your data export has been downloaded.', 'success'));
+    return true;
+  } catch (err) {
+    getErrorMessages(err).forEach(msg => dispatch(setAlert(msg, 'danger')));
+    return false;
+  }
+};
+
 // Follow or unfollow a hashtag. Returns the server's next follow state so the
 // caller can refresh a topic-scoped feed if needed.
 export const toggleFollowedTag = tag => async dispatch => {

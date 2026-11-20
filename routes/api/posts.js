@@ -1462,6 +1462,16 @@ router.post(
 // @desc    Like or unlike a comment
 // @access  Private
 router.put('/comment/like/:post_id/:comment_id', auth, async (req, res) => {
+  // Guard the id shapes before Mongoose casts them: a malformed comment id
+  // would otherwise throw a CastError and be misreported as "No post found".
+  if (!/^[0-9a-fA-F]{24}$/.test(req.params.post_id)) {
+    return res.status(404).json({ msg: 'No post found' });
+  }
+
+  if (!/^[0-9a-fA-F]{24}$/.test(req.params.comment_id)) {
+    return res.status(400).json({ msg: 'Comment does not exist' });
+  }
+
   try {
     const post = await Post.findById(req.params.post_id);
 

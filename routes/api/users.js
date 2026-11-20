@@ -9,13 +9,162 @@ const { JWT_SECRET } = require('../../config/keys');
 const { normalizeEmail, emailMatch } = require('../../util/email');
 const NOTIFICATION_TYPES = require('../../util/notificationTypes');
 
-// Load User model
+// Load models used by the account data export
 const User = require('../../models/User');
+const Profile = require('../../models/Profile');
+const Post = require('../../models/Post');
+const Collection = require('../../models/Collection');
+const Notification = require('../../models/Notification');
 
 // @route   GET api/users/test
 // @desc    Tests users route
 // @access  Public
 router.get('/test', (req, res) => res.json({ message: 'Users works' }));
+
+// @route   GET api/users/export
+// @desc    Download everything the signed-in user has created or saved
+// @access  Private
+router.get('/export', auth, async (req, res) => {
+  try {
+    const userId = String(req.user.id);
+
+    const [user, profile, posts, collections, notifications] = await Promise.all([
+      User.findById(userId).select('-password').lean(),
+      Profile.findOne({ user: userId }).lean(),
+      Post.find({ user: userId }).sort({ date: -1 }).lean(),
+      Collection.find({ user: userId }).sort({ date: -1 }).lean(),
+      Notification.find({ recipient: userId }).sort({ date: -1 }).lean()
+    ]);
+
+    if (!user) {
+      return res.status(404).json({ msg: 'User not found' });
+    }
+
+    // Comments live embedded in posts, so pull out only this user's entries
+    // and keep enough post context for the export to be readable on its own.
+    const commentPosts = await Post.find({ 'comments.user': userId })
+      .select('text date acceptedComment comments')
+      .lean();
+
+    const comments = [];
+    commentPosts.forEach((post) => {
+      (post.comments || []).forEach((comment) => {
+        if (String(comment.user) !== userId) return;
+
+        comments.push({
+          _id: comment._id,
+          post: {
+            _id: post._id,
+            text: post.text,
+            date: post.date
+          },
+          text: comment.text,
+          name: comment.name,
+          date: comment.date,
+          editedAt: comment.editedAt,
+          parent: comment.parent,
+          accepted:
+            post.acceptedComment &&
+            String(post.acceptedComment) === String(comment._id)
+        });
+      });
+    });
+
+    // Posts the user interacted with may belong to someone else; resolve them
+    // once and reuse the summaries inside collections and bookmark lists.
+    const interactionPosts = await Post.find({
+      $or: [
+        { savedBy: userId },
+        { 'likes.user': userId },
+        { subscribers: userId }
+      ]
+    })
+      .select('text name date tags savedBy likes subscribers')
+      .lean();
+
+    const postSummaries = new Map();
+    [...posts, ...interactionPosts].forEach((post) => {
+      postSummaries.set(String(post._id), {
+        _id: post._id,
+        text: post.text,
+        name: post.name,
+        date: post.date,
+        tags: post.tags || []
+      });
+    });
+
+    const summarize = (id) =>
+      postSummaries.get(String(id)) || { _id: id };
+
+    const saved = interactionPosts
+      .filter((post) =>
+        (post.savedBy || []).some((id) => String(id) === userId)
+      )
+      .map((post) => summarize(post._id));
+
+    const liked = interactionPosts
+      .filter((post) =>
+        (post.likes || []).some(
+          (like) => like && like.user && String(like.user) === userId
+        )
+      )
+      .map((post) => summarize(post._id));
+
+    const watching = interactionPosts
+      .filter((post) =>
+        (post.subscribers || []).some((id) => String(id) === userId)
+      )
+      .map((post) => summarize(post._id));
+
+    return res.json({
+      exportedAt: new Date().toISOString(),
+      version: 1,
+      account: {
+        _id: user._id,
+        name: user.name,
+        email: user.email,
+        avatar: user.avatar,
+        date: user.date,
+        followedTags: user.followedTags || [],
+        mutedNotifications: user.mutedNotifications || []
+      },
+      profile,
+      posts: posts.map((post) => ({
+        _id: post._id,
+        text: post.text,
+        tags: post.tags || [],
+        pinned: Boolean(post.pinned),
+        views: post.views || 0,
+        likes: (post.likes || []).length,
+        saved: (post.savedBy || []).length,
+        acceptedComment: post.acceptedComment,
+        date: post.date,
+        editedAt: post.editedAt
+      })),
+      comments,
+      collections: collections.map((collection) => ({
+        name: collection.name,
+        date: collection.date,
+        posts: (collection.posts || []).map(summarize)
+      })),
+      saved,
+      liked,
+      watching,
+      notifications: notifications.map((n) => ({
+        _id: n._id,
+        type: n.type,
+        from: n.from,
+        post: n.post,
+        comment: n.comment,
+        read: n.read,
+        date: n.date
+      }))
+    });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server error');
+  }
+});
 
 // @route   GET api/users/notification-preferences
 // @desc    Get the notification categories muted by the current user
