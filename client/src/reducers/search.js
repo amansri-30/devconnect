@@ -80,6 +80,13 @@ export default function searchReducer(state = initialState, action) {
 
       return {
         ...state,
+        // A failed query must not leave the previous query's results on
+        // screen under the new search term.
+        posts: [],
+        developers: [],
+        totalPosts: 0,
+        totalDevelopers: 0,
+        errors: { posts: null, developers: null },
         loading: false,
         error: action.payload
       };

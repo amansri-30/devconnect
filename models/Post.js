@@ -62,6 +62,36 @@ const PostSchema = new Schema({
     type: Schema.Types.ObjectId,
     default: null
   },
+  // Optional community poll attached to a discussion. Voter ids stay on the
+  // server; API responses expose only counts and the viewer's own choice.
+  poll: {
+    question: {
+      type: String,
+      trim: true,
+      maxlength: 200,
+      default: ''
+    },
+    options: [
+      {
+        text: {
+          type: String,
+          required: true,
+          trim: true,
+          maxlength: 100
+        },
+        votes: [
+          {
+            type: Schema.Types.ObjectId,
+            ref: 'users'
+          }
+        ]
+      }
+    ],
+    closed: {
+      type: Boolean,
+      default: false
+    }
+  },
   comments: [
     {
       user: {

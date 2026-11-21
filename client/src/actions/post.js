@@ -381,6 +381,42 @@ export const editPost = (postId, formData) => async dispatch => {
   }
 };
 
+// Vote for a poll option. Clicking the current option withdraws the vote, and
+// clicking another one moves it; the server returns the public-shaped poll.
+export const votePoll = (postId, optionId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/${postId}/poll/${optionId}`);
+
+    dispatch({
+      type: UPDATE_POST,
+      payload: { _id: postId, poll: res.data }
+    });
+
+    return res.data;
+  } catch (err) {
+    dispatch(setAlert(getErrorPayload(err).msg, 'danger'));
+    return null;
+  }
+};
+
+// Close a poll so no further votes are accepted (post author only).
+export const closePoll = (postId) => async (dispatch) => {
+  try {
+    const res = await axios.put(`/api/posts/${postId}/poll/close`);
+
+    dispatch({
+      type: UPDATE_POST,
+      payload: { _id: postId, poll: res.data }
+    });
+    dispatch(setAlert('Poll closed', 'success'));
+
+    return res.data;
+  } catch (err) {
+    dispatch(setAlert(getErrorPayload(err).msg, 'danger'));
+    return null;
+  }
+};
+
 // Pin or unpin one of the current user's posts. Only a single post per author
 // may be pinned, so the reducer clears any previous pin for the same user.
 export const togglePinPost = (postId, userId) => async (dispatch) => {

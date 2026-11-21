@@ -560,7 +560,8 @@ export default function postReducer(state = initialState, action) {
       return {
         ...state,
         posts: apply(state.posts),
-        followingFeed: apply(state.followingFeed)
+        followingFeed: apply(state.followingFeed),
+        watchingPosts: apply(state.watchingPosts)
       };
     }
     case SAVE_POST: {
@@ -599,6 +600,11 @@ export default function postReducer(state = initialState, action) {
           ? Math.max(state.allSavedTotal - 1, 0)
           : state.allSavedTotal,
         likedPosts: state.likedPosts.map((p) =>
+          p._id === action.payload.postId
+            ? { ...p, saved: action.payload.saved }
+            : p
+        ),
+        watchingPosts: state.watchingPosts.map((p) =>
           p._id === action.payload.postId
             ? { ...p, saved: action.payload.saved }
             : p
@@ -646,6 +652,7 @@ export default function postReducer(state = initialState, action) {
         myPosts: state.myPosts.map(merge),
         savedPosts: state.savedPosts.map(merge),
         likedPosts: state.likedPosts.map(merge),
+        watchingPosts: state.watchingPosts.map(merge),
         userPosts: state.userPosts.map(merge),
         archive: {
           ...state.archive,
@@ -706,6 +713,7 @@ export default function postReducer(state = initialState, action) {
         },
         followingFeed: apply(state.followingFeed),
         trendingPosts: apply(state.trendingPosts),
+        watchingPosts: apply(state.watchingPosts),
         loading: false
       };
     }
@@ -789,6 +797,11 @@ export default function postReducer(state = initialState, action) {
             : post
         ),
         likedPosts: state.likedPosts.map((post) =>
+          post._id === action.payload.postId
+            ? { ...post, likes: action.payload.likes }
+            : post
+        ),
+        watchingPosts: state.watchingPosts.map((post) =>
           post._id === action.payload.postId
             ? { ...post, likes: action.payload.likes }
             : post

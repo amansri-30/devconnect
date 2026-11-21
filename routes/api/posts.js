@@ -4,6 +4,7 @@ const mongoose = require('mongoose');
 const { check, validationResult } = require('express-validator');
 const auth = require('../../middleware/auth');
 const { sanitizeHtml } = require('../../util/sanitize');
+const { stringParam } = require('../../util/query');
 const notify = require('../../util/notify');
 
 // Load Post model
@@ -22,8 +23,36 @@ const Collection = require('../../models/Collection');
 // @access  Public
 router.get('/test', (req, res) => res.json({ message: 'Posts works' }));
 
-// Shape a raw post doc into the public response: hide the full savedBy list
-// and add a boolean `saved` flag relative to the requesting user.
+// Expose poll results without leaking who voted. `voted` is relative to the
+// viewer so the UI can highlight their choice and allow changing it.
+const shapePoll = (poll, userId) => {
+  if (!poll || !Array.isArray(poll.options) || poll.options.length === 0) {
+    return undefined;
+  }
+
+  const options = poll.options.map((option) => {
+    const votes = Array.isArray(option.votes)
+      ? option.votes.map((id) => id.toString())
+      : [];
+
+    return {
+      _id: option._id,
+      text: option.text,
+      votes: votes.length,
+      voted: userId ? votes.includes(String(userId)) : false
+    };
+  });
+
+  return {
+    question: poll.question || '',
+    closed: Boolean(poll.closed),
+    options,
+    totalVotes: options.reduce((sum, option) => sum + option.votes, 0)
+  };
+};
+
+// Shape a raw post doc into the public response: hide the full savedBy and
+// voter lists, and add `saved`/`watching` flags relative to the viewer.
 const shapePost = (doc, userId) => {
   const plain =
     typeof doc.toObject === 'function' ? doc.toObject() : doc;
@@ -33,11 +62,18 @@ const shapePost = (doc, userId) => {
   const subscribers = Array.isArray(plain.subscribers)
     ? plain.subscribers.map((id) => id.toString())
     : [];
-  const { savedBy: _drop, subscribers: _dropWatchers, ...rest } = plain;
+  const {
+    savedBy: _drop,
+    subscribers: _dropWatchers,
+    poll: _dropVoters,
+    ...rest
+  } = plain;
+
   return {
     ...rest,
     saved: savedBy.includes(userId),
-    watching: userId ? subscribers.includes(String(userId)) : false
+    watching: userId ? subscribers.includes(String(userId)) : false,
+    poll: shapePoll(plain.poll, userId)
   };
 };
 
@@ -54,6 +90,47 @@ const extractTags = (text = '') => {
   return [
     ...new Set(matches.map((match) => match.slice(1).toLowerCase()))
   ].slice(0, MAX_TAGS);
+};
+
+// Validate and normalize a optional poll before it reaches Mongoose, so a bad
+// client payload returns a useful 400 instead of a schema-validation 500.
+const buildPoll = (raw) => {
+  if (raw === undefined || raw === null || raw === '') return { poll: null };
+
+  if (typeof raw !== 'object' || Array.isArray(raw)) {
+    return { error: 'Poll must be an object' };
+  }
+
+  const question = String(raw.question || '').trim().slice(0, 200);
+  const rawOptions = Array.isArray(raw.options) ? raw.options : [];
+
+  if (rawOptions.length < 2 || rawOptions.length > 6) {
+    return { error: 'A poll needs between 2 and 6 options' };
+  }
+
+  const seen = new Set();
+  const options = [];
+
+  for (const rawOption of rawOptions) {
+    const text = (
+      typeof rawOption === 'string'
+        ? rawOption
+        : String((rawOption && rawOption.text) || '')
+    )
+      .trim()
+      .slice(0, 100);
+
+    if (!text) return { error: 'Poll options cannot be empty' };
+
+    const key = text.toLowerCase();
+    if (seen.has(key)) return { error: 'Poll options must be unique' };
+    seen.add(key);
+    options.push({ text, votes: [] });
+  }
+
+  return {
+    poll: { question, options, closed: false }
+  };
 };
 
 // Tell everyone subscribed to one of a new post's hashtags about it. The
@@ -168,7 +245,7 @@ const sendLikers = (res, { total, page, limit, users }) => {
 // raw (author names) and escaped (post text) forms; otherwise searching
 // "don't" or "R&D" would never match the stored "don&#039;t" / "R&amp;D".
 const buildSearchFilter = (search) => {
-  const term = (search || '').trim();
+  const term = stringParam(search).trim();
   if (!term) return null;
 
   const rawRx = new RegExp(escapeRegExp(term), 'i');
@@ -202,6 +279,11 @@ router.post(
       return res.status(400).json({ errors: errors.array() });
     }
 
+    const pollData = buildPoll(req.body.poll);
+    if (pollData.error) {
+      return res.status(400).json({ errors: [{ msg: pollData.error }] });
+    }
+
     try {
       const user = await User.findById(req.user.id).select('-password');
 
@@ -214,14 +296,15 @@ router.post(
         tags: extractTags(req.body.text),
         name: user.name,
         avatar: user.avatar,
-        user: user.id
+        user: user.id,
+        poll: pollData.poll || undefined
       });
 
       const post = await newPost.save();
 
       await notifyTopicFollowers(post.tags, post, req.user.id);
 
-      return res.json(post);
+      return res.json(shapePost(post, req.user.id));
     } catch (err) {
       console.error(err.message);
       return res.status(500).send('Server Error');
@@ -289,7 +372,7 @@ router.get('/', auth, async (req, res) => {
 
     // Optional hashtag filter. Tags are stored lowercase on write, so a
     // case-insensitive `#JavaScript` in the URL still matches.
-    const tag = (req.query.tag || '')
+    const tag = stringParam(req.query.tag)
       .trim()
       .replace(/^#/, '')
       .toLowerCase();
@@ -443,12 +526,13 @@ router.get('/saved', auth, async (req, res) => {
 
     // Optional collection scope. Confirm the folder belongs to the viewer so
     // post ids from someone else's collection can't be probed here.
-    if (req.query.collection) {
+    const collectionId = stringParam(req.query.collection);
+    if (collectionId) {
       let collection;
 
       try {
         collection = await Collection.findOne({
-          _id: req.query.collection,
+          _id: collectionId,
           user: req.user.id
         });
       } catch (castErr) {
@@ -606,7 +690,7 @@ router.get('/comments/mine', auth, async (req, res) => {
     // Search covers both the comment and the discussion it belongs to, so an
     // old answer can be found by topic as well as by its own wording. Stored
     // text is HTML-escaped, hence the raw/escaped regex pair.
-    const term = (req.query.search || '').trim();
+    const term = stringParam(req.query.search).trim();
     let searchOr = null;
 
     if (term) {
@@ -1011,6 +1095,108 @@ router.get('/:id/related', auth, async (req, res) => {
 
     if (err.kind === 'ObjectId') {
       return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/posts/:id/poll/close
+// @desc    Close a poll (post author only)
+// @access  Private
+router.put('/:id/poll/close', auth, async (req, res) => {
+  if (!/^[0-9a-fA-F]{24}$/.test(req.params.id)) {
+    return res.status(404).json({ msg: 'No post found' });
+  }
+
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    if (!post.poll || !post.poll.options || post.poll.options.length === 0) {
+      return res.status(400).json({ msg: 'This post has no poll' });
+    }
+
+    if (String(post.user) !== String(req.user.id)) {
+      return res.status(403).json({ msg: 'Only the post author can close its poll' });
+    }
+
+    // Idempotent: repeated clicks just return the current result.
+    post.poll.closed = true;
+    await post.save();
+
+    return res.json(shapePoll(post.poll, req.user.id));
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/posts/:id/poll/:optionId
+// @desc    Vote for (or change/withdraw a vote from) a poll option
+// @access  Private
+router.put('/:id/poll/:optionId', auth, async (req, res) => {
+  if (
+    !/^[0-9a-fA-F]{24}$/.test(req.params.id) ||
+    !/^[0-9a-fA-F]{24}$/.test(req.params.optionId)
+  ) {
+    return res.status(404).json({ msg: 'Poll option not found' });
+  }
+
+  try {
+    const post = await Post.findById(req.params.id);
+
+    if (!post) {
+      return res.status(404).json({ msg: 'No post found' });
+    }
+
+    if (!post.poll || !post.poll.options || post.poll.options.length === 0) {
+      return res.status(400).json({ msg: 'This post has no poll' });
+    }
+
+    if (post.poll.closed) {
+      return res.status(400).json({ msg: 'This poll is closed' });
+    }
+
+    const selected = post.poll.options.id(req.params.optionId);
+
+    if (!selected) {
+      return res.status(400).json({ msg: 'Poll option not found' });
+    }
+
+    const viewerId = String(req.user.id);
+    const wasVoted = (selected.votes || []).some(
+      (id) => String(id) === viewerId
+    );
+
+    // One vote per person: clear this viewer from every option, then add the
+    // new choice. Clicking the current option withdraws the vote.
+    post.poll.options.forEach((option) => {
+      option.votes = (option.votes || []).filter(
+        (id) => String(id) !== viewerId
+      );
+    });
+
+    if (!wasVoted) {
+      post.poll.options.id(req.params.optionId).votes.push(req.user.id);
+    }
+
+    await post.save();
+
+    return res.json(shapePoll(post.poll, req.user.id));
+  } catch (err) {
+    console.error(err.message);
+
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'Poll option not found' });
     }
 
     return res.status(500).send('Server Error');

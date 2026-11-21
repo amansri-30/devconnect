@@ -23,6 +23,10 @@ const PostForm = ({ addPost, auth }) => {
   const [text, setText] = useState(() => readDraft(draftKey));
   const [submitting, setSubmitting] = useState(false);
   const [restored, setRestored] = useState(() => Boolean(readDraft(draftKey)));
+  const [hasPoll, setHasPoll] = useState(false);
+  const [pollQuestion, setPollQuestion] = useState('');
+  const [pollOptions, setPollOptions] = useState(['', '']);
+  const [pollError, setPollError] = useState('');
 
   // Keep the draft up to date as the user types so an accidental refresh or
   // navigation never loses a long post.
@@ -45,12 +49,41 @@ const PostForm = ({ addPost, auth }) => {
     }
   };
 
+  const updatePollOption = (index, value) => {
+    setPollOptions((options) =>
+      options.map((option, i) => (i === index ? value : option))
+    );
+  };
+
+  const addPollOption = () => {
+    if (pollOptions.length < 6) setPollOptions([...pollOptions, '']);
+  };
+
+  const removePollOption = (index) => {
+    if (pollOptions.length <= 2) return;
+    setPollOptions(pollOptions.filter((_, i) => i !== index));
+  };
+
   const onSubmit = async (e) => {
     e.preventDefault();
     if (!text.trim() || submitting) return;
 
+    let poll;
+
+    if (hasPoll) {
+      const options = pollOptions.map((option) => option.trim()).filter(Boolean);
+
+      if (options.length < 2) {
+        setPollError('Add at least two non-empty poll options.');
+        return;
+      }
+
+      poll = { question: pollQuestion.trim(), options };
+    }
+
+    setPollError('');
     setSubmitting(true);
-    const created = await addPost({ text });
+    const created = await addPost({ text, poll });
     setSubmitting(false);
 
     // Only clear the editor once the post really exists, so a failed request
@@ -58,6 +91,9 @@ const PostForm = ({ addPost, auth }) => {
     if (created) {
       setText('');
       setRestored(false);
+      setHasPoll(false);
+      setPollQuestion('');
+      setPollOptions(['', '']);
     }
   };
 
@@ -89,6 +125,66 @@ const PostForm = ({ addPost, auth }) => {
           maxLength={MAX_LENGTH}
           required
         />
+        <div className="poll-builder">
+          <button
+            type="button"
+            className="btn btn-light poll-builder-toggle"
+            onClick={() => setHasPoll((shown) => !shown)}
+            aria-expanded={hasPoll}
+          >
+            <i className="fas fa-chart-bar" /> {hasPoll ? 'Remove poll' : 'Add poll'}
+          </button>
+          {hasPoll && (
+            <div className="poll-builder-fields">
+              <input
+                type="text"
+                value={pollQuestion}
+                onChange={(e) => setPollQuestion(e.target.value)}
+                placeholder="Poll question (optional)"
+                maxLength={200}
+                aria-label="Poll question"
+              />
+              {pollOptions.map((option, index) => (
+                <div className="poll-builder-option" key={index}>
+                  <input
+                    type="text"
+                    value={option}
+                    onChange={(e) => updatePollOption(index, e.target.value)}
+                    placeholder={`Option ${index + 1}`}
+                    maxLength={100}
+                    required={index < 2}
+                    aria-label={`Poll option ${index + 1}`}
+                  />
+                  {pollOptions.length > 2 && (
+                    <button
+                      type="button"
+                      className="btn btn-light"
+                      onClick={() => removePollOption(index)}
+                      aria-label={`Remove poll option ${index + 1}`}
+                      title="Remove this option"
+                    >
+                      <i className="fas fa-times" />
+                    </button>
+                  )}
+                </div>
+              ))}
+              {pollOptions.length < 6 && (
+                <button
+                  type="button"
+                  className="btn btn-light"
+                  onClick={addPollOption}
+                >
+                  <i className="fas fa-plus" /> Add option
+                </button>
+              )}
+              {pollError && (
+                <p className="text-danger my-1" role="alert">
+                  {pollError}
+                </p>
+              )}
+            </div>
+          )}
+        </div>
         <div className="char-counter">
           <span className={`${text.length >= MAX_LENGTH ? 'text-danger' : ''}`}>
             {text.length}/{MAX_LENGTH}

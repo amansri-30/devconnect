@@ -11,6 +11,7 @@ const {
 } = require('../../config/keys');
 const moment = require('moment');
 const notify = require('../../util/notify');
+const { stringParam } = require('../../util/query');
 
 // Load Profile and User Models
 const Profile = require('../../models/Profile');
@@ -78,7 +79,7 @@ const escapeRegExp = (value) =>
 // Free-text match for the developer directory. Run after the user lookup so
 // names can be searched alongside status/company/skills/location/bio.
 const buildProfileSearchMatch = (search) => {
-  const term = (search || '').trim();
+  const term = stringParam(search).trim();
   if (!term) return null;
 
   const rx = new RegExp(escapeRegExp(term), 'i');

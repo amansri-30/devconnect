@@ -1564,6 +1564,145 @@ button {
   color: #e6e6e6;
 }
 
+.poll-builder {
+  margin: 0.5rem 0;
+}
+
+.poll-builder-toggle {
+  margin: 0;
+}
+
+.poll-builder-fields {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+  padding: 0.75rem;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.poll-builder-fields input {
+  padding: 0.4rem 0.6rem;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+}
+
+.poll-builder-option {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.poll-builder-option input {
+  flex: 1;
+}
+
+.poll-builder-option .btn,
+.poll-builder-fields > .btn {
+  margin: 0;
+}
+
+.post-poll {
+  margin: 0.6rem 0;
+  padding: 0.75rem;
+  border: 1px solid #dfe4e8;
+  border-radius: 6px;
+  background: #fafbfc;
+}
+
+.poll-question {
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.poll-options {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.poll-option {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  overflow: hidden;
+  width: 100%;
+  padding: 0.55rem 0.75rem;
+  border: 1px solid var(--primary-color);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--primary-color);
+  cursor: pointer;
+  text-align: left;
+}
+
+.poll-option:disabled {
+  cursor: default;
+}
+
+.poll-option-fill {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: 0;
+  background: rgba(0, 123, 255, 0.12);
+  transition: width 0.25s ease;
+}
+
+.poll-option.is-voted {
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
+.poll-option.is-voted .poll-option-fill {
+  background: rgba(40, 167, 69, 0.15);
+}
+
+.poll-option-label,
+.poll-option-stats {
+  position: relative;
+  z-index: 1;
+}
+
+.poll-option-stats {
+  margin-left: 0.75rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.poll-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--dark-color);
+}
+
+.poll-close {
+  margin: 0;
+  padding: 0.2rem 0.5rem;
+  font-size: 0.85rem;
+}
+
+[data-theme='dark'] .post-poll {
+  background: #1f2428;
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .poll-builder-fields {
+  border-color: #3a424a;
+}
+
+[data-theme='dark'] .poll-builder-fields input {
+  background: #1f2428;
+  border-color: #3a424a;
+  color: #e6e6e6;
+}
+
 .post-tags {
   display: flex;
   flex-wrap: wrap;

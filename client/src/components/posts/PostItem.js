@@ -16,6 +16,7 @@ import { toggleFollow } from '../../actions/profile';
 import linkify, { decodeHtml } from '../../utils/linkify';
 import MediaPreview from '../layout/MediaPreview';
 import PostLikes from './PostLikes';
+import Poll from './Poll';
 
 const PostItem = ({
   addLike,
@@ -43,7 +44,8 @@ const PostItem = ({
     pinned,
     isFollowing,
     editedAt,
-    acceptedComment
+    acceptedComment,
+    poll
   },
   showActions,
   detail
@@ -283,6 +285,9 @@ const PostItem = ({
                   </Link>
                 ))}
               </div>
+            )}
+            {poll && !editing && (
+              <Poll poll={poll} postId={_id} isOwner={isOwnPost} />
             )}
             <p className="post-date">
               Posted <Moment fromNow>{date}</Moment>
