@@ -24,7 +24,8 @@ const initialState = {
   errors: { posts: null, developers: null },
   loading: false,
   requestId: 0,
-  error: {}
+  error: {},
+  filters: { type: 'all', sort: 'recent', availability: '' }
 };
 
 // The directory rows store the author under `user` (populated on the server).
@@ -41,6 +42,7 @@ export default function searchReducer(state = initialState, action) {
         ...state,
         query: action.payload.query,
         requestId: action.payload.requestId,
+        filters: action.payload.filters || initialState.filters,
         errors: { posts: null, developers: null },
         loading: true,
         error: {}
@@ -49,6 +51,7 @@ export default function searchReducer(state = initialState, action) {
       const {
         query,
         requestId,
+        filters,
         posts,
         developers,
         totalPosts,
@@ -62,6 +65,7 @@ export default function searchReducer(state = initialState, action) {
       return {
         ...state,
         query,
+        filters: filters || state.filters,
         posts,
         developers,
         totalPosts,

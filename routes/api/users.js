@@ -275,7 +275,12 @@ router.post('/followed-tags/:tag', auth, async (req, res) => {
 router.post(
   '/register',
   [
-    check('name', 'Name is required').not().isEmpty(),
+    // `.not().isEmpty()` would happily accept an object or array, which then
+    // becomes the literal name "[object Object]" when coerced below and gets
+    // copied into every post/comment by that account.
+    check('name', 'Name is required').custom(
+      (value) => typeof value === 'string' && value.trim().length > 0
+    ),
     check('email', 'Please include a valid email').trim().isEmail(),
     check(
       'password',
@@ -297,8 +302,8 @@ router.post(
     const email = normalizeEmail(req.body.email);
     const { password } = req.body;
 
-    // A whitespace-only name passes the raw `not().isEmpty()` check but would
-    // fail schema validation, so reject it with a helpful message instead.
+    // Keep this guard for callers that reach the handler with a missing name;
+    // the validator above already rejects non-strings and whitespace-only text.
     if (!name) {
       return res.status(400).json({ errors: [{ msg: 'Name is required' }] });
     }

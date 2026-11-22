@@ -66,6 +66,12 @@ const shapePost = (doc, userId) => {
     savedBy: _drop,
     subscribers: _dropWatchers,
     poll: _dropVoters,
+    // Aggregation-only helpers used for sorting/ranking. They are not stored
+    // fields and must never become part of the public post contract.
+    likesCount: _dropLikesCount,
+    commentsCount: _dropCommentsCount,
+    score: _dropScore,
+    sharedTags: _dropSharedTags,
     ...rest
   } = plain;
 

@@ -1087,10 +1087,38 @@ router.delete('/', auth, async (req, res) => {
       { $pull: { savedBy: req.user.id } }
     );
 
+    const userId = req.user.id.toString();
+
+    // Poll votes live inside each option as ObjectIds. A deleted account can
+    // never withdraw them, so remove them here or poll counts stay inflated
+    // forever for every discussion they took part in.
+    const votedPollPosts = await Post.find({
+      'poll.options.votes': req.user.id
+    }).select('poll');
+
+    for (const post of votedPollPosts) {
+      let pollChanged = false;
+
+      for (const option of post.poll.options || []) {
+        const votes = option.votes || [];
+        const remaining = votes.filter(
+          (vote) => vote && vote.toString() !== userId
+        );
+
+        if (remaining.length !== votes.length) {
+          option.votes = remaining;
+          pollChanged = true;
+        }
+      }
+
+      if (pollChanged) {
+        await post.save();
+      }
+    }
+
     // Remove the account's likes from other people's comments as well. The
     // account is gone, so leaving those likes behind would permanently inflate
     // the comment like counts (and nobody could ever remove them).
-    const userId = req.user.id.toString();
     const likedCommentPosts = await Post.find({
       'comments.likes.user': req.user.id
     });
