@@ -601,6 +601,31 @@ button {
   margin-right: 0.3rem;
 }
 
+.skill-endorsement {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin: 0.2rem;
+}
+
+.skill-endorsement-count {
+  color: var(--success-color);
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+
+.skill-endorse {
+  margin: 0;
+  padding: 0.2rem 0.45rem;
+  font-size: 0.75rem;
+  white-space: nowrap;
+}
+
+.skill-endorse.is-endorsed {
+  border-color: var(--success-color);
+  color: var(--success-color);
+}
+
 .popular-skills {
   display: flex;
   align-items: center;

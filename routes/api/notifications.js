@@ -5,6 +5,7 @@ const auth = require('../../middleware/auth');
 
 const Notification = require('../../models/Notification');
 const NOTIFICATION_TYPES = require('../../util/notificationTypes');
+const { stringParam } = require('../../util/query');
 
 const isUnreadFilter = (value) => value === 'true' || value === '1';
 
@@ -14,11 +15,16 @@ const isUnreadFilter = (value) => value === 'true' || value === '1';
 const buildFilter = (req) => {
   const filter = { recipient: req.user.id };
 
-  if (NOTIFICATION_TYPES.includes(req.query.type)) {
-    filter.type = req.query.type;
+  // Express turns repeated query keys into arrays, so normalize before the
+  // enum/unread checks (otherwise `?type=like&type=comment` drops the filter).
+  const type = stringParam(req.query.type);
+  const unread = stringParam(req.query.unread);
+
+  if (NOTIFICATION_TYPES.includes(type)) {
+    filter.type = type;
   }
 
-  if (isUnreadFilter(req.query.unread)) {
+  if (isUnreadFilter(unread)) {
     filter.read = false;
   }
 

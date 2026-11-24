@@ -95,6 +95,43 @@ const buildProfileSearchMatch = (search) => {
   };
 };
 
+const normalizeSkillKey = (value) =>
+  typeof value === 'string' ? value.trim().toLowerCase() : '';
+
+// Endorsements are public as counts; the list of who endorsed whom stays on
+// the server. `endorsed` is relative to the viewer so a button can reflect
+// their own choice without exposing anyone else's id.
+const shapeEndorsements = (profile, viewerId) => {
+  const entries = Array.isArray(profile.skillEndorsements)
+    ? profile.skillEndorsements
+    : [];
+
+  return entries
+    .map((entry) => {
+      const users = Array.isArray(entry.users)
+        ? entry.users.map((id) => String(id))
+        : [];
+
+      return {
+        skill: entry.skill,
+        count: users.length,
+        endorsed: Boolean(viewerId && users.includes(String(viewerId)))
+      };
+    })
+    .filter((entry) => entry.skill);
+};
+
+const profileForViewer = (profile, viewerId) => {
+  const plain =
+    typeof profile.toObject === 'function' ? profile.toObject() : profile;
+  const { skillEndorsements: _dropEndorserIds, ...rest } = plain;
+
+  return {
+    ...rest,
+    endorsements: shapeEndorsements(plain, viewerId)
+  };
+};
+
 // Resolve the optional viewer from a token so the public directory can mark
 // which developers the current user already follows.
 const getViewerId = (req) => {
@@ -403,7 +440,7 @@ router.get('/user/:user_id', async (req, res) => {
     }
 
     return res.json({
-      profile,
+      profile: profileForViewer(profile, viewerId),
       isFollowing,
       followsYou,
       followersCount: (profile.followers || []).length,
@@ -489,6 +526,93 @@ router.put('/follow/:user_id', auth, async (req, res) => {
     return res.json({
       following: !wasFollowing,
       followers: (target.followers || []).length
+    });
+  } catch (err) {
+    console.error(err.message);
+    if (err.kind === 'ObjectId') {
+      return res.status(404).json({ msg: 'No profile found' });
+    }
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/profile/endorse/:user_id/:skill
+// @desc    Add or remove your endorsement for one of a developer's skills
+// @access  Private
+router.put('/endorse/:user_id/:skill', auth, async (req, res) => {
+  const targetUserId = String(req.params.user_id);
+  const skill = typeof req.params.skill === 'string' ? req.params.skill.trim() : '';
+
+  if (!/^[0-9a-fA-F]{24}$/.test(targetUserId)) {
+    return res.status(404).json({ msg: 'No profile found' });
+  }
+
+  if (targetUserId.toLowerCase() === String(req.user.id).toLowerCase()) {
+    return res.status(403).json({ msg: "You can't endorse your own skills" });
+  }
+
+  if (!skill || skill.length > 50) {
+    return res.status(400).json({ msg: 'Invalid skill' });
+  }
+
+  try {
+    const profile = await Profile.findOne({ user: targetUserId });
+
+    if (!profile) {
+      return res.status(404).json({ msg: 'No profile found' });
+    }
+
+    // Only skills the developer actually lists can be endorsed, and the stored
+    // spelling is kept so the UI label never changes because of URL casing.
+    const matchedSkill = (profile.skills || []).find(
+      (value) => normalizeSkillKey(value) === normalizeSkillKey(skill)
+    );
+
+    if (!matchedSkill) {
+      return res.status(400).json({ msg: 'This developer does not list that skill' });
+    }
+
+    if (!Array.isArray(profile.skillEndorsements)) {
+      profile.skillEndorsements = [];
+    }
+
+    let entry = profile.skillEndorsements.find(
+      (value) => normalizeSkillKey(value.skill) === normalizeSkillKey(matchedSkill)
+    );
+
+    if (!entry) {
+      entry = { skill: matchedSkill, users: [] };
+      profile.skillEndorsements.push(entry);
+    }
+
+    if (!Array.isArray(entry.users)) entry.users = [];
+
+    const viewerKey = String(req.user.id);
+    const viewerIndex = entry.users.findIndex(
+      (id) => String(id) === viewerKey
+    );
+    const endorsed = viewerIndex === -1;
+
+    if (endorsed) {
+      entry.users.push(req.user.id);
+    } else {
+      entry.users.splice(viewerIndex, 1);
+    }
+
+    // Empty entries would otherwise accumulate for every withdrawn vote.
+    profile.skillEndorsements = profile.skillEndorsements.filter(
+      (value) => (value.users || []).length > 0
+    );
+
+    await profile.save();
+
+    const updated = shapeEndorsements(profile, viewerKey).find(
+      (value) => normalizeSkillKey(value.skill) === normalizeSkillKey(matchedSkill)
+    ) || { skill: matchedSkill, count: 0, endorsed: false };
+
+    return res.json({
+      profile: profileForViewer(profile, viewerKey),
+      endorsement: updated
     });
   } catch (err) {
     console.error(err.message);
@@ -884,8 +1008,8 @@ router.put(
       }
 
       const targetIndex = profile.experience
-        .map((item) => item.id)
-        .indexOf(req.params.exp_id);
+        .map((item) => String(item.id).toLowerCase())
+        .indexOf(String(req.params.exp_id).toLowerCase());
 
       if (targetIndex === -1) {
         return res.status(400).json({ msg: 'Experience entry not found' });
@@ -949,8 +1073,8 @@ router.put(
       }
 
       const targetIndex = profile.education
-        .map((item) => item.id)
-        .indexOf(req.params.edu_id);
+        .map((item) => String(item.id).toLowerCase())
+        .indexOf(String(req.params.edu_id).toLowerCase());
 
       if (targetIndex === -1) {
         return res.status(400).json({ msg: 'Education entry not found' });
@@ -997,8 +1121,8 @@ router.delete('/experience/:exp_id', auth, async (req, res) => {
 
     // Get remove index
     const removeIndex = profile.experience
-      .map((item) => item.id)
-      .indexOf(req.params.exp_id);
+      .map((item) => String(item.id).toLowerCase())
+      .indexOf(String(req.params.exp_id).toLowerCase());
 
     if (removeIndex === -1) {
       return res.status(400).json({ msg: 'Experience entry not found' });
@@ -1027,8 +1151,8 @@ router.delete('/education/:edu_id', auth, async (req, res) => {
     }
 
     const removeIndex = profile.education
-      .map((item) => item.id)
-      .indexOf(req.params.edu_id);
+      .map((item) => String(item.id).toLowerCase())
+      .indexOf(String(req.params.edu_id).toLowerCase());
 
     if (removeIndex === -1) {
       return res.status(400).json({ msg: 'Education entry not found' });
@@ -1113,6 +1237,35 @@ router.delete('/', auth, async (req, res) => {
 
       if (pollChanged) {
         await post.save();
+      }
+    }
+
+    // Skill endorsements are another permanent voter list: remove this account
+    // from every developer it endorsed so counts cannot drift out of sync.
+    const endorsedProfiles = await Profile.find({
+      'skillEndorsements.users': req.user.id
+    }).select('skillEndorsements');
+
+    for (const profile of endorsedProfiles) {
+      let endorsementChanged = false;
+
+      for (const endorsement of profile.skillEndorsements) {
+        const users = endorsement.users || [];
+        const remaining = users.filter(
+          (id) => id && id.toString() !== userId
+        );
+
+        if (remaining.length !== users.length) {
+          endorsement.users = remaining;
+          endorsementChanged = true;
+        }
+      }
+
+      if (endorsementChanged) {
+        profile.skillEndorsements = profile.skillEndorsements.filter(
+          (endorsement) => (endorsement.users || []).length > 0
+        );
+        await profile.save();
       }
     }
 

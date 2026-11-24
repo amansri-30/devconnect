@@ -714,6 +714,10 @@ export default function postReducer(state = initialState, action) {
         followingFeed: apply(state.followingFeed),
         trendingPosts: apply(state.trendingPosts),
         watchingPosts: apply(state.watchingPosts),
+        related: {
+          ...state.related,
+          posts: apply(state.related.posts)
+        },
         loading: false
       };
     }

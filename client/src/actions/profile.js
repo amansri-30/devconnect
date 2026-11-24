@@ -184,6 +184,27 @@ export const toggleFollow = (userId) => async (dispatch) => {
   }
 };
 
+// Add or remove your endorsement for a single skill on another profile.
+export const toggleSkillEndorsement = (userId, skill) => async (dispatch) => {
+  try {
+    const res = await axios.put(
+      `/api/profile/endorse/${userId}/${encodeURIComponent(skill)}`
+    );
+
+    dispatch({
+      type: UPDATE_PROFILE,
+      payload: res.data.profile
+    });
+
+    return res.data.endorsement || null;
+  } catch (err) {
+    const data = err.response && err.response.data;
+    const msg = (data && (data.msg || data.errors?.[0]?.msg)) || 'Could not update endorsement';
+    dispatch(setAlert(msg, 'danger'));
+    return null;
+  }
+};
+
 // Shared loader for the public followers/following lists. A token ensures a
 // slow response for the previous tab never replaces the active list.
 const fetchNetworkList = (url) => async (dispatch) => {

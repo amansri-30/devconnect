@@ -24,6 +24,24 @@ const ProfileSchema = new Schema({
     type: [String],
     required: true
   },
+  // Peer endorsements for individual skills. Only counts and the viewer's own
+  // state leave the API; the raw endorser ids stay server-side.
+  skillEndorsements: [
+    {
+      skill: {
+        type: String,
+        required: true,
+        lowercase: true,
+        trim: true
+      },
+      users: [
+        {
+          type: Schema.Types.ObjectId,
+          ref: 'users'
+        }
+      ]
+    }
+  ],
   bio: {
     type: String
   },
