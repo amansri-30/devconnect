@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { addComment } from '../../actions/post';
+import linkify from '../../utils/linkify';
 
 const CommentForm = ({
   postId,
@@ -14,6 +15,7 @@ const CommentForm = ({
 }) => {
   const [text, setText] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [showPreview, setShowPreview] = useState(false);
   const MAX_LENGTH = 1000;
 
   const onSubmit = async (e) => {
@@ -52,6 +54,27 @@ const CommentForm = ({
           maxLength={MAX_LENGTH}
           required
         />
+        {!small && (
+          <div className="format-toolbar">
+            <button
+              type="button"
+              className="btn btn-light"
+              onClick={() => setShowPreview((shown) => !shown)}
+              aria-expanded={showPreview}
+            >
+              <i className="fas fa-eye" /> {showPreview ? 'Edit' : 'Preview'}
+            </button>
+            <span className="format-hint">
+              **bold** *italic* `code` ```block```
+            </span>
+          </div>
+        )}
+        {showPreview && !small && (
+          <div
+            className="markdown-preview markdown-body"
+            dangerouslySetInnerHTML={{ __html: linkify(text) }}
+          />
+        )}
         <div className="char-counter">
           <span className={`${text.length >= MAX_LENGTH ? 'text-danger' : ''}`}>
             {text.length}/{MAX_LENGTH}

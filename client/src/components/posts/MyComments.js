@@ -137,8 +137,8 @@ const MyComments = ({ getMyComments, post: { myComments } }) => {
                 </div>
               </div>
 
-              <p
-                className="my-comment-body"
+              <div
+                className="my-comment-body markdown-body"
                 dangerouslySetInnerHTML={{ __html: linkify(comment.text) }}
               />
 

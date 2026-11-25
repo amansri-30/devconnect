@@ -1,7 +1,8 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import PropTypes from 'prop-types';
 import { connect } from 'react-redux';
 import { addPost } from '../../actions/post';
+import linkify from '../../utils/linkify';
 
 const MAX_LENGTH = 1000;
 
@@ -27,10 +28,21 @@ const PostForm = ({ addPost, auth }) => {
   const [pollQuestion, setPollQuestion] = useState('');
   const [pollOptions, setPollOptions] = useState(['', '']);
   const [pollError, setPollError] = useState('');
+  const [showPreview, setShowPreview] = useState(false);
+  const draftKeyRef = useRef(draftKey);
 
-  // Keep the draft up to date as the user types so an accidental refresh or
-  // navigation never loses a long post.
+  // Drafts are scoped per account. When the key changes, load the new account's
+  // draft and skip persistence for this render so the outgoing account's text
+  // is never copied into the new one's key.
   useEffect(() => {
+    if (draftKeyRef.current !== draftKey) {
+      draftKeyRef.current = draftKey;
+      const saved = readDraft(draftKey);
+      setText(saved);
+      setRestored(Boolean(saved));
+      return;
+    }
+
     try {
       if (text.trim()) localStorage.setItem(draftKey, text);
       else localStorage.removeItem(draftKey);
@@ -125,6 +137,25 @@ const PostForm = ({ addPost, auth }) => {
           maxLength={MAX_LENGTH}
           required
         />
+        <div className="format-toolbar">
+          <button
+            type="button"
+            className="btn btn-light"
+            onClick={() => setShowPreview((shown) => !shown)}
+            aria-expanded={showPreview}
+          >
+            <i className="fas fa-eye" /> {showPreview ? 'Edit' : 'Preview'}
+          </button>
+          <span className="format-hint">
+            **bold** *italic* `code` ```block```
+          </span>
+        </div>
+        {showPreview && (
+          <div
+            className="markdown-preview markdown-body"
+            dangerouslySetInnerHTML={{ __html: linkify(text) }}
+          />
+        )}
         <div className="poll-builder">
           <button
             type="button"

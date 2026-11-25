@@ -626,6 +626,75 @@ button {
   color: var(--success-color);
 }
 
+.format-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin: 0.4rem 0;
+}
+
+.format-toolbar .btn {
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+.format-hint {
+  color: #6c757d;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
+.markdown-body {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.markdown-body > pre {
+  margin: 0.5rem 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: 4px;
+  background: #f5f6f7;
+  overflow-x: auto;
+  white-space: pre;
+}
+
+.markdown-body code {
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  background: #f5f6f7;
+  font-family: monospace;
+  font-size: 0.9em;
+}
+
+.markdown-body pre code {
+  padding: 0;
+  background: transparent;
+}
+
+.markdown-preview {
+  min-height: 3rem;
+  margin: 0.4rem 0;
+  padding: 0.6rem 0.75rem;
+  border: 1px dashed #bbb;
+  border-radius: 4px;
+}
+
+[data-theme='dark'] .format-hint {
+  color: #adb5bd;
+}
+
+[data-theme='dark'] .markdown-body > pre,
+[data-theme='dark'] .markdown-body code {
+  background: #1f2428;
+}
+
+[data-theme='dark'] .markdown-preview {
+  border-color: #3a424a;
+}
+
 .popular-skills {
   display: flex;
   align-items: center;

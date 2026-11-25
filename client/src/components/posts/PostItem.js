@@ -267,8 +267,8 @@ const PostItem = ({
           </form>
         ) : (
           <Fragment>
-            <p
-              className="my-1"
+            <div
+              className="my-1 markdown-body"
               dangerouslySetInnerHTML={{ __html: linkify(text) }}
             />
             <MediaPreview text={text} />
