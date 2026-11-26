@@ -9,6 +9,10 @@ const { stringParam } = require('../../util/query');
 
 const isUnreadFilter = (value) => value === 'true' || value === '1';
 
+// Only replies in a discussion count toward a watched thread's unread badge;
+// likes, follows and tag notifications stay in the global notification list.
+const THREAD_NOTIFICATION_TYPES = ['comment', 'reply'];
+
 // Build the recipient/filter query shared by the list and summary endpoints.
 // Unknown type values are ignored rather than causing a 400, so a stale client
 // bookmark still shows notifications instead of an error.
@@ -127,6 +131,73 @@ router.get('/unread-count', auth, async (req, res) => {
     });
 
     return res.json({ count });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   GET api/notifications/unread-posts
+// @desc    Count unread reply notifications per discussion for the current user
+// @access  Private
+router.get('/unread-posts', auth, async (req, res) => {
+  try {
+    const recipient = new mongoose.Types.ObjectId(req.user.id);
+
+    const rows = await Notification.aggregate([
+      {
+        $match: {
+          recipient,
+          read: false,
+          type: { $in: THREAD_NOTIFICATION_TYPES },
+          post: { $exists: true, $ne: null }
+        }
+      },
+      {
+        $group: {
+          _id: '$post',
+          count: { $sum: 1 }
+        }
+      }
+    ]);
+
+    const counts = {};
+    let total = 0;
+
+    rows.forEach(({ _id, count }) => {
+      counts[String(_id)] = count;
+      total += count;
+    });
+
+    return res.json({ counts, total });
+  } catch (err) {
+    console.error(err.message);
+    return res.status(500).send('Server Error');
+  }
+});
+
+// @route   PUT api/notifications/read-post/:postId
+// @desc    Mark the current user's unread replies for one discussion as read
+// @access  Private
+router.put('/read-post/:postId', auth, async (req, res) => {
+  const { postId } = req.params;
+
+  if (!/^[0-9a-fA-F]{24}$/.test(postId)) {
+    return res.status(404).json({ msg: 'Post not found' });
+  }
+
+  try {
+    await Notification.updateMany(
+      {
+        recipient: req.user.id,
+        read: false,
+        type: { $in: THREAD_NOTIFICATION_TYPES },
+        post: postId
+      },
+      { read: true }
+    );
+
+    return res.json({ success: true });
   } catch (err) {
     console.error(err.message);
     return res.status(500).send('Server Error');

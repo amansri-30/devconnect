@@ -5,13 +5,23 @@ import { Link } from 'react-router-dom';
 import Spinner from '../layout/Spinner';
 import PostItem from '../posts/PostItem';
 import { getWatchingPosts } from '../../actions/post';
+import {
+  getUnreadPostCounts,
+  markThreadRead
+} from '../../actions/notifications';
 
 const WatchingPosts = ({
   getWatchingPosts,
-  post: { watchingPosts, watchingLoading, watchingPage, watchingTotal }
+  getUnreadPostCounts,
+  markThreadRead,
+  post: { watchingPosts, watchingLoading, watchingPage, watchingTotal },
+  notification: { unreadByPost },
+  auth
 }) => {
+  const accountId = auth.user ? auth.user._id : '';
   const [query, setQuery] = useState('');
   const [moreLoading, setMoreLoading] = useState(false);
+  const [readBusy, setReadBusy] = useState('');
 
   // Server-side, debounced search so every followed discussion is searchable.
   // A request token in the action/reducer drops out-of-order responses.
@@ -22,6 +32,20 @@ const WatchingPosts = ({
     }, delay);
     return () => clearTimeout(timer);
   }, [getWatchingPosts, query]);
+
+  // Badge each watched thread with its own unread reply count. Reload when the
+  // signed-in account changes so a shared browser never shows another user's
+  // thread badges.
+  useEffect(() => {
+    getUnreadPostCounts();
+  }, [getUnreadPostCounts, accountId]);
+
+  const markRead = async (postId) => {
+    if (readBusy) return;
+    setReadBusy(postId);
+    await markThreadRead(postId);
+    setReadBusy('');
+  };
 
   const loadMore = async () => {
     if (moreLoading || watchingLoading) return;
@@ -67,7 +91,31 @@ const WatchingPosts = ({
       )}
       <div className="posts">
         {watchingPosts.length > 0 ? (
-          watchingPosts.map((post) => <PostItem key={post._id} post={post} />)
+          watchingPosts.map((post) => {
+            const unread = unreadByPost[post._id] || 0;
+
+            return (
+              <div className="watched-post" key={post._id}>
+                {unread > 0 && (
+                  <div className="watched-post-status">
+                    <span className="badge badge-primary watched-unread-badge">
+                      <i className="fas fa-comments" /> {unread} new{' '}
+                      {unread === 1 ? 'reply' : 'replies'}
+                    </span>
+                    <button
+                      type="button"
+                      className="btn btn-light btn-sm"
+                      onClick={() => markRead(post._id)}
+                      disabled={Boolean(readBusy)}
+                    >
+                      {readBusy === post._id ? 'Marking...' : 'Mark read'}
+                    </button>
+                  </div>
+                )}
+                <PostItem post={post} />
+              </div>
+            );
+          })
         ) : term ? (
           <p className="my-1">No followed discussions match "{term}".</p>
         ) : (
@@ -94,11 +142,21 @@ const WatchingPosts = ({
 
 WatchingPosts.propTypes = {
   getWatchingPosts: PropTypes.func.isRequired,
-  post: PropTypes.object.isRequired
+  getUnreadPostCounts: PropTypes.func.isRequired,
+  markThreadRead: PropTypes.func.isRequired,
+  post: PropTypes.object.isRequired,
+  notification: PropTypes.object.isRequired,
+  auth: PropTypes.object.isRequired
 };
 
 const mapStateToProps = (state) => ({
-  post: state.post
+  post: state.post,
+  notification: state.notification,
+  auth: state.auth
 });
 
-export default connect(mapStateToProps, { getWatchingPosts })(WatchingPosts);
+export default connect(mapStateToProps, {
+  getWatchingPosts,
+  getUnreadPostCounts,
+  markThreadRead
+})(WatchingPosts);

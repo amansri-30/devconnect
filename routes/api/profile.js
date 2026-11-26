@@ -362,8 +362,25 @@ router.get('/', async (req, res) => {
           isSelf: viewerId ? { $eq: ['$user._id', viewerId] } : false
         }
       },
-      // Never leak credentials through the public directory.
-      { $project: { 'user.password': 0, 'user.email': 0, 'user.__v': 0 } },
+      // Public directory: return only what the cards and sorting need. An
+      // allowlist keeps raw follower/endorsement ids and private user settings
+      // (muted notification types, followed tags) off this unauthenticated API.
+      {
+        $project: {
+          _id: 1,
+          user: { _id: 1, name: 1, avatar: 1 },
+          status: 1,
+          company: 1,
+          location: 1,
+          skills: 1,
+          availability: 1,
+          date: 1,
+          followersCount: 1,
+          followingCount: 1,
+          isFollowing: 1,
+          isSelf: 1
+        }
+      },
       {
         $facet: {
           items: [{ $sort: sortSpec }, { $skip: skip }, { $limit: limit }],

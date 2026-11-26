@@ -1868,6 +1868,43 @@ button {
   text-align: center;
 }
 
+/* Per-thread unread reply state on the watching page. */
+.watched-post {
+  padding-bottom: 0.8rem;
+  margin-bottom: 0.8rem;
+  border-bottom: 1px solid var(--light-color);
+}
+
+.watched-post:last-child {
+  border-bottom: none;
+  margin-bottom: 0;
+}
+
+.watched-post-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.5rem;
+}
+
+.watched-unread-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.watched-post-status .btn {
+  margin: 0;
+  padding: 0.25rem 0.6rem;
+  font-size: 0.85rem;
+}
+
+[data-theme='dark'] .watched-post {
+  border-color: #3a424a;
+}
+
 .post .comment-count {
   background: var(--light-color);
   color: var(--primary-color);

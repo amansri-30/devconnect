@@ -3,6 +3,9 @@ import {
   REQUEST_NOTIFICATIONS,
   GET_NOTIFICATION_SUMMARY,
   GET_UNREAD_COUNT,
+  REQUEST_UNREAD_POST_COUNTS,
+  GET_UNREAD_POST_COUNTS,
+  MARK_THREAD_READ,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR,
@@ -25,6 +28,8 @@ const emptySummary = () => ({
 const initialState = {
   notifications: [],
   unreadCount: 0,
+  unreadByPost: {},
+  unreadPostsRequestId: 0,
   summary: emptySummary(),
   filters: { type: '', unread: false },
   prefs: { muted: [], loading: false, error: null, requestId: 0 },
@@ -137,6 +142,35 @@ export default function notificationReducer(state = initialState, action) {
         unreadCount: action.payload,
         loading: false
       };
+    case REQUEST_UNREAD_POST_COUNTS:
+      return {
+        ...state,
+        unreadPostsRequestId: action.payload.requestId
+      };
+    case GET_UNREAD_POST_COUNTS:
+      if (action.payload.requestId !== state.unreadPostsRequestId) {
+        return state;
+      }
+
+      return {
+        ...state,
+        unreadByPost: action.payload.counts
+      };
+    case MARK_THREAD_READ: {
+      const { postId } = action.payload;
+      const nextCounts = { ...state.unreadByPost };
+      delete nextCounts[postId];
+
+      // Keep loaded notification rows in sync; authoritative unread totals are
+      // refreshed by the action so per-type counts stay accurate.
+      return {
+        ...state,
+        notifications: state.notifications.map((n) =>
+          String(n.post) === String(postId) ? { ...n, read: true } : n
+        ),
+        unreadByPost: nextCounts
+      };
+    }
     case MARK_NOTIFICATION_READ: {
       const target = state.notifications.find(
         (n) => n._id === action.payload
@@ -168,6 +202,7 @@ export default function notificationReducer(state = initialState, action) {
       return {
         ...state,
         notifications: state.notifications.map((n) => ({ ...n, read: true })),
+        unreadByPost: {},
         unreadCount: 0,
         summary: {
           ...state.summary,

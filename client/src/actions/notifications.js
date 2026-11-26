@@ -4,6 +4,9 @@ import {
   REQUEST_NOTIFICATIONS,
   GET_NOTIFICATION_SUMMARY,
   GET_UNREAD_COUNT,
+  REQUEST_UNREAD_POST_COUNTS,
+  GET_UNREAD_POST_COUNTS,
+  MARK_THREAD_READ,
   MARK_NOTIFICATION_READ,
   MARK_ALL_NOTIFICATIONS_READ,
   NOTIFICATIONS_ERROR,
@@ -16,6 +19,7 @@ import {
 // filter) can never overwrite the list the user is currently looking at.
 let notificationsRequestId = 0;
 let preferencesRequestId = 0;
+let unreadPostsRequestId = 0;
 
 const getErrorPayload = (err) => {
   const data = err.response && err.response.data;
@@ -104,6 +108,56 @@ export const getUnreadCount = () => async (dispatch) => {
   }
 };
 
+// Count unread replies per discussion so the watching page can badge threads
+// that need attention. A token prevents an old account's counts from landing
+// after a login/switch has already reset the notification slice.
+export const getUnreadPostCounts = () => async (dispatch) => {
+  const requestId = ++unreadPostsRequestId;
+
+  dispatch({
+    type: REQUEST_UNREAD_POST_COUNTS,
+    payload: { requestId }
+  });
+
+  try {
+    const res = await axios.get('/api/notifications/unread-posts');
+
+    if (requestId !== unreadPostsRequestId) return;
+
+    dispatch({
+      type: GET_UNREAD_POST_COUNTS,
+      payload: { counts: res.data.counts || {}, requestId }
+    });
+  } catch (err) {
+    if (requestId !== unreadPostsRequestId) return;
+
+    dispatch({
+      type: NOTIFICATIONS_ERROR,
+      payload: getErrorPayload(err)
+    });
+  }
+};
+
+// Clear the unread reply badge for one watched discussion. Only that user's
+// comment/reply notifications for this post are touched on the server.
+export const markThreadRead = (postId) => async (dispatch) => {
+  try {
+    await axios.put(`/api/notifications/read-post/${postId}`);
+
+    dispatch({ type: MARK_THREAD_READ, payload: { postId } });
+    dispatch(getUnreadPostCounts());
+    dispatch(getUnreadCount());
+    dispatch(getNotificationSummary());
+    return true;
+  } catch (err) {
+    dispatch({
+      type: NOTIFICATIONS_ERROR,
+      payload: getErrorPayload(err)
+    });
+    return false;
+  }
+};
+
 // Mark one (or all, when id is omitted) notifications as read
 export const markNotificationsRead = (id) => async (dispatch) => {
   try {
@@ -111,6 +165,7 @@ export const markNotificationsRead = (id) => async (dispatch) => {
 
     dispatch(getUnreadCount());
     dispatch(getNotificationSummary());
+    dispatch(getUnreadPostCounts());
     if (id) {
       dispatch({ type: MARK_NOTIFICATION_READ, payload: id });
     } else {
@@ -138,6 +193,7 @@ export const clearNotifications = (filters = {}) => async (dispatch) => {
     dispatch(getNotifications(1, 20, filters));
     dispatch(getUnreadCount());
     dispatch(getNotificationSummary());
+    dispatch(getUnreadPostCounts());
   } catch (err) {
     dispatch({
       type: NOTIFICATIONS_ERROR,
