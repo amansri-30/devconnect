@@ -570,6 +570,9 @@ export default function postReducer(state = initialState, action) {
       const savedExists = state.savedPosts.some(
         (p) => p._id === action.payload.postId
       );
+      // The DELETE endpoint is idempotent: a repeat dispatch must not shrink
+      // either saved total a second time.
+      const changed = action.payload.changed !== false;
 
       return {
         ...state,
@@ -590,13 +593,12 @@ export default function postReducer(state = initialState, action) {
             )
           : state.savedPosts.filter((p) => p._id !== action.payload.postId),
         savedTotal:
-          !action.payload.saved && savedExists
+          !action.payload.saved && savedExists && changed
             ? Math.max(state.savedTotal - 1, 0)
             : state.savedTotal,
-        // This action only fires when the post's saved state actually changed,
-        // so an unsave always removes one from the all-saved count (DELETE_
-        // SAVED_POST deliberately does not touch it to avoid double counting).
-        allSavedTotal: !action.payload.saved
+        // DELETE_SAVED_POST deliberately leaves this alone; only a response
+        // that really removed a bookmark may decrement the all-saved count.
+        allSavedTotal: !action.payload.saved && changed
           ? Math.max(state.allSavedTotal - 1, 0)
           : state.allSavedTotal,
         likedPosts: state.likedPosts.map((p) =>
@@ -867,6 +869,11 @@ export default function postReducer(state = initialState, action) {
       const wasInArchive = state.archive.posts.some(
         (post) => String(post._id) === String(action.payload)
       );
+      // A post opened by deep link can be deleted while a filtered feed is
+      // showing something else; only the active feed's total may shrink.
+      const wasInFeed = state.posts.some(
+        (post) => String(post._id) === String(action.payload)
+      );
 
       return {
         ...state,
@@ -921,7 +928,7 @@ export default function postReducer(state = initialState, action) {
           ),
           total: Math.max(state.myComments.total - removedComments, 0)
         },
-        total: Math.max(state.total - 1, 0),
+        total: wasInFeed ? Math.max(state.total - 1, 0) : state.total,
         loading: false
       };
     }

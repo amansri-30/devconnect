@@ -21,7 +21,8 @@ const FILTERS = [
   { key: 'reply', label: 'Replies', icon: 'fas fa-reply' },
   { key: 'accepted', label: 'Accepted answers', icon: 'fas fa-check-circle' },
   { key: 'comment_like', label: 'Comment likes', icon: 'fas fa-heart' },
-  { key: 'tag', label: 'Topics', icon: 'fas fa-hashtag' }
+  { key: 'tag', label: 'Topics', icon: 'fas fa-hashtag' },
+  { key: 'mention', label: 'Mentions', icon: 'fas fa-at' }
 ];
 
 const Notifications = ({
@@ -156,6 +157,8 @@ const Notifications = ({
         return { icon: 'fas fa-heart', className: 'badge-danger' };
       case 'tag':
         return { icon: 'fas fa-hashtag', className: 'badge-primary' };
+      case 'mention':
+        return { icon: 'fas fa-at', className: 'badge-primary' };
       default:
         return { icon: 'fas fa-bell', className: 'badge-light' };
     }
@@ -178,6 +181,8 @@ const Notifications = ({
         return <Fragment>{who} liked your comment</Fragment>;
       case 'tag':
         return <Fragment>{who} posted in a topic you follow</Fragment>;
+      case 'mention':
+        return <Fragment>{who} mentioned you in a discussion</Fragment>;
       default:
         return <Fragment>{who} sent you a notification</Fragment>;
     }

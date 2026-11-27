@@ -6,6 +6,7 @@ const auth = require('../../middleware/auth');
 const { sanitizeHtml } = require('../../util/sanitize');
 const { stringParam } = require('../../util/query');
 const notify = require('../../util/notify');
+const { extractMentions } = require('../../util/mentions');
 
 // Load Post model
 const Post = require('../../models/Post');
@@ -171,6 +172,71 @@ const notifyTopicFollowers = async (tags, post, authorId) => {
 const escapeRegExp = (value) =>
   value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
+// Notify developers named in text. `skipIds` avoids double-pinging people who
+// already receive a comment/reply notification for the same action.
+const notifyNamedMentions = async (
+  names,
+  { from, post, comment, skipIds = [] }
+) => {
+  if (!Array.isArray(names) || names.length === 0) return;
+
+  try {
+    const excluded = [
+      String(from),
+      ...(skipIds || []).filter(Boolean).map(String)
+    ];
+
+    const users = await User.find({
+      _id: { $nin: excluded },
+      name: {
+        $in: names.map(
+          (name) => new RegExp(`^${escapeRegExp(name)}$`, 'i')
+        )
+      }
+    })
+      .select('_id name')
+      .lean();
+
+    // Display names are not unique. Only ping when exactly one account matches
+    // a typed name; otherwise the rendered search link lets the author pick
+    // the right person instead of notifying the wrong account.
+    const matches = new Map();
+    users.forEach((user) => {
+      const key = String(user.name || '').trim().toLowerCase();
+      if (!matches.has(key)) matches.set(key, []);
+      matches.get(key).push(user._id);
+    });
+
+    const recipients = [];
+    names.forEach((name) => {
+      const group = matches.get(name.toLowerCase()) || [];
+      if (group.length !== 1) return;
+
+      const recipient = group[0];
+      if (!recipients.some((id) => String(id) === String(recipient))) {
+        recipients.push(recipient);
+      }
+    });
+
+    await Promise.all(
+      recipients.map((recipient) =>
+        notify({
+          recipient,
+          from,
+          type: 'mention',
+          post,
+          comment
+        })
+      )
+    );
+  } catch (err) {
+    console.error('mention notify error:', err.message);
+  }
+};
+
+const notifyMentions = (text, meta) =>
+  notifyNamedMentions(extractMentions(text), meta);
+
 // Build a paginated, de-duplicated, newest-first list of users from a list of
 // like entries ({ user } or legacy raw id). Shared by post and comment likers
 // so both dialogs agree on ordering, paging and follow state.
@@ -309,6 +375,10 @@ router.post(
       const post = await newPost.save();
 
       await notifyTopicFollowers(post.tags, post, req.user.id);
+      await notifyMentions(req.body.text, {
+        from: req.user.id,
+        post: post._id
+      });
 
       return res.json(shapePost(post, req.user.id));
     } catch (err) {
@@ -1314,10 +1384,24 @@ router.put(
         return res.status(403).json({ msg: 'User not authorized' });
       }
 
+      const previousMentions = extractMentions(post.text);
+
       post.text = sanitizeHtml(req.body.text);
       post.tags = extractTags(req.body.text);
       post.editedAt = new Date();
       await post.save();
+
+      // Editing only pings names that weren't already in the post.
+      const freshMentions = extractMentions(req.body.text).filter(
+        (name) =>
+          !previousMentions.some(
+            (old) => old.toLowerCase() === name.toLowerCase()
+          )
+      );
+      await notifyNamedMentions(freshMentions, {
+        from: req.user.id,
+        post: post._id
+      });
 
       return res.json(shapePost(post, req.user.id));
     } catch (err) {
@@ -1363,7 +1447,7 @@ router.put('/save/:id', auth, async (req, res) => {
 
     await post.save();
 
-    return res.json({ saved: !alreadySaved });
+    return res.json({ saved: !alreadySaved, changed: true });
   } catch (err) {
     console.error(err.message);
 
@@ -1387,7 +1471,11 @@ router.delete('/save/:id', auth, async (req, res) => {
     }
 
     // Unconditional pull: calling this twice is harmless, unlike the toggle
-    // PUT which would re-save the post on a second call.
+    // PUT which would re-save the post on a second call. Report whether this
+    // call actually removed a bookmark so cached totals don't drift.
+    const wasSaved = post.savedBy.some(
+      (id) => id.toString() === req.user.id
+    );
     post.savedBy = post.savedBy.filter(
       (id) => id.toString() !== req.user.id
     );
@@ -1400,7 +1488,7 @@ router.delete('/save/:id', auth, async (req, res) => {
       { $pull: { posts: post._id } }
     );
 
-    return res.json({ saved: false });
+    return res.json({ saved: false, changed: wasSaved });
   } catch (err) {
     console.error(err.message);
 
@@ -1636,6 +1724,15 @@ router.post(
           })
         )
       );
+
+      // Mentioned developers get a distinct ping, but not on top of a
+      // comment/reply they already received for this exact action.
+      await notifyMentions(req.body.text, {
+        from: req.user.id,
+        post: post._id,
+        comment: savedComment._id,
+        skipIds: [...skipIds, ...watcherIds]
+      });
 
       return res.json(post.comments);
     } catch (err) {
@@ -1922,9 +2019,23 @@ router.put(
         return res.status(403).json({ msg: 'User not authorized' });
       }
 
+      const previousMentions = extractMentions(comment.text);
+
       comment.text = sanitizeHtml(req.body.text);
       comment.editedAt = new Date();
       await post.save();
+
+      const freshMentions = extractMentions(req.body.text).filter(
+        (name) =>
+          !previousMentions.some(
+            (old) => old.toLowerCase() === name.toLowerCase()
+          )
+      );
+      await notifyNamedMentions(freshMentions, {
+        from: req.user.id,
+        post: post._id,
+        comment: comment._id
+      });
 
       return res.json(post.comments);
     } catch (err) {

@@ -121,13 +121,29 @@ const shapeEndorsements = (profile, viewerId) => {
     .filter((entry) => entry.skill);
 };
 
+// The single-profile response is public too. Return only display fields;
+// follower/following ids and raw endorsement ids stay on the server. Counts
+// and viewer-specific follow flags are supplied separately by the route.
 const profileForViewer = (profile, viewerId) => {
   const plain =
     typeof profile.toObject === 'function' ? profile.toObject() : profile;
-  const { skillEndorsements: _dropEndorserIds, ...rest } = plain;
 
   return {
-    ...rest,
+    _id: plain._id,
+    user: plain.user,
+    company: plain.company,
+    website: plain.website,
+    location: plain.location,
+    status: plain.status,
+    skills: plain.skills,
+    bio: plain.bio,
+    githubusername: plain.githubusername,
+    availability: plain.availability,
+    views: plain.views,
+    experience: plain.experience,
+    education: plain.education,
+    social: plain.social,
+    date: plain.date,
     endorsements: shapeEndorsements(plain, viewerId)
   };
 };

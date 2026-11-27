@@ -147,7 +147,7 @@ const PostForm = ({ addPost, auth }) => {
             <i className="fas fa-eye" /> {showPreview ? 'Edit' : 'Preview'}
           </button>
           <span className="format-hint">
-            **bold** *italic* `code` ```block```
+            **bold** *italic* `code` ```block``` @Name / @"Full Name"
           </span>
         </div>
         {showPreview && (

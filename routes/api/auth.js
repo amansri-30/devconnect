@@ -52,7 +52,7 @@ router.post(
   '/',
   [
     check('email', 'Sign in email is required').trim().isEmail(),
-    check('password', 'Password is required').exists()
+    check('password', 'Password is required').exists().isString()
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -113,8 +113,12 @@ router.put(
   [
     auth,
     [
-      check('currentPassword', 'Current password is required').not().isEmpty(),
+      check('currentPassword', 'Current password is required')
+        .isString()
+        .not()
+        .isEmpty(),
       check('newPassword', 'New password must be at least 6 characters')
+        .isString()
         .isLength({ min: 6 })
         // Six spaces pass the length check but are not a usable password.
         .custom((value) => !/^\s+$/.test(String(value)))

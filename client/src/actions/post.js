@@ -802,7 +802,11 @@ export const toggleSavePost = (postId) => async (dispatch) => {
 
     dispatch({
       type: SAVE_POST,
-      payload: { postId, saved: res.data.saved }
+      payload: {
+        postId,
+        saved: res.data.saved,
+        changed: res.data.changed !== false
+      }
     });
   } catch (err) {
     dispatch(setAlert('Could not save post', 'danger'));
@@ -821,7 +825,11 @@ export const unsavePost = (postId) => async (dispatch) => {
 
     dispatch({
       type: SAVE_POST,
-      payload: { postId, saved: res.data.saved }
+      payload: {
+        postId,
+        saved: res.data.saved,
+        changed: res.data.changed !== false
+      }
     });
     dispatch({
       type: DELETE_SAVED_POST,

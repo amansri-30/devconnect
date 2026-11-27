@@ -682,6 +682,10 @@ button {
   border-radius: 4px;
 }
 
+.markdown-body .mention-link {
+  font-weight: 600;
+}
+
 [data-theme='dark'] .format-hint {
   color: #adb5bd;
 }

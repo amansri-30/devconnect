@@ -66,6 +66,39 @@ const INLINE_PATTERNS = [
     }
   },
   {
+    // Quoted form supports display names with spaces or punctuation.
+    regex: /@"([^"\n]{1,50})"/g,
+    render: (match) => {
+      const name = match[1].trim().replace(/[._-]+$/, '');
+      if (!name) return null;
+
+      const href = `/search?q=${encodeURIComponent(name)}&type=developers`;
+
+      return {
+        html: `<a class="mention-link" href="${escapeHtml(href)}">@${escapeHtml(name)}</a>`,
+        consumed: match[0].length
+      };
+    }
+  },
+  {
+    // The leading group keeps email addresses out and must be re-emitted: it
+    // is part of the match but not part of the mention itself.
+    regex: /(^|[^\w@.])@([A-Za-z0-9][A-Za-z0-9_.-]{0,29})/g,
+    render: (match) => {
+      const name = match[2].replace(/[._-]+$/, '');
+      if (!name) return null;
+
+      const href = `/search?q=${encodeURIComponent(name)}&type=developers`;
+      const prefix = escapeHtml(match[1]);
+
+      return {
+        html: `${prefix}<a class="mention-link" href="${escapeHtml(href)}">@${escapeHtml(name)}</a>`,
+        // Leave trailing punctuation for the next plain-text run.
+        consumed: match[1].length + 1 + name.length
+      };
+    }
+  },
+  {
     regex: /\*\*([\s\S]+?)\*\*/g,
     render: (match) => ({
       html: `<strong>${renderInline(match[1])}</strong>`,
